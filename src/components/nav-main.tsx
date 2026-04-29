@@ -48,8 +48,8 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton tooltip={item.title}>
                     {item.icon}
-                    <span>{item.title}</span>
-                    <ChevronRightIcon className="ms-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                    <ChevronRightIcon className="ms-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -72,7 +72,7 @@ export function NavMain({
               <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
                 <a href={item.url}>
                   {item.icon}
-                  <span>{item.title}</span>
+                  <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

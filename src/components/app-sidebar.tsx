@@ -1,4 +1,5 @@
 ﻿import * as React from "react"
+import faviconUrl from "@/assets/favicon.svg"
 import {
   LayoutDashboardIcon,
   ChartBarIcon,
@@ -105,7 +106,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           >
             <div className="flex items-center justify-center rounded-md">
               <img
-                src="/src/assets/favicon.ico"
+                src={faviconUrl}
                 alt="The Development Zone"
                 className="size-12 group-data-[collapsible=icon]:size-8 transition-all rounded-md object-contain"
               />

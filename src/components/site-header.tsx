@@ -1,4 +1,6 @@
+import * as React from "react"
 import { SearchIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 import {
   Breadcrumb,
@@ -13,8 +15,22 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 export function SiteHeader() {
+  const [scrolled, setScrolled] = React.useState(false)
+
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-white/10 bg-black/40 backdrop-blur-xl transition-[width,height] ease-linear">
+    <header
+      className={cn(
+        "sticky top-2 mx-[4px] z-20 flex h-14 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300",
+        scrolled ? "shadow-[0_10px_40px_rgba(0,0,0,0.45)]" : "",
+      )}
+    >
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         {/* Sidebar toggle */}
         <SidebarTrigger className="-ms-1" />

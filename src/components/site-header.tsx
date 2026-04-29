@@ -1,5 +1,4 @@
 import * as React from "react"
-import { SearchIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import {
@@ -10,7 +9,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
@@ -54,9 +52,7 @@ export function SiteHeader() {
 
         {/* Right-side actions */}
         <div className="ms-auto flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="size-8" aria-label="Search">
-            <SearchIcon className="size-4" />
-          </Button>
+          
         </div>
       </div>
     </header>

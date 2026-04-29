@@ -125,11 +125,17 @@
 	* { @apply border-border outline-ring/50; }
 }@layer utilities {
   .glass-panel {
-    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] rounded-xl transition-all duration-300;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] rounded-xl transition-all duration-300;
+  }
+
+  header {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] rounded-xl transition-all duration-300;
+    margin-inline-start: 2px !important;
+    margin-inline-end: 4px !important;
   }
 
   [data-slot="sidebar-inner"] {
-    @apply rounded-xl bg-white/[0.04] border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl p-4;
+    @apply rounded-xl bg-white/4 border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl p-4;
   }
 
   /* Collapse icon mode: remove horizontal padding so icons center properly in w-16 */
@@ -184,6 +190,23 @@
 
   .thin-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255,255,255,0.22);
+  }
+
+  /* ── Hover panel (floating submenu) animation ────────────────────────── */
+  @keyframes hover-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(-6px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  .nav-hover-panel {
+    animation: hover-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
   }
 }
 

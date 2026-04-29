@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/roboto";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	/* ── Light Theme (Logo Tones) ────────────────────────── */
+	--background: oklch(0.98 0.01 290);
+	--foreground: oklch(0.12 0.04 290); /* Logo Dark Purple */
+	--card: oklch(0.99 0.01 290);
+	--card-foreground: oklch(0.12 0.04 290);
+	--popover: oklch(0.99 0.01 290);
+	--popover-foreground: oklch(0.12 0.04 290);
+
+	/* Primary: The DZ Gold Gradient Peak */
+	--primary: oklch(0.82 0.17 85); 
+	--primary-foreground: oklch(0.12 0.04 290);
+
+	--secondary: oklch(0.92 0.05 290);
+	--secondary-foreground: oklch(0.30 0.12 290);
+	--muted: oklch(0.94 0.03 290);
+	--muted-foreground: oklch(0.40 0.08 290);
+
+	/* Accent: Logo Vibrant Purple */
+	--accent: oklch(0.50 0.20 290);
+	--accent-foreground: oklch(0.99 0.01 290);
+
+	--destructive: oklch(0.60 0.18 25);
+	--border: oklch(0.88 0.04 290);
+	--input: oklch(0.88 0.04 290);
+	--ring: oklch(0.82 0.17 85);
+	--radius: 0.5rem;
+
+	/* Sidebar (Light) */
+	--sidebar: oklch(0.98 0.01 290);
+	--sidebar-foreground: oklch(0.12 0.04 290);
+	--sidebar-primary: oklch(0.82 0.17 85);
+	--sidebar-primary-foreground: oklch(0.99 0.01 290);
+	--sidebar-accent: oklch(0.50 0.20 290);
+	--sidebar-accent-foreground: oklch(0.99 0.01 290);
+	--sidebar-border: oklch(0.92 0.04 290);
+	--sidebar-ring: oklch(0.82 0.17 85);
+}
+
+.dark {
+	/* ── Dark Theme (Exact Logo Purple Base) ─────────────── */
+	/* Matching background and sidebar to remove the seam */
+	--background: oklch(0.12 0.04 290); 
+	--foreground: oklch(0.98 0.01 290);
+	--card: oklch(0.15 0.04 290);
+	--card-foreground: oklch(0.98 0.01 290);
+	--popover: oklch(0.14 0.04 290);
+	--popover-foreground: oklch(0.98 0.01 290);
+
+	/* Primary: Radiant DZ Gold */
+	--primary: oklch(0.84 0.19 88);
+	--primary-foreground: oklch(0.12 0.04 290);
+
+	--secondary: oklch(0.20 0.06 290);
+	--secondary-foreground: oklch(0.98 0.01 290);
+	--muted: oklch(0.18 0.05 290);
+	--muted-foreground: oklch(0.65 0.08 290);
+
+	--accent: oklch(0.48 0.18 290); /* Purple Gradient from logo */
+	--accent-foreground: oklch(0.98 0.01 290);
+
+	--destructive: oklch(0.55 0.22 28);
+	--border: oklch(0.22 0.05 290 / 60%);
+	--input: oklch(0.22 0.05 290);
+	--ring: oklch(0.84 0.19 88);
+
+	/* Sidebar (Dark - Seamless with Dashboard) */
+	--sidebar: oklch(0.12 0.04 290); /* Matches --background exactly */
+	--sidebar-foreground: oklch(0.95 0.02 290);
+	--sidebar-primary: oklch(0.84 0.19 88);
+	--sidebar-primary-foreground: oklch(0.12 0.04 290);
+	--sidebar-accent: oklch(0.48 0.18 290);
+	--sidebar-accent-foreground: oklch(0.98 0.01 290);
+	--sidebar-border: oklch(0.22 0.05 290 / 60%);
+	--sidebar-ring: oklch(0.84 0.19 88);
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	
+	/* Sidebar Mapping */
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	--font-sans: 'Roboto Variable', sans-serif;
+	--radius-lg: var(--radius);
+}
+
+@layer base {
+	html, body, #root { height: 100%; }
+	body {
+		@apply bg-background text-foreground;
+		-webkit-font-smoothing: antialiased;
+	}
+	* { @apply border-border outline-ring/50; }
+}

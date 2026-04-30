@@ -25,7 +25,7 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        "sticky top-2 mx-[4px] z-20 flex h-14 shrink-0 items-center gap-2 border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300",
+        "sticky top-2 mx-1 z-20 flex h-14 shrink-0 items-center gap-2 border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300",
         scrolled ? "shadow-[0_10px_40px_rgba(0,0,0,0.45)]" : "",
       )}
     >

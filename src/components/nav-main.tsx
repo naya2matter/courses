@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
+import { Link } from "react-router-dom"
 import { ChevronRightIcon } from "lucide-react"
 
 import {
@@ -88,10 +89,10 @@ function HoverPanel({
       {item.items?.map((sub, idx) => {
         const isActive = activeSubItem === sub.title
         return (
-          <a
+          <Link
             key={sub.title}
             ref={(el) => { itemRefs.current[idx] = el }}
-            href={sub.url}
+            to={sub.url}
             role="menuitem"
             tabIndex={0}
             onFocus={() => setFocusedIdx(idx)}
@@ -116,7 +117,7 @@ function HoverPanel({
               ].join(" ")}
             />
             {sub.title}
-          </a>
+          </Link>
         )
       })}
     </div>,
@@ -221,7 +222,7 @@ export function NavMain({
                                 isActive={isSubActive}
                                 onClick={() => setActiveSubItem(sub.title)}
                               >
-                                <a href={sub.url} className="group flex items-center gap-2">
+                                <Link to={sub.url} className="group flex items-center gap-2">
                                   <span
                                     className={[
                                       "size-1.5 shrink-0 rounded-full transition-all duration-200",
@@ -231,7 +232,7 @@ export function NavMain({
                                     ].join(" ")}
                                   />
                                   <span>{sub.title}</span>
-                                </a>
+                                </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           )
@@ -244,10 +245,10 @@ export function NavMain({
             ) : (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
-                  <a href={item.url}>
+                  <Link to={item.url}>
                     {item.icon}
                     <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )

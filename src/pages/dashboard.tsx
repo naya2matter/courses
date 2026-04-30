@@ -206,11 +206,12 @@ export function Dashboard() {
 
       {/* ──────────────────────── 2. STATS STRIP ─────────────────────────── */}
       <section className="grid grid-cols-2 gap-y-10 px-6 md:grid-cols-4">
-        {stats.map((stat, i) => (
+        {stats.map((stat) => (
           <div
             key={stat.label}
-            className="floating-stat flex flex-col items-center gap-3 text-center"
-            style={{ animationDelay: `${i * 0.4}s` }}
+            className="flex flex-col items-center gap-3 text-center"
+            // className="floating-stat flex flex-col items-center gap-3 text-center"
+            // style={{ animationDelay: `${i * 0.4}s` }}
           >
             {/* Icon bubble */}
             <div
@@ -348,7 +349,7 @@ export function Dashboard() {
           {attendanceRecords.map((record) => (
             <div
               key={record.id}
-              className="glass-panel group relative flex flex-col p-6 transition-all duration-500 hover:scale-[1.02] hover:bg-white/[0.08] hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
+              className="glass-panel group relative flex flex-col p-6 transition-all duration-500 hover:scale-[1.02] hover:bg-white/8 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]"
               style={{
                 background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)",
                 backdropFilter: "blur(16px)",
@@ -425,7 +426,7 @@ export function Dashboard() {
             {recentActivities.map((activity) => (
               <div
                 key={activity.id}
-                className="group flex items-center justify-between p-5 transition-all duration-300 hover:bg-white/[0.06]"
+                className="group flex items-center justify-between p-5 transition-all duration-300 hover:bg-white/6"
               >
                 <div className="flex items-center gap-5">
                   <div className="relative">
@@ -455,7 +456,7 @@ export function Dashboard() {
           </div>
 
           {/* Bottom highlight beam */}
-          <div className="absolute bottom-0 left-0 h-[1px] w-full bg-linear-to-r from-transparent via-indigo-500/30 to-transparent" />
+          <div className="absolute bottom-0 left-0 h-px w-full bg-linear-to-r from-transparent via-indigo-500/30 to-transparent" />
         </div>
       </section>
 

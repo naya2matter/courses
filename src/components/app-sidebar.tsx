@@ -9,7 +9,6 @@ import {
   Settings2Icon,
   BookOpenIcon,
   CircleHelpIcon,
-  MessageSquareIcon,
   
 } from "lucide-react"
 
@@ -23,46 +22,46 @@ import {
   SidebarHeader,
   
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/context/auth"
 
 /* --- Navigation data ---------------------------------------------------- */
 
 const data = {
-  user: {
-    name: "Admin User",
-    email: "admin@courses.dev",
-    avatar: "",
-  },
-
   navPlatform: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/admin",
       icon: <LayoutDashboardIcon />,
       isActive: true,
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/admin/analytics",
       icon: <ChartBarIcon />,
       items: [
-        { title: "Overview",  url: "#" },
-        { title: "Reports",   url: "#" },
-        { title: "Real-time", url: "#" },
+        { title: "Overview",  url: "/admin/analytics" },
+        { title: "Reports",   url: "/admin/analytics" },
+        { title: "Real-time", url: "/admin/analytics" },
       ],
     },
     {
       title: "Users",
-      url: "#",
+      url: "/admin/users",
       icon: <UsersIcon />,
       items: [
-        { title: "All Users",   url: "#" },
-        { title: "Roles",       url: "#" },
-        { title: "Permissions", url: "#" },
+        { title: "All Users",   url: "/admin/users" },
+        { title: "Roles",       url: "/admin/users" },
+        { title: "Permissions", url: "/admin/users" },
       ],
     },
   ],
 
   navManagement: [
+    {
+      title: "Courses",
+      url: "/admin/courses",
+      icon: <BookOpenIcon />,
+    },
     {
       title: "Orders",
       url: "#",
@@ -88,13 +87,14 @@ const data = {
   navSecondary: [
     { title: "Documentation", url: "#", icon: <BookOpenIcon /> },
     { title: "Get Help",      url: "#", icon: <CircleHelpIcon /> },
-    { title: "Feedback",      url: "#", icon: <MessageSquareIcon /> },
+    { title: "Settings", url: "/admin/settings", icon: <Settings2Icon /> },
   ],
 }
 
 /* --- Component ----------------------------------------------------------- */
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth()
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -125,7 +125,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={{
+          name: user?.name ?? "Admin User",
+          email: user?.email ?? "admin@courses.dev",
+          avatar: user?.avatar ?? "",
+        }} />
       </SidebarFooter>
     </Sidebar>
   )

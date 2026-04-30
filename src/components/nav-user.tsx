@@ -19,6 +19,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { useAuth } from "@/context/auth"
+import { Role } from "@/types/auth"
 
 export function NavUser({
   user,
@@ -30,6 +32,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const auth = useAuth()
 
   return (
     <SidebarMenu>
@@ -91,12 +94,35 @@ export function NavUser({
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
-              Log out
-            </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {/* Admin-only impersonation controls (UI-only) */}
+              {auth.isImpersonating ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    auth.revertImpersonation()
+                  }}
+                >
+                  Stop impersonation
+                </DropdownMenuItem>
+              ) : auth.user?.role === Role.admin ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    auth.impersonateAs(Role.user)
+                  }}
+                >
+                  Impersonate as user
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  // sign out via auth context
+                  auth.signOut()
+                }}
+              >
+                <LogOutIcon />
+                Log out
+              </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

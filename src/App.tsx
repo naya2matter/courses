@@ -1,40 +1,63 @@
-import { useState } from "react"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import { Dashboard } from "@/pages/dashboard"
-import { LoginPage } from "@/pages/login"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { AuthProvider } from "@/context/auth"
+import { Role } from "@/types/auth"
+import { ProtectedRoute } from "@/routes/protected-route"
+
+// Layouts
+import { AdminLayout } from "@/layouts/admin-layout"
+import { UserLayout } from "@/layouts/user-layout"
+
+// Auth
+import { LoginPage } from "@/pages/auth/login"
+
+// Admin pages
+import { AdminDashboard } from "@/pages/admin/dashboard"
+import { AdminUsers } from "@/pages/admin/users"
+import { AdminAnalytics } from "@/pages/admin/analytics"
+import { AdminCourses } from "@/pages/admin/courses"
+import { AdminSettings } from "@/pages/admin/settings"
+
+// User pages
+import { UserDashboard } from "@/pages/user/dashboard"
+import { UserMyCourses } from "@/pages/user/my-courses"
+import { UserProgress } from "@/pages/user/progress"
+import { UserSchedule } from "@/pages/user/schedule"
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
   return (
-    <TooltipProvider>
-      <div className="fixed inset-0 -z-10 bg-[#0a0a12]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(99,102,241,0.18),transparent_45%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(139,92,246,0.15),transparent_55%)]" />
-        <div className="pointer-events-none absolute left-6 top-6 h-72 w-72 rounded-[28px] bg-white/4 shadow-[0_40px_80px_rgba(99,102,241,0.14)] blur-3xl" />
-        <div className="pointer-events-none absolute left-10 top-10 h-64 w-64 rounded-[28px] bg-[radial-gradient(circle,rgba(124,58,237,0.22),transparent_70%)] opacity-80 blur-[52px]" />
-      </div>
-      <div className="min-h-screen bg-[#080713]">
-        {isLoggedIn ? (
-          <SidebarProvider className="bg-transparent">
-            <AppSidebar />
-            <div className="flex h-screen flex-1 flex-col overflow-hidden">
-              <SiteHeader />
-              <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
-                <div className="w-full max-w-350 mx-auto">
-                  <Dashboard />
-                </div>
-              </main>
-            </div>
-          </SidebarProvider>
-        ) : (
-          <LoginPage onSignIn={() => setIsLoggedIn(true)} />
-        )}
-      </div>
-    </TooltipProvider>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Admin — role-guarded */}
+          <Route element={<ProtectedRoute requiredRole={Role.admin} />}>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin"           element={<AdminDashboard />} />
+              <Route path="/admin/users"     element={<AdminUsers />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/courses"   element={<AdminCourses />} />
+              <Route path="/admin/settings"  element={<AdminSettings />} />
+            </Route>
+          </Route>
+
+          {/* User — role-guarded */}
+          <Route element={<ProtectedRoute requiredRole={Role.user} />}>
+            <Route element={<UserLayout />}>
+              <Route path="/user"          element={<UserDashboard />} />
+              <Route path="/user/courses"  element={<UserMyCourses />} />
+              <Route path="/user/progress" element={<UserProgress />} />
+              <Route path="/user/schedule" element={<UserSchedule />} />
+            </Route>
+          </Route>
+
+          {/* Catch-all → login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

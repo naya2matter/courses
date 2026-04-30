@@ -1,10 +1,14 @@
+import { useState } from "react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { Dashboard } from "@/pages/dashboard"
+import { LoginPage } from "@/pages/login"
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
   return (
     <TooltipProvider>
       <div className="fixed inset-0 -z-10 bg-[#0a0a12]">
@@ -14,17 +18,21 @@ function App() {
         <div className="pointer-events-none absolute left-10 top-10 h-64 w-64 rounded-[28px] bg-[radial-gradient(circle,rgba(124,58,237,0.22),transparent_70%)] opacity-80 blur-[52px]" />
       </div>
       <div className="min-h-screen bg-[#080713]">
-        <SidebarProvider className="bg-transparent">
-          <AppSidebar />
-          <div className="flex h-screen flex-1 flex-col overflow-hidden">
-            <SiteHeader />
-            <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
-              <div className="w-full max-w-350 mx-auto">
-                <Dashboard />
-              </div>
-            </main>
-          </div>
-        </SidebarProvider>
+        {isLoggedIn ? (
+          <SidebarProvider className="bg-transparent">
+            <AppSidebar />
+            <div className="flex h-screen flex-1 flex-col overflow-hidden">
+              <SiteHeader />
+              <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
+                <div className="w-full max-w-350 mx-auto">
+                  <Dashboard />
+                </div>
+              </main>
+            </div>
+          </SidebarProvider>
+        ) : (
+          <LoginPage onSignIn={() => setIsLoggedIn(true)} />
+        )}
       </div>
     </TooltipProvider>
   )

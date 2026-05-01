@@ -25,8 +25,8 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        "sticky top-2 mx-1 z-20 flex h-14 shrink-0 items-center gap-2 border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300",
-        scrolled ? "shadow-[0_10px_40px_rgba(0,0,0,0.45)]" : "",
+        "sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-white/5 bg-transparent transition-all duration-300",
+        scrolled ? "bg-[#080713]/80 border-white/10 shadow-sm backdrop-blur-md" : ""
       )}
     >
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">

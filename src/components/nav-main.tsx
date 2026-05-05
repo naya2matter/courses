@@ -1,6 +1,6 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { ChevronRightIcon } from "lucide-react"
 
 import {
@@ -33,19 +33,17 @@ type NavItem = {
 interface HoverPanelProps {
   item: NavItem
   anchorRect: DOMRect
-  activeSubItem: string | null
+  currentPath: string
   onMouseEnter: () => void
   onMouseLeave: () => void
-  onSelect: (title: string) => void
 }
 
 function HoverPanel({
   item,
   anchorRect,
-  activeSubItem,
+  currentPath,
   onMouseEnter,
   onMouseLeave,
-  onSelect,
 }: HoverPanelProps) {
   const panelRef = React.useRef<HTMLDivElement>(null)
   const itemRefs = React.useRef<(HTMLAnchorElement | null)[]>([])
@@ -68,7 +66,6 @@ function HoverPanel({
     const len = item.items?.length ?? 0
     if (e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx(Math.min(idx + 1, len - 1)) }
     else if (e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx(Math.max(idx - 1, 0)) }
-    else if (e.key === "Enter" && item.items) { onSelect(item.items[idx].title) }
   }
 
   return ReactDOM.createPortal(
@@ -87,7 +84,7 @@ function HoverPanel({
       </p>
 
       {item.items?.map((sub, idx) => {
-        const isActive = activeSubItem === sub.title
+        const isActive = currentPath === sub.url || currentPath.startsWith(sub.url + "/")
         return (
           <Link
             key={sub.title}
@@ -97,15 +94,13 @@ function HoverPanel({
             tabIndex={0}
             onFocus={() => setFocusedIdx(idx)}
             onKeyDown={(e) => handleKeyDown(e, idx)}
-            onClick={() => onSelect(sub.title)}
+            data-slot="sidebar-menu-sub-button"
+            data-active={isActive}
             className={[
               "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm outline-none",
               "transition-all duration-150 ease-out",
-              "hover:bg-indigo-500/14 hover:text-white",
               "focus-visible:bg-indigo-500/14 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-indigo-400/40",
-              isActive
-                ? "bg-indigo-500/18 text-white font-medium shadow-[inset_0_0_0_1px_rgba(99,102,241,0.2)]"
-                : "text-white/60",
+              isActive ? "text-white font-medium" : "text-white/60",
             ].join(" ")}
           >
             <span
@@ -136,10 +131,39 @@ export function NavMain({
 }) {
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const { pathname } = useLocation()
+
+  const isSubActive = (url: string) =>
+    pathname === url ||
+    (url !== "/admin" && pathname.startsWith(url + "/"))
+
+  const isGroupActive = (item: NavItem) =>
+    item.items?.some((sub) => isSubActive(sub.url)) ??
+    isSubActive(item.url)
+
+  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      items
+        .filter((item) => item.items?.length)
+        .map((item) => [item.title, isGroupActive(item)])
+    )
+  )
+
+  React.useEffect(() => {
+    const updates: Record<string, boolean> = {}
+    for (const item of items) {
+      if (item.items?.some((sub) => isSubActive(sub.url))) {
+        updates[item.title] = true
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      setOpenGroups((prev) => ({ ...prev, ...updates }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   const [hoveredTitle, setHoveredTitle] = React.useState<string | null>(null)
   const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null)
-  const [activeSubItem, setActiveSubItem] = React.useState<string | null>(null)
 
   const hideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const showTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -185,13 +209,13 @@ export function NavMain({
                 /* Collapsed icon mode → hover panel trigger */
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    isActive={item.isActive}
+                    isActive={isGroupActive(item)}
                     aria-haspopup="menu"
                     aria-expanded={hoveredTitle === item.title}
                     aria-label={item.title}
                     onMouseEnter={(e) => openPanel(item.title, e.currentTarget)}
                     onMouseLeave={closePanel}
-                  >
+                    >
                     {item.icon}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -200,12 +224,19 @@ export function NavMain({
                 <Collapsible
                   key={item.title}
                   asChild
-                  defaultOpen={item.isActive}
+                  open={openGroups[item.title] ?? false}
+                  onOpenChange={(open) =>
+                    setOpenGroups((prev) => ({ ...prev, [item.title]: open }))
+                  }
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={item.isActive}>
+                    <CollapsibleTrigger asChild >
+                      <SidebarMenuButton 
+                        tooltip={item.title} 
+                        isActive={isGroupActive(item)}
+                        className=" hover:bg-white/10 focus-visible:bg-white/10"
+                      >
                         {item.icon}
                         <span>{item.title}</span>
                         <ChevronRightIcon className="ms-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -214,24 +245,26 @@ export function NavMain({
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {item.items.map((sub) => {
-                          const isSubActive = activeSubItem === sub.title
+                          const subActive = isSubActive(sub.url)
                           return (
                             <SidebarMenuSubItem key={sub.title}>
-                              <SidebarMenuSubButton
-                                asChild
-                                isActive={isSubActive}
-                                onClick={() => setActiveSubItem(sub.title)}
-                              >
-                                <Link to={sub.url} className="group flex items-center gap-2">
+                              <SidebarMenuSubButton asChild className="!bg-transparent hover:!bg-white/10">
+                                <Link
+                                  to={sub.url}
+                                  className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors duration-150"
+                                  aria-current={subActive ? "page" : undefined}
+                                >
                                   <span
                                     className={[
                                       "size-1.5 shrink-0 rounded-full transition-all duration-200",
-                                      isSubActive
+                                      subActive
                                         ? "bg-indigo-400 shadow-[0_0_6px_2px_rgba(99,102,241,0.5)]"
                                         : "bg-white/20 group-hover:bg-white/45",
                                     ].join(" ")}
                                   />
-                                  <span>{sub.title}</span>
+                                  <span className={subActive ? "text-white font-medium" : "text-sidebar-foreground/70 group-hover:text-white"}>
+                                    {sub.title}
+                                  </span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -244,7 +277,7 @@ export function NavMain({
               )
             ) : (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                <SidebarMenuButton asChild tooltip={item.title} isActive={isSubActive(item.url)}>
                   <Link to={item.url}>
                     {item.icon}
                     <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
@@ -261,10 +294,9 @@ export function NavMain({
         <HoverPanel
           item={hoveredItem}
           anchorRect={anchorRect}
-          activeSubItem={activeSubItem}
+          currentPath={pathname}
           onMouseEnter={clearTimers}
           onMouseLeave={closePanel}
-          onSelect={setActiveSubItem}
         />
       )}
     </>

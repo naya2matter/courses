@@ -12,7 +12,11 @@ interface ProtectedRouteProps {
  *  2. Role match      → redirects to the correct home if the role doesn't match
  */
 export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isBootstrapping } = useAuth()
+
+  if (isBootstrapping) {
+    return null
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />

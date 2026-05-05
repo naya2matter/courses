@@ -10,12 +10,49 @@ import { UserLayout } from "@/layouts/user-layout"
 // Auth
 import { LoginPage } from "@/pages/auth/login"
 
-// Admin pages
+// Admin — core pages
 import { AdminDashboard } from "@/pages/admin/dashboard"
-import { AdminUsers } from "@/pages/admin/users"
-import { AdminAnalytics } from "@/pages/admin/analytics"
-import { AdminCourses } from "@/pages/admin/courses"
-import { AdminSettings } from "@/pages/admin/settings"
+
+// Admin — User Management
+import UsersPage from "@/pages/admin/user-management/users/users"
+import { CreateUserPage } from "@/pages/admin/user-management/users/pages/create-user-page"
+import { EditUserPage } from "@/pages/admin/user-management/users/pages/edit-user-page"
+import DepartmentsPage from "@/pages/admin/user-management/departments/departments"
+import ResendLinksPage from "@/pages/admin/user-management/resend-links/resend-links"
+
+// Admin — Course Management
+import LiveCoursesPage from "@/pages/admin/course-management/live-courses/live-courses"
+import OnlineCoursesPage from "@/pages/admin/course-management/online-courses/online-courses"
+
+// Admin — Report Management
+import ReportLiveCoursesPage from "@/pages/admin/report-management/live-courses/live-courses"
+import ReportOnlineCoursesPage from "@/pages/admin/report-management/online-courses/online-courses"
+import KpisPage from "@/pages/admin/report-management/kpis/kpis"
+
+// Admin — Evaluation Management
+import UserEvaluationPage from "@/pages/admin/evaluation-management/user-evaluation/user-evaluation"
+import EvaluationConfigurationsPage from "@/pages/admin/evaluation-management/configurations/configurations"
+import EvaluationNotificationsPage from "@/pages/admin/evaluation-management/notifications/notifications"
+import EvaluationHistoryPage from "@/pages/admin/evaluation-management/history/history"
+
+// Admin — Audio Management
+import AudioManagementPage from "@/pages/admin/audio-management/audio/audio"
+import { CreateAudioPage } from "@/pages/admin/audio-management/audio/pages/create-audio-page"
+import { EditAudioPage } from "@/pages/admin/audio-management/audio/pages/edit-audio-page"
+import { ViewAudioPage } from "@/pages/admin/audio-management/audio/pages/view-audio-page"
+import AudioAssignmentsPage from "@/pages/admin/audio-management/assignments/assignments"
+import AudioCategoriesPage from "@/pages/admin/audio-management/categories/categories"
+
+// Admin — Video Management
+import VideoManagementPage from "@/pages/admin/video-management/video/video"
+import VideoCategoriesPage from "@/pages/admin/video-management/categories/categories"
+
+// Admin — Blog Management
+import BlogManagementPage from "@/pages/admin/blog-management/blog/blog"
+
+// Admin — Support
+import FeedbackPage from "@/pages/admin/feedback/feedback"
+import BugReportsPage from "@/pages/admin/bug-reports/bug-reports"
 
 // User pages
 import { UserDashboard } from "@/pages/user/dashboard"
@@ -34,11 +71,48 @@ function App() {
           {/* Admin — role-guarded */}
           <Route element={<ProtectedRoute requiredRole={Role.admin} />}>
             <Route element={<AdminLayout />}>
-              <Route path="/admin"           element={<AdminDashboard />} />
-              <Route path="/admin/users"     element={<AdminUsers />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-              <Route path="/admin/courses"   element={<AdminCourses />} />
-              <Route path="/admin/settings"  element={<AdminSettings />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+
+              {/* User Management */}
+              <Route path="/admin/user-management/users" element={<UsersPage />} />
+              <Route path="/admin/user-management/users/create" element={<CreateUserPage />} />
+              <Route path="/admin/user-management/users/edit/:id" element={<EditUserPage />} />
+              <Route path="/admin/user-management/departments" element={<DepartmentsPage />} />
+              <Route path="/admin/user-management/resend-links" element={<ResendLinksPage />} />
+
+              {/* Course Management */}
+              <Route path="/admin/course-management/live-courses" element={<LiveCoursesPage />} />
+              <Route path="/admin/course-management/online-courses" element={<OnlineCoursesPage />} />
+
+              {/* Report Management */}
+              <Route path="/admin/report-management/live-courses" element={<ReportLiveCoursesPage />} />
+              <Route path="/admin/report-management/online-courses" element={<ReportOnlineCoursesPage />} />
+              <Route path="/admin/report-management/kpis" element={<KpisPage />} />
+
+              {/* Evaluation Management */}
+              <Route path="/admin/evaluation-management/user-evaluation" element={<UserEvaluationPage />} />
+              <Route path="/admin/evaluation-management/configurations" element={<EvaluationConfigurationsPage />} />
+              <Route path="/admin/evaluation-management/notifications" element={<EvaluationNotificationsPage />} />
+              <Route path="/admin/evaluation-management/history" element={<EvaluationHistoryPage />} />
+
+              {/* Audio Management */}
+              <Route path="/admin/audio-management/audio" element={<AudioManagementPage />} />
+              <Route path="/admin/audio-management/audio/create" element={<CreateAudioPage />} />
+              <Route path="/admin/audio-management/audio/view/:id" element={<ViewAudioPage />} />
+              <Route path="/admin/audio-management/audio/edit/:id" element={<EditAudioPage />} />
+              <Route path="/admin/audio-management/assignments" element={<AudioAssignmentsPage />} />
+              <Route path="/admin/audio-management/categories" element={<AudioCategoriesPage />} />
+
+              {/* Video Management */}
+              <Route path="/admin/video-management/video" element={<VideoManagementPage />} />
+              <Route path="/admin/video-management/categories" element={<VideoCategoriesPage />} />
+
+              {/* Blog Management */}
+              <Route path="/admin/blog-management/blog" element={<BlogManagementPage />} />
+
+              {/* Support */}
+              <Route path="/admin/feedback" element={<FeedbackPage />} />
+              <Route path="/admin/bug-reports" element={<BugReportsPage />} />
             </Route>
           </Route>
 

@@ -1,24 +1,8 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { type AuthUser, Role } from "@/types/auth"
-
-/* ── Mock users for UI-only development ─────────────────────────────────── */
-
-const MOCK_ADMIN: AuthUser = {
-  id: "1",
-  name: "Admin User",
-  email: "admin@courses.dev",
-  avatar: "",
-  role: Role.admin,
-}
-
-const MOCK_USER: AuthUser = {
-  id: "2",
-  name: "Alex Johnson",
-  email: "alex@courses.dev",
-  avatar: "",
-  role: Role.user,
-}
+import { apiClient, USER_ROLE_KEY } from "@/lib/api"
+import { authService } from "@/services/auth.service"
 
 /* ── Context definition ──────────────────────────────────────────────────── */
 
@@ -26,39 +10,93 @@ interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isImpersonating: boolean
-  /** UI-only: normal sign in (replace with real API auth) */
-  signIn: (role: Role) => void
-  signOut: () => void
-  /** UI-only: start impersonating another role (admin-only) */
+  isBootstrapping: boolean
+  /** Sign in with email + password. Resolves with the authenticated user's role. Throws on invalid credentials. */
+  signIn: (email: string, password: string) => Promise<Role>
+  /** Sign out and invalidate the Sanctum token server-side. */
+  signOut: () => Promise<void>
+  /** Temporarily switch to another role's view (admin-only feature). */
   impersonateAs: (role: Role) => void
-  /** UI-only: revert to original user after impersonation */
+  /** Revert back to the original user after impersonation. */
   revertImpersonation: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function resourceToAuthUser(resource: {
+  id: number
+  name: string
+  email: string
+  role: Role
+  avatar?: string
+}): AuthUser {
+  return {
+    id: String(resource.id),
+    name: resource.name,
+    email: resource.email,
+    avatar: resource.avatar ?? "",
+    role: resource.role,
+  }
+}
 
 /* ── Provider ────────────────────────────────────────────────────────────── */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [originalUser, setOriginalUser] = useState<AuthUser | null>(null)
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
 
-  const signIn = (role: Role) => {
-    // Replace the mock lookup with a real API user object when connecting to the API
+  // Hydrate session from a persisted token on first render.
+  useEffect(() => {
+    const token = apiClient.getToken()
+    const storedRole = localStorage.getItem(USER_ROLE_KEY) as Role | null
+
+    if (!token || !storedRole) {
+      setIsBootstrapping(false)
+      return
+    }
+
+    authService
+      .getMe(storedRole)
+      .then((resource) => setUser(resourceToAuthUser(resource)))
+      .catch(() => {
+        // Token is invalid or expired — clear storage
+        apiClient.clearToken()
+      })
+      .finally(() => setIsBootstrapping(false))
+  }, [])
+
+  const signIn = async (email: string, password: string): Promise<Role> => {
+    // authService.login already unwraps Laravel's `data` envelope
+    const { token, user: resource } = await authService.login({ email, password })
+
+    apiClient.setToken(token)
+    localStorage.setItem(USER_ROLE_KEY, resource.role)
+
     setOriginalUser(null)
-    setUser(role === Role.admin ? MOCK_ADMIN : MOCK_USER)
+    setUser(resourceToAuthUser(resource))
+
+    return resource.role
   }
 
-  const signOut = () => {
-    setOriginalUser(null)
-    setUser(null)
+  const signOut = async (): Promise<void> => {
+    try {
+      await authService.logout()
+    } finally {
+      // Always clear local state even if the server call fails
+      apiClient.clearToken()
+      setOriginalUser(null)
+      setUser(null)
+    }
   }
 
   const impersonateAs = (role: Role) => {
-    if (!user) return
-    if (user.role === role) return
+    if (!user || user.role === role) return
     setOriginalUser(user)
-    setUser(role === Role.admin ? MOCK_ADMIN : MOCK_USER)
+    // Swap in-memory role; full API-based impersonation can be added later
+    setUser({ ...user, role })
   }
 
   const revertImpersonation = () => {
@@ -73,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isImpersonating: !!originalUser,
+        isBootstrapping,
         signIn,
         signOut,
         impersonateAs,

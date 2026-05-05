@@ -1,95 +1,27 @@
 ﻿import * as React from "react"
 import faviconUrl from "@/assets/favicon.svg"
-import {
-  LayoutDashboardIcon,
-  ChartBarIcon,
-  UsersIcon,
-  ShoppingCartIcon,
-  PackageIcon,
-  Settings2Icon,
-  BookOpenIcon,
-  CircleHelpIcon,
-  
-} from "lucide-react"
+import { LayoutDashboardIcon } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/context/auth"
+import { adminSidebarConfig } from "@/config/admin-sidebar"
 
-/* --- Navigation data ---------------------------------------------------- */
+/* --- Dashboard nav item (always first) ---------------------------------- */
 
-const data = {
-  navPlatform: [
-    {
-      title: "Dashboard",
-      url: "/admin",
-      icon: <LayoutDashboardIcon />,
-      isActive: true,
-    },
-    {
-      title: "Analytics",
-      url: "/admin/analytics",
-      icon: <ChartBarIcon />,
-      items: [
-        { title: "Overview",  url: "/admin/analytics" },
-        { title: "Reports",   url: "/admin/analytics" },
-        { title: "Real-time", url: "/admin/analytics" },
-      ],
-    },
-    {
-      title: "Users",
-      url: "/admin/users",
-      icon: <UsersIcon />,
-      items: [
-        { title: "All Users",   url: "/admin/users" },
-        { title: "Roles",       url: "/admin/users" },
-        { title: "Permissions", url: "/admin/users" },
-      ],
-    },
-  ],
-
-  navManagement: [
-    {
-      title: "Courses",
-      url: "/admin/courses",
-      icon: <BookOpenIcon />,
-    },
-    {
-      title: "Orders",
-      url: "#",
-      icon: <ShoppingCartIcon />,
-      items: [
-        { title: "All Orders", url: "#" },
-        { title: "Pending",    url: "#" },
-        { title: "Fulfilled",  url: "#" },
-      ],
-    },
-    {
-      title: "Products",
-      url: "#",
-      icon: <PackageIcon />,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: <Settings2Icon />,
-    },
-  ],
-
-  navSecondary: [
-    { title: "Documentation", url: "#", icon: <BookOpenIcon /> },
-    { title: "Get Help",      url: "#", icon: <CircleHelpIcon /> },
-    { title: "Settings", url: "/admin/settings", icon: <Settings2Icon /> },
-  ],
-}
+const dashboardItem = [
+  {
+    title: "Dashboard",
+    url: "/admin",
+    icon: <LayoutDashboardIcon />,
+  },
+]
 
 /* --- Component ----------------------------------------------------------- */
 
@@ -119,9 +51,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain items={data.navPlatform}   label="Platform"   />
-        <NavMain items={data.navManagement} label="Management" />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={dashboardItem} />
+        {adminSidebarConfig.groups.map((group, index) => (
+          <NavMain key={index} items={group.items} />
+        ))}
       </SidebarContent>
 
       <SidebarFooter>

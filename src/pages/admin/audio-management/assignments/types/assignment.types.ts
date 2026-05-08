@@ -82,9 +82,23 @@ export interface CreateAssignmentResult {
   skippedUserIds: number[]
 }
 
+export interface AssignmentSummaryCard {
+  key: string
+  title: string
+  value: number | string
+}
+
+export interface AssignmentListResult {
+  data: AudioAssignmentResource[]
+  links: PaginationLinks
+  meta: PaginationMeta
+  cards?: AssignmentSummaryCard[]
+}
+
 export interface AssignmentState {
   items: AudioAssignmentResource[]
   meta: PaginationMeta | null
+  summaryCards: AssignmentSummaryCard[]
   isLoading: boolean
   error: string | null
   filters: AssignmentListFilters

@@ -2,7 +2,7 @@
 // Implements list/create/delete for audio assignments.
 
 import { useState } from "react"
-import { AlertCircleIcon, Loader2Icon, PlusIcon, RefreshCwIcon, XIcon } from "lucide-react"
+import { AlertCircleIcon, Loader2Icon, PlusIcon, RefreshCwIcon, XIcon, FileMusicIcon, Users, Layers } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -16,6 +16,7 @@ export default function AudioAssignmentsPage() {
   const {
     items,
     meta,
+    summaryCards,
     isLoading,
     error,
     filters,
@@ -27,6 +28,19 @@ export default function AudioAssignmentsPage() {
   } = useAssignment()
 
   const [createOpen, setCreateOpen] = useState(false)
+
+  function getSummaryIcon(key: string) {
+    switch (key) {
+      case "total_audio_assignments":
+        return FileMusicIcon
+      case "assigned_users":
+        return Users
+      case "assigned_audios":
+        return Layers
+      default:
+        return FileMusicIcon
+    }
+  }
 
   // Normalize delete errors so table can show a friendly message.
   async function handleDeleteAssignment(id: number) {
@@ -71,6 +85,25 @@ export default function AudioAssignmentsPage() {
           </Button>
         </div>
       </div>
+
+      {summaryCards.length > 0 && (
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {summaryCards.map((card) => {
+            const Icon = getSummaryIcon(card.key)
+            return (
+              <div key={card.key} className="flex flex-col items-center text-center rounded-3xl  p-6 shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/5 border mb-2 border-white/6 ">
+                  <Icon className="size-6 text-sky-400" />
+                </div>
+                <p className="text-4xl font-semibold tabular-nums text-foreground">{card.value}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                  {card.title}
+                </p>
+              </div>
+            )
+          })}
+        </section>
+      )}
 
       {/* Top-level list fetch errors */}
       {error && (

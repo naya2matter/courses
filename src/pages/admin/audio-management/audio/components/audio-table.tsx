@@ -15,8 +15,6 @@ import {
   ChevronRightIcon,
   Trash2Icon,
   Music2Icon,
-  EyeIcon,
-  XIcon,
   AlertCircleIcon,
   PencilIcon,
 } from "lucide-react"
@@ -43,17 +41,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-import { getAudioById } from "../service/audio.service"
-import { isApiError } from "@/lib/api"
 import type { AudioListFilters, AudioResource, PaginationMeta } from "../types/audio.types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -94,17 +83,6 @@ function TableSkeleton() {
   )
 }
 
-// ── Detail label/value pair used inside the Sheet ─────────────────────────────
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border bg-card/50 p-4 sm:p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-2 text-sm">{value ?? <span className="italic text-muted-foreground/60">—</span>}</p>
-    </div>
-  )
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -139,11 +117,6 @@ export function AudioTable({
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  // ── Detail Sheet state ────────────────────────────────────────────────────
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [detailItem, setDetailItem] = useState<AudioResource | null>(null)
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
-  const [detailError, setDetailError] = useState<string | null>(null)
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -161,36 +134,6 @@ export function AudioTable({
    * Open the detail sheet and fetch full audio info from the API by ID.
    * Keeps the sheet open on error so the user can see the message.
    */
-  async function handleViewDetail(audio: AudioResource) {
-    // Optimistically show the row data while the full detail loads
-    setDetailItem(audio)
-    setDetailError(null)
-    setSheetOpen(true)
-    setIsLoadingDetail(true)
-
-    try {
-      const detail = await getAudioById(audio.id)
-      setDetailItem(detail)
-    } catch (err) {
-      // Ignore browser navigation cancellations
-      if (err instanceof DOMException && err.name === "AbortError") {
-        setSheetOpen(false)
-        return
-      }
-
-      // Show a human-readable error inside the sheet
-      let message = "Failed to load audio details. Please try again."
-      if (isApiError(err)) {
-        message = err.status === 404 ? "Audio not found." : (err.message || message)
-      } else if (err instanceof Error) {
-        message = err.message
-      }
-      setDetailError(message)
-    } finally {
-      setIsLoadingDetail(false)
-    }
-  }
-
   /**
    * Execute confirmed soft-delete.
    * Keeps the dialog open and shows the error instead of closing on failure.
@@ -332,10 +275,10 @@ export function AudioTable({
                 <TableCell>
                   {audio.status ? (
                     <Badge
-                      variant={audio.status === "active" ? "default" : "secondary"}
+                      variant={typeof audio.status === "string" && audio.status === "active" ? "default" : "secondary"}
                       className="capitalize"
                     >
-                      {audio.status}
+                      {typeof audio.status === "string" ? audio.status : "Status summary"}
                     </Badge>
                   ) : (
                     <span className="italic text-muted-foreground/50">—</span>
@@ -356,17 +299,7 @@ export function AudioTable({
                 {/* Action buttons: View detail + Edit + Delete */}
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {/* Opens the detail Sheet */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => handleViewDetail(audio)}
-                      aria-label={`View details for ${audio.title ?? "audio"}`}
-                    >
-                      <EyeIcon className="h-3.5 w-3.5" />
-                    </Button>
+                    
 
                     {/* Navigate to the edit page, passing the row data via router state */}
                     <Button
@@ -435,139 +368,7 @@ export function AudioTable({
         </div>
       )}
 
-      {/* ── Detail Sheet ──────────────────────────────────────────────────── */}
-      {/* Slide-in panel that shows the full detail of a single audio item */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full overflow-y-auto px-2 sm:px-4">
-          <SheetHeader className="sticky top-0 z-10 mb-5 border-b bg-popover/95 pb-4 backdrop-blur supports-backdrop-filter:bg-popover/85">
-            <SheetTitle className="flex items-center gap-2 text-base">
-              <Music2Icon className="h-5 w-5 text-primary" />
-              Audio Details
-            </SheetTitle>
-            <SheetDescription>
-              Full information for the selected audio item.
-            </SheetDescription>
-          </SheetHeader>
-
-          {/* Loading spinner while fetching the full detail */}
-          {isLoadingDetail && (
-            <div className="flex items-center justify-center rounded-xl border bg-card/40 px-4 py-16">
-              <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {/* Error message if the detail fetch failed */}
-          {!isLoadingDetail && detailError && (
-            <Alert variant="destructive" className="mx-1 sm:mx-2">
-              <AlertCircleIcon className="size-4" />
-              <AlertDescription className="flex items-center justify-between gap-4">
-                <span>{detailError}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6 shrink-0"
-                  onClick={() => setSheetOpen(false)}
-                  aria-label="Close"
-                >
-                  <XIcon className="size-3.5" />
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Detail fields — shown once data is loaded */}
-          {!isLoadingDetail && !detailError && detailItem && (
-            <div className="space-y-5 pb-8 px-1 sm:px-2">
-              <div className="rounded-xl border bg-card/60 p-5 sm:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected audio</p>
-                    <p className="mt-1 text-base font-semibold">
-                      {detailItem.title ?? <span className="italic text-muted-foreground/60">Untitled</span>}
-                    </p>
-                    <p className="text-xs text-muted-foreground">ID #{detailItem.id}</p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSheetOpen(false)
-                      navigate(`/admin/audio-management/audio/edit/${detailItem.id}`, {
-                        state: { audio: detailItem },
-                      })
-                    }}
-                    className="w-fit"
-                  >
-                    <PencilIcon className="mr-2 h-3.5 w-3.5" />
-                    Edit Audio
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-              <DetailRow label="ID" value={`#${detailItem.id}`} />
-              <DetailRow label="Title" value={detailItem.title} />
-              <DetailRow label="Description" value={detailItem.description} />
-              <DetailRow label="Course" value={detailItem.course} />
-              <DetailRow label="Category" value={detailItem.category} />
-              <DetailRow label="Duration" value={formatDuration(detailItem.duration)} />
-              <DetailRow label="File size" value={detailItem.file_size != null ? String(detailItem.file_size) : null} />
-              <DetailRow label="MIME type" value={detailItem.mime_type} />
-              <DetailRow
-                label="Status"
-                value={
-                  detailItem.status ? (
-                    <Badge
-                      variant={detailItem.status === "active" ? "default" : "secondary"}
-                      className="capitalize"
-                    >
-                      {detailItem.status}
-                    </Badge>
-                  ) : null
-                }
-              />
-
-              {/* Clickable URL if the audio file link is available */}
-              <DetailRow
-                label="URL"
-                value={
-                  detailItem.url ? (
-                    <a
-                      href={detailItem.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="break-all text-primary underline-offset-4 hover:underline text-sm"
-                    >
-                      {detailItem.url}
-                    </a>
-                  ) : null
-                }
-              />
-
-              <DetailRow
-                label="Created"
-                value={
-                  detailItem.created_at
-                    ? new Date(detailItem.created_at).toLocaleString()
-                    : null
-                }
-              />
-
-              <DetailRow
-                label="Updated"
-                value={
-                  detailItem.updated_at
-                    ? new Date(detailItem.updated_at).toLocaleString()
-                    : null
-                }
-              />
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      
 
       {/* ── Delete Confirmation Dialog ─────────────────────────────────────── */}
       <AlertDialog

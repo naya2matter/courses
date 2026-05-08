@@ -6,7 +6,7 @@
 //   • Render the CategoryTable which handles inline edit/delete
 //   • Provide a "Create Category" button that opens the CategoryFormSheet
 
-import { AlertCircleIcon, XIcon, Loader2Icon, RefreshCwIcon, PlusIcon } from "lucide-react"
+import { AlertCircleIcon, XIcon, Loader2Icon, RefreshCwIcon, PlusIcon, FileMusicIcon, BookOpen, Activity, Clock } from "lucide-react"
 import { useRef } from "react"
 import type { CategoryTableHandle } from "./components/category-table"
 
@@ -20,6 +20,7 @@ export default function AudioCategoriesPage() {
   // Pull everything we need from the custom hook (backed by Zustand)
   const {
     items,
+    summaryCards,
     isLoading,
     error,
     clearError,
@@ -28,6 +29,25 @@ export default function AudioCategoriesPage() {
     updateCategory,
     deleteCategory,
   } = useCategory()
+
+  const totalCategories = items.length
+  const sortedCategories = items.filter(
+    (category) => typeof category.sort_order === "number" && category.sort_order >= 0,
+  ).length
+  const unsortedCategories = totalCategories - sortedCategories
+
+  const getSummaryIcon = (key: string) => {
+    switch (key) {
+      case "total_categories":
+        return FileMusicIcon
+      case "total_audios":
+        return BookOpen
+      case "active_categories":
+        return Activity
+      default:
+        return Clock
+    }
+  }
 
   // Ref to control the child table's imperative API (open create/edit sheet)
   const tableRef = useRef<CategoryTableHandle | null>(null)
@@ -70,6 +90,28 @@ export default function AudioCategoriesPage() {
           </Button>
         </div>
       </div>
+
+      {/* ── Summary strip (icon-first, no shadows) ─────────────────────────── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 items-center">
+        {(summaryCards.length > 0 ? summaryCards : [
+          { key: "total_categories", title: "Total Categories", value: totalCategories },
+          { key: "total_audios", title: "Total Audios", value: sortedCategories },
+          { key: "active_categories", title: "Categories With Audio", value: unsortedCategories },
+        ]).map((card) => {
+          const Icon = getSummaryIcon(card.key)
+          return (
+            <div key={card.key} className="flex flex-col items-center text-center rounded-3xl  p-6 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/5 border border-white/6 mb-2">
+                <Icon className="size-6 text-sky-400" />
+              </div>
+              <p className="text-4xl font-semibold tabular-nums text-foreground">{card.value}</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                {card.title}
+              </p>
+            </div>
+          )
+        })}
+      </section>
 
       {/* ── Top-level fetch error banner ─────────────────────────────────────── */}
       {error && (

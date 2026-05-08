@@ -20,6 +20,7 @@ const DEFAULT_PER_PAGE = 15
 export const useAssignmentStore = create<AssignmentState>((set, get) => ({
   items: [],
   meta: null,
+  summaryCards: [],
   isLoading: false,
   error: null,
   filters: { page: 1, per_page: DEFAULT_PER_PAGE },
@@ -31,7 +32,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
 
     try {
       const response = await getAllAssignments(mergedFilters)
-      set({ items: response.data, meta: response.meta, isLoading: false })
+      set({ items: response.data, meta: response.meta, summaryCards: response.cards ?? [], isLoading: false })
     } catch (err) {
       // Ignore cancellation only.
       if (err instanceof DOMException && err.name === "AbortError") {

@@ -32,12 +32,25 @@ export interface UpdateCategoryPayload {
   sort_order?: number    // optional, min 0
 }
 
+export interface SummaryCard {
+  key: string
+  title: string
+  value: number | string
+}
+
+export interface CategoryListResult {
+  items: AudioCategoryResource[]
+  cards: SummaryCard[]
+}
+
 // ── Zustand store shape ───────────────────────────────────────────────────────
 
 /** Full state + actions managed by the category Zustand store */
 export interface CategoryState {
   /** Full list of audio categories (not paginated) */
   items: AudioCategoryResource[]
+  /** Summary cards returned by the category API */
+  summaryCards: SummaryCard[]
   /** True while the list is being fetched */
   isLoading: boolean
   /** Non-null when the last fetch failed */

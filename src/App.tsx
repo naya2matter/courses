@@ -60,6 +60,10 @@ import { UserMyCourses } from "@/pages/user/my-courses"
 import { UserProgress } from "@/pages/user/progress"
 import { UserSchedule } from "@/pages/user/schedule"
 
+// User — Audio pages
+import { UserAudioPage } from "@/pages/user/audio/index"
+import { UserAudioDetailPage } from "@/pages/user/audio/audio-detail"
+
 function App() {
   return (
     <AuthProvider>
@@ -123,6 +127,10 @@ function App() {
               <Route path="/user/courses"  element={<UserMyCourses />} />
               <Route path="/user/progress" element={<UserProgress />} />
               <Route path="/user/schedule" element={<UserSchedule />} />
+
+              {/* Audio — list + detail/player */}
+              <Route path="/user/audio"     element={<UserAudioPage />} />
+              <Route path="/user/audio/:id" element={<UserAudioDetailPage />} />
             </Route>
           </Route>
 

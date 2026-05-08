@@ -4,6 +4,8 @@
 import { apiClient } from "@/lib/api"
 import type {
   AssignmentListFilters,
+  AssignmentListResult,
+  AssignmentSummaryCard,
   AudioAssignmentResource,
   CreateAssignmentPayload,
   CreateAssignmentResult,
@@ -11,8 +13,9 @@ import type {
 } from "../types/assignment.types"
 
 type ListApiResponse =
+  | AssignmentListResult
   | LaravelPaginated<AudioAssignmentResource>
-  | { data?: AudioAssignmentResource[]; meta?: LaravelPaginated<AudioAssignmentResource>["meta"]; links?: LaravelPaginated<AudioAssignmentResource>["links"] }
+  | { data?: AudioAssignmentResource[]; meta?: LaravelPaginated<AudioAssignmentResource>["meta"]; links?: LaravelPaginated<AudioAssignmentResource>["links"]; cards?: AssignmentSummaryCard[] }
   | AudioAssignmentResource[]
 
 type CreateApiResponse =
@@ -35,7 +38,7 @@ function buildQuery(filters: AssignmentListFilters): string {
   return qs ? `?${qs}` : ""
 }
 
-function normalizeListResponse(response: ListApiResponse): LaravelPaginated<AudioAssignmentResource> {
+function normalizeListResponse(response: ListApiResponse): AssignmentListResult {
   // Case 1: endpoint returned array directly.
   if (Array.isArray(response)) {
     return {
@@ -66,6 +69,9 @@ function normalizeListResponse(response: ListApiResponse): LaravelPaginated<Audi
       path: "",
     },
     links: response.links ?? { first: null, last: null, prev: null, next: null },
+    cards: Array.isArray((response as { cards?: AssignmentSummaryCard[] }).cards)
+      ? (response as { cards?: AssignmentSummaryCard[] }).cards
+      : [],
   }
 }
 
@@ -82,7 +88,7 @@ function normalizeCreateResponse(response: CreateApiResponse): CreateAssignmentR
 
 export async function getAllAssignments(
   filters: AssignmentListFilters = {},
-): Promise<LaravelPaginated<AudioAssignmentResource>> {
+): Promise<AssignmentListResult> {
   const query = buildQuery(filters)
   const response = await apiClient.get<ListApiResponse>(`/admin/audio-assignments/getAll${query}`)
   return normalizeListResponse(response)

@@ -6,14 +6,17 @@
 import { apiClient } from "@/lib/api"
 import type {
   AudioCategoryResource,
+  CategoryListResult,
   CreateCategoryPayload,
   UpdateCategoryPayload,
+  SummaryCard,
 } from "../types/category.types"
 
 type CategoriesApiResponse =
   | AudioCategoryResource[]
   | {
       data?: AudioCategoryResource[]
+      cards?: SummaryCard[]
     }
 
 /**
@@ -26,15 +29,23 @@ function normalizeCategoryList(response: CategoriesApiResponse): AudioCategoryRe
   return []
 }
 
+function normalizeSummaryCards(response: CategoriesApiResponse): SummaryCard[] {
+  if (!response || Array.isArray(response)) return []
+  return Array.isArray(response.cards) ? response.cards : []
+}
+
 /**
  * Fetch all audio categories.
  * Endpoint: GET /admin/audio-categories/getAll
  *
- * Returns a plain array (not paginated).
+ * Returns a plain array (not paginated) with optional summary cards.
  */
-export async function getAllCategories(): Promise<AudioCategoryResource[]> {
+export async function getAllCategories(): Promise<CategoryListResult> {
   const response = await apiClient.get<CategoriesApiResponse>("/admin/audio-categories/getAll")
-  return normalizeCategoryList(response)
+  return {
+    items: normalizeCategoryList(response),
+    cards: normalizeSummaryCards(response),
+  }
 }
 
 /**

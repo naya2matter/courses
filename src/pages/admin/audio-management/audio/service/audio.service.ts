@@ -5,10 +5,42 @@
 import { apiClient } from "@/lib/api"
 import type { AudioListFilters, AudioResource, LaravelPaginated } from "../types/audio.types"
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api"
+
 type BackendAudioCategory = {
   id?: number
   name?: string | null
 } | null
+
+type BackendAudioStatusSummary = {
+  total_listeners?: number | null
+  completion_rate?: number | null
+  average_progress?: number | null
+  total_hours_listened?: number | null
+}
+
+type BackendAudioProgress = {
+  current_time?: number | null
+  total_listened_time?: number | null
+  completion_percentage?: number | null
+  is_completed?: boolean | null
+  last_accessed_at?: string | null
+}
+
+type BackendAudioListener = {
+  user?: {
+    id?: number | null
+    name?: string | null
+    email?: string | null
+  } | null
+  progress_percentage?: number | null
+  current_position_seconds?: number | null
+  total_duration_seconds?: number | null
+  status?: string | null
+  listening_time_minutes?: number | null
+  last_accessed_at?: string | null
+  assigned_at?: string | null
+}
 
 type BackendAudioResource = {
   id: number
@@ -17,13 +49,17 @@ type BackendAudioResource = {
   url?: string | null
   duration?: number | string | null
   file_size?: number | string | null
+  file_size_bytes?: number | null
   mime_type?: string | null
   course?: string | null
-  status?: string | null
+  status?: string | BackendAudioStatusSummary | null
   audio_category_id?: number | null
   audio_category?: BackendAudioCategory
   thumbnail_path?: string | null
   has_audio_file?: boolean
+  progress?: BackendAudioProgress
+  stream_url?: string | null
+  listeners?: BackendAudioListener[]
   created_at?: string | null
   updated_at?: string | null
 }
@@ -68,6 +104,7 @@ function toAudioResource(audio: BackendAudioResource): AudioResource {
     url: audio.url ?? null,
     duration: audio.duration ?? null,
     file_size: audio.file_size ?? null,
+    file_size_bytes: audio.file_size_bytes ?? null,
     mime_type: audio.mime_type ?? null,
     course: audio.course ?? null,
     status: audio.status ?? null,
@@ -80,7 +117,10 @@ function toAudioResource(audio: BackendAudioResource): AudioResource {
         }
       : null,
     thumbnail_path: audio.thumbnail_path ?? null,
-    has_audio_file: audio.has_audio_file ?? false,
+    has_audio_file: audio.has_audio_file ?? null,
+    progress: audio.progress ?? null,
+    stream_url: audio.stream_url ?? null,
+    listeners: audio.listeners ?? null,
     created_at: audio.created_at ?? null,
     updated_at: audio.updated_at ?? null,
   }
@@ -149,6 +189,41 @@ export async function getAudioById(id: number): Promise<AudioResource> {
     `/admin/audio/getById/${id}`,
   )
   return normalizeSingleAudioResponse(response)
+}
+
+/**
+ * GET /admin/audio/stream/{id}
+ * Fetches the audio binary from the admin stream endpoint and returns an
+ * object URL suitable for a browser <audio> player.
+ *
+ * The returned URL should be revoked when the caller unmounts the component.
+ */
+export async function getAdminAudioStreamBlobUrl(
+  id: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  const token = apiClient.getToken()
+
+  const response = await fetch(`${API_BASE}/admin/audio/stream/${id}`, {
+    method: "GET",
+    headers: {
+      Accept: "audio/*,*/*",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    signal,
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const message = (payload as { message?: string } | null)?.message ??
+      `Stream failed (${response.status})`
+    const err = new Error(message) as Error & { status: number }
+    err.status = response.status
+    throw err
+  }
+
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
 }
 
 /**

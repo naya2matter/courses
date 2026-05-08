@@ -7,6 +7,7 @@ import {
   CalendarIcon,
   CircleHelpIcon,
   MessageSquareIcon,
+  HeadphonesIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -41,6 +42,11 @@ const navLearning = [
     title: "Schedule",
     url: "/user/schedule",
     icon: <CalendarIcon />,
+  },
+  {
+    title: "My Audio",
+    url: "/user/audio",
+    icon: <HeadphonesIcon />,
   },
 ]
 

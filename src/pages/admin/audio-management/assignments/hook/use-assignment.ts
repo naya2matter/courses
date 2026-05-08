@@ -15,6 +15,7 @@ export function useAssignment() {
   const setFilters = useAssignmentStore((s) => s.setFilters)
   const createAssignment = useAssignmentStore((s) => s.createAssignment)
   const deleteAssignment = useAssignmentStore((s) => s.deleteAssignment)
+  const summaryCards = useAssignmentStore((s) => s.summaryCards)
   const clearError = useAssignmentStore((s) => s.clearError)
 
   // Initial fetch once when page mounts.
@@ -26,6 +27,7 @@ export function useAssignment() {
   return {
     items,
     meta,
+    summaryCards,
     isLoading,
     error,
     filters,

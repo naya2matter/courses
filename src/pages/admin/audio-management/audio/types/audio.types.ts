@@ -28,18 +28,52 @@ export interface AudioResource {
     name?: string | null
   } | null
   thumbnail_path?: string | null
-  has_audio_file?: boolean
+  has_audio_file?: boolean | null
   /** File size in bytes or human-readable */
   file_size?: number | string | null
+  file_size_bytes?: number | null
   /** MIME type, e.g. audio/mpeg */
   mime_type?: string | null
   /** Name of the course or lesson this audio belongs to */
   course?: string | null
   /** Any extra category/tag information */
   category?: string | null
-  status?: string | null
+  status?: string | AudioStatusSummary | null
+  progress?: AudioProgress | null
+  stream_url?: string | null
+  listeners?: AudioListener[] | null
   created_at?: string | null
   updated_at?: string | null
+}
+
+export interface AudioStatusSummary {
+  total_listeners?: number | null
+  completion_rate?: number | null
+  average_progress?: number | null
+  total_hours_listened?: number | null
+}
+
+export interface AudioProgress {
+  current_time?: number | null
+  total_listened_time?: number | null
+  completion_percentage?: number | null
+  is_completed?: boolean | null
+  last_accessed_at?: string | null
+}
+
+export interface AudioListener {
+  user?: {
+    id?: number | null
+    name?: string | null
+    email?: string | null
+  } | null
+  progress_percentage?: number | null
+  current_position_seconds?: number | null
+  total_duration_seconds?: number | null
+  status?: string | null
+  listening_time_minutes?: number | null
+  last_accessed_at?: string | null
+  assigned_at?: string | null
 }
 
 // ── Laravel paginated envelope ────────────────────────────────────────────────

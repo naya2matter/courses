@@ -1,4 +1,5 @@
 export type AudioMetadata = {
+  title?: string
   url?: string
   mimeType?: string
   fileSize?: number
@@ -55,6 +56,7 @@ export async function extractAudioMetadata(file: File): Promise<AudioMetadata> {
   })
 
   return {
+    title: file.name,
     url: objectUrl,
     mimeType: file.type?.trim() ? file.type : "Unknown",
     fileSize: Number.isFinite(file.size) ? file.size : undefined,
@@ -64,6 +66,27 @@ export async function extractAudioMetadata(file: File): Promise<AudioMetadata> {
   }
 }
 
+async function loadRemoteAudioDuration(url: string): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const audio = document.createElement("audio")
+    audio.preload = "metadata"
+    audio.src = url
+
+    audio.onloadedmetadata = () => {
+      const parsed = Number.isFinite(audio.duration) ? audio.duration : undefined
+      audio.removeAttribute("src")
+      audio.load()
+      resolve(parsed)
+    }
+
+    audio.onerror = () => {
+      audio.removeAttribute("src")
+      audio.load()
+      resolve(undefined)
+    }
+  })
+}
+
 export async function extractAudioMetadataFromUrl(url: string): Promise<AudioMetadata> {
   if (!url?.trim()) return {}
 
@@ -71,24 +94,30 @@ export async function extractAudioMetadataFromUrl(url: string): Promise<AudioMet
 
   try {
     const response = await fetch(url, { method: "HEAD" })
-    if (!response.ok) return metadata
+    if (response.ok) {
+      const contentType = response.headers.get("content-type")?.trim()
+      const contentLength = response.headers.get("content-length")
 
-    const contentType = response.headers.get("content-type")?.trim()
-    const contentLength = response.headers.get("content-length")
+      if (contentType) {
+        metadata.mimeType = contentType
+      }
 
-    if (contentType) {
-      metadata.mimeType = contentType
-    }
-
-    if (contentLength) {
-      const parsedSize = Number.parseInt(contentLength, 10)
-      if (Number.isFinite(parsedSize) && parsedSize >= 0) {
-        metadata.fileSize = parsedSize
-        metadata.fileSizeFormatted = formatFileSize(parsedSize)
+      if (contentLength) {
+        const parsedSize = Number.parseInt(contentLength, 10)
+        if (Number.isFinite(parsedSize) && parsedSize >= 0) {
+          metadata.fileSize = parsedSize
+          metadata.fileSizeFormatted = formatFileSize(parsedSize)
+        }
       }
     }
   } catch {
     // CORS or network errors are intentionally ignored to keep the UI resilient.
+  }
+
+  const duration = await loadRemoteAudioDuration(url)
+  if (duration != null) {
+    metadata.duration = duration
+    metadata.durationFormatted = formatDuration(duration)
   }
 
   return metadata

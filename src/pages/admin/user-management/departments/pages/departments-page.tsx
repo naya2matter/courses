@@ -4,12 +4,14 @@
 
 import { useState } from "react"
 import { AlertCircleIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { useDepartments } from "../hook/use-departments"
 import { DepartmentsList } from "../components/departments-list"
 import { DepartmentSheet } from "../components/department-sheet"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { Department } from "../types/department.types"
+import { PageHeader } from "@/components/admin/page-header"
 
 export function DepartmentsPageContent() {
   const { departments, isLoading, error, clearError, refetch } = useDepartments()
@@ -33,35 +35,30 @@ export function DepartmentsPageContent() {
   return (
     <div className="space-y-6">
       {/* ── Page header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Department Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            View and manage all departments, subdepartments, and their users.
-          </p>
-        </div>
-        {/* Action buttons — responsive row on larger screens */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={handleCreate}
-            className="w-fit"
-          >
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Create Department
-          </Button>
-          <Button
-            onClick={refetch}
-            disabled={isLoading}
-            variant="outline"
-            className="w-fit"
-          >
-            {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-            Refresh Data
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Department Management"
+        description="View and manage all departments, subdepartments, and their users."
+        actions={
+          <>
+            <Button
+              onClick={handleCreate}
+              className="w-fit"
+            >
+              <PlusIcon className="mr-2 h-4 w-4 " />
+              Create Department
+            </Button>
+            <Button
+              onClick={refetch}
+              disabled={isLoading}
+              variant="outline"
+              className="w-fit"
+            >
+              {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+              Refresh Data
+            </Button>
+          </>
+        }
+      />
 
       {/* ── Error banner (dismissed per session, AbortError is never shown) ── */}
       {error && (

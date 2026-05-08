@@ -16,6 +16,7 @@ import { useCategoryStore } from "../store/category.store"
  */
 export function useCategory() {
   const items = useCategoryStore((s) => s.items)
+  const summaryCards = useCategoryStore((s) => s.summaryCards)
   const isLoading = useCategoryStore((s) => s.isLoading)
   const error = useCategoryStore((s) => s.error)
   const fetchCategories = useCategoryStore((s) => s.fetchCategories)
@@ -32,6 +33,7 @@ export function useCategory() {
 
   return {
     items,
+    summaryCards,
     isLoading,
     error,
     clearError,

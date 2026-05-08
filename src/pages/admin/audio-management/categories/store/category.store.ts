@@ -12,6 +12,7 @@ import {
 } from "../service/category.service"
 import type {
   AudioCategoryResource,
+  CategoryListResult,
   CategoryState,
   CreateCategoryPayload,
   UpdateCategoryPayload,
@@ -20,6 +21,7 @@ import type {
 export const useCategoryStore = create<CategoryState>((set, get) => ({
   // ── Initial state ──────────────────────────────────────────────────────────
   items: [],
+  summaryCards: [],
   isLoading: false,
   error: null,
 
@@ -33,8 +35,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      const items = await getAllCategories()
-      set({ items, isLoading: false })
+      const response: CategoryListResult = await getAllCategories()
+      set({ items: response.items, summaryCards: response.cards, isLoading: false })
     } catch (err) {
       // Silently ignore browser navigation cancellations — not a real error
       if (err instanceof DOMException && err.name === "AbortError") {

@@ -76,7 +76,7 @@ function HoverPanel({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{ top, left, position: "fixed" }}
-      className="z-9999 min-w-47.5 nav-hover-panel rounded-2xl border border-white/8 bg-[#0f0d24]/90 p-2 shadow-[0_12px_48px_rgba(79,70,229,0.32),0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur-2xl"
+      className="z-9999 min-w-47.5 nav-hover-panel rounded-2xl border border-white/8 bg-[#0f0d24]/90 p-2 backdrop-blur-2xl"
     >
       {/* Section label */}
       <p className="mb-1 px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35 select-none">
@@ -88,12 +88,12 @@ function HoverPanel({
         return (
           <Link
             key={sub.title}
-            ref={(el) => { itemRefs.current[idx] = el }}
+            ref={(el: HTMLAnchorElement | null) => { itemRefs.current[idx] = el }}
             to={sub.url}
             role="menuitem"
             tabIndex={0}
             onFocus={() => setFocusedIdx(idx)}
-            onKeyDown={(e) => handleKeyDown(e, idx)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLAnchorElement>) => handleKeyDown(e, idx)}
             data-slot="sidebar-menu-sub-button"
             data-active={isActive}
             className={[
@@ -107,7 +107,7 @@ function HoverPanel({
               className={[
                 "size-1.5 shrink-0 rounded-full transition-all duration-150",
                 isActive
-                  ? "bg-indigo-400 shadow-[0_0_8px_2px_rgba(99,102,241,0.55)]"
+                  ? "bg-indigo-400"
                   : "bg-white/20 group-hover:bg-indigo-400/80",
               ].join(" ")}
             />
@@ -133,9 +133,12 @@ export function NavMain({
   const isCollapsed = state === "collapsed"
   const { pathname } = useLocation()
 
-  const isSubActive = (url: string) =>
-    pathname === url ||
-    (url !== "/admin" && pathname.startsWith(url + "/"))
+  const isSubActive = (url: string) => {
+    if (url === "/admin" || url === "/user") {
+      return pathname === url
+    }
+    return pathname === url || pathname.startsWith(url + "/")
+  }
 
   const isGroupActive = (item: NavItem) =>
     item.items?.some((sub) => isSubActive(sub.url)) ??
@@ -202,7 +205,7 @@ export function NavMain({
     <>
       <SidebarGroup>
         {label && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
           {items.map((item) =>
             item.items?.length ? (
               isCollapsed ? (
@@ -258,7 +261,7 @@ export function NavMain({
                                     className={[
                                       "size-1.5 shrink-0 rounded-full transition-all duration-200",
                                       subActive
-                                        ? "bg-indigo-400 shadow-[0_0_6px_2px_rgba(99,102,241,0.5)]"
+                                        ? "bg-indigo-400"
                                         : "bg-white/20 group-hover:bg-white/45",
                                     ].join(" ")}
                                   />

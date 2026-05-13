@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider } from "@/context/auth"
 import { Role } from "@/types/auth"
 import { ProtectedRoute } from "@/routes/protected-route"
+import { Toaster } from "@/components/ui/sonner"
 
 // Layouts
 import { AdminLayout } from "@/layouts/admin-layout"
@@ -22,7 +23,10 @@ import ResendLinksPage from "@/pages/admin/user-management/resend-links/resend-l
 
 // Admin — Course Management
 import LiveCoursesPage from "@/pages/admin/course-management/live-courses/live-courses"
+import ViewCoursePage from "@/pages/admin/course-management/live-courses/pages/view-course-page"
+import CourseFormPage from "@/pages/admin/course-management/live-courses/pages/course-form-page"
 import OnlineCoursesPage from "@/pages/admin/course-management/online-courses/online-courses"
+import AttendancePage from "@/pages/admin/course-management/attendance/attendance-page"
 
 // Admin — Report Management
 import ReportLiveCoursesPage from "@/pages/admin/report-management/live-courses/live-courses"
@@ -56,13 +60,17 @@ import BugReportsPage from "@/pages/admin/bug-reports/bug-reports"
 
 // User pages
 import { UserDashboard } from "@/pages/user/dashboard"
-import { UserMyCourses } from "@/pages/user/my-courses"
+import { UserCoursesPage } from "@/pages/user/courses/courses-page"
+import { CourseDetailPage } from "@/pages/user/courses/pages/course-detail-page"
 import { UserProgress } from "@/pages/user/progress"
 import { UserSchedule } from "@/pages/user/schedule"
 
 // User — Audio pages
 import { UserAudioPage } from "@/pages/user/audio/index"
 import { UserAudioDetailPage } from "@/pages/user/audio/audio-detail"
+
+// User — Clocking / Attendance
+import { UserClockingPage } from "@/pages/user/clocking/clocking-page"
 
 function App() {
   return (
@@ -86,7 +94,11 @@ function App() {
 
               {/* Course Management */}
               <Route path="/admin/course-management/live-courses" element={<LiveCoursesPage />} />
+              <Route path="/admin/course-management/live-courses/create" element={<CourseFormPage />} />
+              <Route path="/admin/course-management/live-courses/edit/:id" element={<CourseFormPage />} />
+              <Route path="/admin/course-management/live-courses/:id" element={<ViewCoursePage />} />
               <Route path="/admin/course-management/online-courses" element={<OnlineCoursesPage />} />
+              <Route path="/admin/course-management/attendance" element={<AttendancePage />} />
 
               {/* Report Management */}
               <Route path="/admin/report-management/live-courses" element={<ReportLiveCoursesPage />} />
@@ -124,13 +136,17 @@ function App() {
           <Route element={<ProtectedRoute requiredRole={Role.user} />}>
             <Route element={<UserLayout />}>
               <Route path="/user"          element={<UserDashboard />} />
-              <Route path="/user/courses"  element={<UserMyCourses />} />
+              <Route path="/user/courses"  element={<UserCoursesPage />} />
+              <Route path="/user/courses/:id" element={<CourseDetailPage />} />
               <Route path="/user/progress" element={<UserProgress />} />
               <Route path="/user/schedule" element={<UserSchedule />} />
 
               {/* Audio — list + detail/player */}
               <Route path="/user/audio"     element={<UserAudioPage />} />
               <Route path="/user/audio/:id" element={<UserAudioDetailPage />} />
+
+              {/* Clocking / Attendance */}
+              <Route path="/user/clocking" element={<UserClockingPage />} />
             </Route>
           </Route>
 
@@ -138,6 +154,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        <Toaster richColors closeButton position="top-right" />
       </BrowserRouter>
     </AuthProvider>
   )

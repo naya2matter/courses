@@ -9,6 +9,7 @@ import {
   NewspaperIcon,
   MessageSquareIcon,
   BugIcon,
+  FileTextIcon,
 } from "lucide-react"
 
 export type SidebarSubItem = {
@@ -56,6 +57,23 @@ export const adminSidebarConfig: AdminSidebarConfig = {
           items: [
             { title: "Live Courses", url: "/admin/course-management/live-courses" },
             { title: "Online Courses", url: "/admin/course-management/online-courses" },
+            { title: "Attendance", url: "/admin/course-management/attendance" },
+          ],
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          title: "Quiz Management",
+          url: "/admin/quiz-management",
+          icon: <FileTextIcon />,
+          items: [
+            { title: "List All Quizzes", url: "/admin/quiz-management/list-quizzes" },
+            { title: "Create New Quiz", url: "/admin/quiz-management/create-quiz" },
+            { title: "Quiz Details & Questions", url: "/admin/quiz-management/quiz-details" },
+            { title: "Update Quiz Fields", url: "/admin/quiz-management/update-quiz" },
+            { title: "Soft Delete Quiz", url: "/admin/quiz-management/soft-delete-quiz" },
           ],
         },
       ],

@@ -24,7 +24,7 @@ export function NavSecondary({
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className="gap-0.5">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>

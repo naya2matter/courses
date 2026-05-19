@@ -69,11 +69,8 @@ export const adminSidebarConfig: AdminSidebarConfig = {
           url: "/admin/quiz-management",
           icon: <FileTextIcon />,
           items: [
-            { title: "List All Quizzes", url: "/admin/quiz-management/list-quizzes" },
-            { title: "Create New Quiz", url: "/admin/quiz-management/create-quiz" },
-            { title: "Quiz Details & Questions", url: "/admin/quiz-management/quiz-details" },
-            { title: "Update Quiz Fields", url: "/admin/quiz-management/update-quiz" },
-            { title: "Soft Delete Quiz", url: "/admin/quiz-management/soft-delete-quiz" },
+            { title: "Quizzes", url: "/admin/quiz-management/list-quizzes" },
+            { title: "Quiz Assignments", url: "/admin/quiz-management/assignments" },
           ],
         },
       ],

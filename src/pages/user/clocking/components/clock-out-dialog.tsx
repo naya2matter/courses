@@ -1,4 +1,4 @@
-// --- ClockOutDialog (Redesigned) ----------------------------------------------
+ï»¿// --- ClockOutDialog (Redesigned) ----------------------------------------------
 
 import { useEffect, useState } from "react"
 import { LogOutIcon, Loader2Icon, AlertCircleIcon, StarIcon } from "lucide-react"
@@ -100,7 +100,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
   const [rating, setRating] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [elapsed, setElapsed] = useState("—")
+  const [elapsed, setElapsed] = useState("â€”")
 
   useEffect(() => {
     if (!open || !clockInTime) return
@@ -257,7 +257,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
             {isLoading ? (
               <>
                 <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                Ending…
+                Endingâ€¦
               </>
             ) : (
               <>

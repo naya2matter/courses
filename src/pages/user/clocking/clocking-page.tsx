@@ -7,12 +7,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
-  LayersIcon,
   LogInIcon,
   LogOutIcon,
   RefreshCwIcon,
   StarIcon,
-  TimerIcon,
   BriefcaseIcon,
   
   
@@ -56,13 +54,6 @@ function formatDuration(minutes: number | null | undefined): string {
   const m = minutes % 60
   if (h === 0) return `${m}m`
   if (m === 0) return `${h}h`
-  return `${h}h ${m}m`
-}
-
-function formatTotalTime(minutes: number): string {
-  if (minutes === 0) return "0h 0m"
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
   return `${h}h ${m}m`
 }
 
@@ -243,29 +234,6 @@ function NoSessionState({ onClockIn }: { onClockIn: () => void }) {
 //     </div>
 //   )
 // }
-
-function StatCard({ title, value, icon: Icon, trend, color }: { title: string, value: string | number, icon: any, trend: string, color: 'indigo' | 'emerald' | 'amber' }) {
-  const colorStyles = {
-    indigo: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20",
-    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
-    amber: "text-amber-500 bg-amber-500/10 border-amber-500/20"
-  }
-  
-  return (
-    <div className="border border-border/50 bg-card rounded-xl p-5 shadow-xs flex flex-col justify-between">
-      <div className="flex justify-between items-start mb-4">
-        <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
-        <div className={`p-2 rounded-md border ${colorStyles[color]}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-      <div>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1">{trend}</p>
-      </div>
-    </div>
-  )
-}
 
 // 4. TIMELINE HISTORY
 function SessionTimelineItem({ record }: { record: ClockingRecord }) {

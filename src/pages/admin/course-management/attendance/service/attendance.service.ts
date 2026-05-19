@@ -37,10 +37,20 @@ function buildQuery(filters: AttendanceListFilters): string {
   return qs ? `?${qs}` : ""
 }
 
+function normalizeClockingRecord(record: ClockingRecord): ClockingRecord {
+  return {
+    ...record,
+    duration:
+      record.duration ??
+      record.duration_in_minutes ??
+      null,
+  }
+}
+
 function normalizeListResponse(response: ListApiResponse): AttendanceListResult {
   if (Array.isArray(response)) {
     return {
-      data: response,
+      data: response.map(normalizeClockingRecord),
       meta: {
         current_page: 1,
         from: response.length > 0 ? 1 : null,
@@ -59,7 +69,9 @@ function normalizeListResponse(response: ListApiResponse): AttendanceListResult 
   const cards = responseWithCards.cards ?? []
 
   return {
-    data: Array.isArray(response.data) ? response.data : [],
+    data: Array.isArray(response.data)
+      ? response.data.map(normalizeClockingRecord)
+      : [],
     meta: response.meta ?? {
       current_page: 1,
       from: null,
@@ -104,9 +116,9 @@ export async function updateAttendance(
   )
   // Unwrap Laravel resource envelope if present
   if (response && typeof response === "object" && "data" in response && !Array.isArray(response)) {
-    return (response as { data: ClockingRecord }).data
+    return normalizeClockingRecord((response as { data: ClockingRecord }).data)
   }
-  return response as ClockingRecord
+  return normalizeClockingRecord(response as ClockingRecord)
 }
 
 /**

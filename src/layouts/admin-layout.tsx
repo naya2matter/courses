@@ -15,13 +15,13 @@ export function AdminLayout() {
         <div className="pointer-events-none absolute left-10 top-10 h-64 w-64 rounded-[28px] bg-[radial-gradient(circle,rgba(124,58,237,0.22),transparent_70%)] opacity-80 blur-[52px]" />
       </div>
 
-      <div className="min-h-screen bg-[#080713]">
+      <div className="min-h-svh bg-[#080713]">
         <SidebarProvider className="bg-transparent">
           <AppSidebar />
-          <div className="flex h-screen flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-svh w-full flex-col">
             <SiteHeader />
-            <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
-              <div className="mx-auto w-full max-w-350">
+            <main className="flex-1 p-5 md:p-6">
+              <div className="mx-auto w-full max-w-350 pb-8">
                 <Outlet />
               </div>
             </main>

@@ -54,6 +54,10 @@ import VideoCategoriesPage from "@/pages/admin/video-management/categories/categ
 // Admin — Blog Management
 import BlogManagementPage from "@/pages/admin/blog-management/blog/blog"
 
+// Admin — Quiz Management
+import QuizzesPage, { CreateQuizPage, ViewQuizPage, EditQuizPage, ViewAttemptPage } from "@/pages/admin/quize-management/quizes/quizzes"
+import QuizAssignmentsPage from "@/pages/admin/quize-management/quiz-assignments/quiz-assignments"
+
 // Admin — Support
 import FeedbackPage from "@/pages/admin/feedback/feedback"
 import BugReportsPage from "@/pages/admin/bug-reports/bug-reports"
@@ -71,6 +75,12 @@ import { UserAudioDetailPage } from "@/pages/user/audio/audio-detail"
 
 // User — Clocking / Attendance
 import { UserClockingPage } from "@/pages/user/clocking/clocking-page"
+
+// User — Quiz pages
+import { MyQuizzesPage } from "@/pages/user/quiz/my-quizzes-page"
+import { QuizDetailPage } from "@/pages/user/quiz/quiz-detail-page"
+import { QuizTakePage } from "@/pages/user/quiz/quiz-take-page"
+import { QuizResultPage } from "@/pages/user/quiz/quiz-result-page"
 
 function App() {
   return (
@@ -126,6 +136,16 @@ function App() {
               {/* Blog Management */}
               <Route path="/admin/blog-management/blog" element={<BlogManagementPage />} />
 
+              {/* Quiz Management */}
+              <Route path="/admin/quiz-management/list-quizzes" element={<QuizzesPage />} />
+              <Route path="/admin/quiz-management/quizzes/create" element={<CreateQuizPage />} />
+              <Route path="/admin/quiz-management/quizzes/:id" element={<ViewQuizPage />} />
+              <Route path="/admin/quiz-management/quizzes/:id/edit" element={<EditQuizPage />} />
+              <Route path="/admin/quiz-management/quizzes/:id/attempts/:attemptId" element={<ViewAttemptPage />} />
+              <Route path="/admin/quiz-management/assignments" element={<QuizAssignmentsPage />} />
+              <Route path="/admin/quiz-management/quiz-assignments" element={<QuizAssignmentsPage />} />
+              <Route path="/admin/quiz-management/assignments/list" element={<QuizAssignmentsPage />} />
+
               {/* Support */}
               <Route path="/admin/feedback" element={<FeedbackPage />} />
               <Route path="/admin/bug-reports" element={<BugReportsPage />} />
@@ -147,17 +167,30 @@ function App() {
 
               {/* Clocking / Attendance */}
               <Route path="/user/clocking" element={<UserClockingPage />} />
+
+              {/* Quiz pages */}
+              <Route path="/user/quizzes" element={<MyQuizzesPage />} />
+              <Route path="/user/quizzes/:id" element={<QuizDetailPage />} />
+              <Route path="/user/quizzes/:id/take/:attemptId" element={<QuizTakePage />} />
+              <Route path="/user/quizzes/:id/result/:attemptId" element={<QuizResultPage />} />
             </Route>
           </Route>
 
-          {/* Catch-all → login */}
+          {/* Fallbacks */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<RoleAwareFallback />} />
         </Routes>
         <Toaster richColors closeButton position="top-right" />
       </BrowserRouter>
     </AuthProvider>
   )
+}
+
+function RoleAwareFallback() {
+  const role = localStorage.getItem("auth_role")
+  if (role === Role.admin) return <Navigate to="/admin" replace />
+  if (role === Role.user) return <Navigate to="/user" replace />
+  return <Navigate to="/login" replace />
 }
 
 export default App

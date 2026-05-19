@@ -9,6 +9,7 @@ import {
   ClockIcon,
   MessageSquareIcon,
   HeadphonesIcon,
+  BookOpenCheckIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -53,6 +54,11 @@ const navLearning = [
     title: "My Attendance",
     url: "/user/clocking",
     icon: <ClockIcon />,
+  },
+  {
+    title: "My Quiz",
+    url: "/user/quizzes",
+    icon: <BookOpenCheckIcon />,
   },
 ]
 

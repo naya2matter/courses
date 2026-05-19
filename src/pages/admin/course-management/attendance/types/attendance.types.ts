@@ -22,6 +22,7 @@ export interface ClockingRecord {
   clock_in: string | null       // ISO 8601 datetime
   clock_out: string | null      // ISO 8601 datetime
   duration: number | null       // in minutes
+  duration_in_minutes?: number | null // raw API field for compatibility
   comment: string | null
   rating: number | null         // 1–5
   user?: AttendanceUserRef | null

@@ -51,6 +51,24 @@ export interface UserListResource {
   created_at?: string
 }
 
+/**
+ * A single user as returned by POST /admin/users/create and
+ * PUT /admin/users/update/{id}.
+ * Uses `manager` (not `report_to`) and includes `updated_at`.
+ */
+export interface UserResource {
+  id: number
+  name: string
+  email: string
+  role: Role
+  avatar?: string | null
+  department?: (UserDepartment & { slug?: string }) | null
+  tier?: UserTier | null
+  manager?: UserManager | null
+  created_at?: string
+  updated_at?: string
+}
+
 // ── Laravel paginated envelope ────────────────────────────────────────────────
 
 /** Standard Laravel paginator meta block */

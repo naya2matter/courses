@@ -3,18 +3,52 @@
 // handles loading/error states, and renders the DepartmentsList component.
 
 import { useState } from "react"
-import { AlertCircleIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
+import { AlertCircleIcon, XIcon, Loader2Icon, PlusIcon, BuildingIcon, UsersIcon, LayoutGridIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useDepartments } from "../hook/use-departments"
+import type { DepartmentCard } from "../types/department.types"
 import { DepartmentsList } from "../components/departments-list"
 import { DepartmentSheet } from "../components/department-sheet"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { Department } from "../types/department.types"
 import { PageHeader } from "@/components/admin/page-header"
 
+// ── Card icon map ─────────────────────────────────────────────────────────────
+const CARD_ICONS: Record<string, React.ReactNode> = {
+  total_departments: <LayoutGridIcon className="h-5 w-5" />,
+  root_departments: <BuildingIcon className="h-5 w-5" />,
+  users_with_department: <UsersIcon className="h-5 w-5" />,
+}
+
+function SummaryCards({ cards, isLoading }: { cards: DepartmentCard[]; isLoading: boolean }) {
+  if (cards.length === 0 && !isLoading) return null
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {isLoading && cards.length === 0
+        ? Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-xl border border-white/10 bg-white/5" />
+          ))
+        : cards.map((card) => (
+            <div
+              key={card.key}
+              className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 px-5 py-4"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                {CARD_ICONS[card.key] ?? <LayoutGridIcon className="h-5 w-5" />}
+              </div>
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-white">{card.value.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{card.title}</p>
+              </div>
+            </div>
+          ))}
+    </div>
+  )
+}
+
 export function DepartmentsPageContent() {
-  const { departments, isLoading, error, clearError, refetch } = useDepartments()
+  const { departments, cards, isLoading, error, clearError, refetch } = useDepartments()
 
   // Sheet state — null means Create mode; a Department means Edit mode
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -59,6 +93,9 @@ export function DepartmentsPageContent() {
           </>
         }
       />
+
+      {/* ── Summary cards ── */}
+      <SummaryCards cards={cards} isLoading={isLoading} />
 
       {/* ── Error banner (dismissed per session, AbortError is never shown) ── */}
       {error && (

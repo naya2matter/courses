@@ -3,32 +3,31 @@
 // Uses the shared apiClient so auth tokens are handled automatically.
 
 import { apiClient } from "@/lib/api"
-import type { Department, DepartmentsApiResponse, DepartmentMutationPayload } from "../types/department.types"
+import type { Department, DepartmentCard, DepartmentsApiResponse, DepartmentMutationPayload } from "../types/department.types"
 
 /**
  * Fetch all departments from the backend.
  * Endpoint: GET /admin/departments/getAll
  *
- * The API may return either an envelope { data: [...] } or a plain array.
- * We normalise both shapes so the store always works with Department[].
+ * The API may return either an envelope { data: [...], cards: [...] } or a plain array.
+ * We normalise both shapes so the store always receives { departments, cards }.
  */
-export async function getAllDepartments(): Promise<Department[]> {
+export async function getAllDepartments(): Promise<{ departments: Department[]; cards: DepartmentCard[] }> {
   const response = await apiClient.get<DepartmentsApiResponse | Department[]>(
     "/admin/departments/getAll",
   )
 
-  // Normalise: handle both { data: [...] } and plain array responses
+  // Plain array (no envelope)
   if (Array.isArray(response)) {
-    return response
+    return { departments: response, cards: [] }
   }
 
   // Envelope shape
   if (response && Array.isArray(response.data)) {
-    return response.data
+    return { departments: response.data, cards: response.cards ?? [] }
   }
 
-  // Unexpected shape – return empty list rather than crashing
-  return []
+  return { departments: [], cards: [] }
 }
 
 /**

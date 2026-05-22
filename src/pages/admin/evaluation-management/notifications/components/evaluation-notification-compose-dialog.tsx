@@ -55,14 +55,14 @@ import { ManagerMultiSelect } from "./manager-multi-select"
 // ── Validation ────────────────────────────────────────────────────────────────
 
 interface FormErrors {
-  manager_ids?: string
+  user_ids?: string
   subject?: string
   message?: string
   date?: string
 }
 
 interface FormState {
-  manager_ids: number[]
+  user_ids: number[]
   subject: string
   message: string
   start_date: string
@@ -71,8 +71,8 @@ interface FormState {
 
 function validateForm(form: FormState): FormErrors {
   const errors: FormErrors = {}
-  if (form.manager_ids.length === 0) {
-    errors.manager_ids = "Select at least one manager."
+  if (form.user_ids.length === 0) {
+    errors.user_ids = "Select at least one user."
   }
   if (!form.subject.trim()) {
     errors.subject = "Subject is required."
@@ -124,12 +124,12 @@ function ComposeStep({
       {/* Managers */}
       <div className="space-y-1.5">
         <Label className="text-sm">
-          Managers <span className="text-red-400">*</span>
+          Users <span className="text-red-400">*</span>
         </Label>
         <ManagerMultiSelect
-          selectedIds={form.manager_ids}
-          onChange={(ids) => onChange({ manager_ids: ids })}
-          error={errors.manager_ids ?? fieldError("manager_ids")}
+          selectedIds={form.user_ids}
+          onChange={(ids) => onChange({ user_ids: ids })}
+          error={errors.user_ids ?? fieldError("user_ids")}
         />
       </div>
 
@@ -429,7 +429,7 @@ interface EvaluationNotificationComposeDialogProps {
 type Step = "compose" | "preview" | "result"
 
 const EMPTY_FORM: FormState = {
-  manager_ids: [],
+  user_ids: [],
   subject: "",
   message: "",
   start_date: "",
@@ -482,7 +482,7 @@ export function EvaluationNotificationComposeDialog({
     setApiErrors({})
     try {
       const payload = {
-        manager_ids: form.manager_ids,
+        user_ids: form.user_ids,
         subject: form.subject,
         message: form.message,
         ...(form.start_date ? { start_date: form.start_date } : {}),
@@ -515,7 +515,7 @@ export function EvaluationNotificationComposeDialog({
     setApiError(null)
     try {
       const payload = {
-        manager_ids: form.manager_ids,
+        user_ids: form.user_ids,
         subject: form.subject,
         message: form.message,
         ...(form.start_date ? { start_date: form.start_date } : {}),

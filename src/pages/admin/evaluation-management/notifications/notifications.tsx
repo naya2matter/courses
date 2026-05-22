@@ -1,12 +1,10 @@
 // ─── EvaluationNotificationsPage ─────────────────────────────────────────────
 // Admin page: compose evaluation notification emails and view send history.
 
-import { useState } from "react"
 import {
   AlertCircleIcon,
   BellIcon,
   Loader2Icon,
-  PlusIcon,
   RefreshCwIcon,
 } from "lucide-react"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
@@ -22,13 +20,10 @@ import {
 } from "@/components/ui/select"
 
 import { useEvaluationNotificationHistory } from "./hook/use-evaluation-notification-history"
-import type { EvaluationNotificationHistoryItem } from "./types/evaluation-notification.types"
 
 import { EvaluationNotificationSummaryCards } from "./components/evaluation-notification-summary-cards"
 import { EvaluationNotificationFiltersToolbar } from "./components/evaluation-notification-filters-toolbar"
 import { EvaluationNotificationHistoryTable } from "./components/evaluation-notification-history-table"
-import { EvaluationNotificationDetailDrawer } from "./components/evaluation-notification-detail-drawer"
-import { EvaluationNotificationComposeDialog } from "./components/evaluation-notification-compose-dialog"
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -46,22 +41,8 @@ export default function EvaluationNotificationsPage() {
     clearError,
   } = useEvaluationNotificationHistory()
 
-  const [selectedItem, setSelectedItem] =
-    useState<EvaluationNotificationHistoryItem | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [composeOpen, setComposeOpen] = useState(false)
-
   const hasActiveFilters =
     !!filters.search.trim() || (!!filters.status && filters.status !== "all")
-
-  function handleViewDetails(item: EvaluationNotificationHistoryItem) {
-    setSelectedItem(item)
-    setDrawerOpen(true)
-  }
-
-  function handleSent() {
-    refetch()
-  }
 
   return (
     <div className="space-y-6">
@@ -96,14 +77,6 @@ export default function EvaluationNotificationsPage() {
               <RefreshCwIcon className="size-4" />
             )}
             Refresh
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setComposeOpen(true)}
-          >
-            <PlusIcon className="size-4" />
-            Compose Notification
           </Button>
         </div>
       </div>
@@ -151,7 +124,6 @@ export default function EvaluationNotificationsPage() {
         items={filteredItems}
         isLoading={isLoading}
         hasActiveFilters={hasActiveFilters}
-        onViewDetails={handleViewDetails}
       />
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
@@ -201,7 +173,7 @@ export default function EvaluationNotificationsPage() {
               <ChevronLeftIcon className="size-4" />
             </Button>
 
-            <span className="min-w-[4rem] text-center text-xs tabular-nums text-muted-foreground">
+            <span className="min-w-16 text-center text-xs tabular-nums text-muted-foreground">
               {meta.current_page} / {meta.last_page}
             </span>
 
@@ -219,18 +191,6 @@ export default function EvaluationNotificationsPage() {
         </div>
       )}
 
-      {/* ── Drawers / Dialogs ─────────────────────────────────────────────── */}
-      <EvaluationNotificationDetailDrawer
-        item={selectedItem}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
-
-      <EvaluationNotificationComposeDialog
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        onSent={handleSent}
-      />
     </div>
   )
 }

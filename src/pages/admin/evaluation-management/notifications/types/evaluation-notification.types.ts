@@ -28,7 +28,7 @@ export interface ApiValidationError {
 // ── Request payload ───────────────────────────────────────────────────────────
 
 export interface EvaluationNotificationPayload {
-  manager_ids: number[]
+  user_ids: number[]
   subject: string
   message: string
   start_date?: string

@@ -13,6 +13,7 @@ import { useDepartmentStore } from "../store/department.store"
  */
 export function useDepartments() {
   const departments = useDepartmentStore((s) => s.departments)
+  const cards = useDepartmentStore((s) => s.cards)
   const isLoading = useDepartmentStore((s) => s.isLoading)
   const error = useDepartmentStore((s) => s.error)
   const fetchDepartments = useDepartmentStore((s) => s.fetchDepartments)
@@ -23,5 +24,5 @@ export function useDepartments() {
     fetchDepartments()
   }, [fetchDepartments])
 
-  return { departments, isLoading, error, clearError, refetch: fetchDepartments }
+  return { departments, cards, isLoading, error, clearError, refetch: fetchDepartments }
 }

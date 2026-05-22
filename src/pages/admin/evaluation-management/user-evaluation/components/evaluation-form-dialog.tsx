@@ -38,6 +38,19 @@ interface Props {
   onSuccess: () => void
 }
 
+function flattenDepartmentTree(nodes: Department[]): Department[] {
+  const items: Department[] = []
+
+  for (const node of nodes) {
+    items.push(node)
+    if (node.children?.length) {
+      items.push(...flattenDepartmentTree(node.children))
+    }
+  }
+
+  return items
+}
+
 export function EvaluationFormDialog({ open, onOpenChange, availableTypes, onSuccess }: Props) {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loadingDepartments, setLoadingDepartments] = useState(false)
@@ -68,7 +81,7 @@ export function EvaluationFormDialog({ open, onOpenChange, availableTypes, onSuc
 
     setLoadingDepartments(true)
     getAllDepartments()
-      .then(setDepartments)
+      .then(({ departments }) => setDepartments(flattenDepartmentTree(departments)))
       .catch(() => {
         setApiError("Failed to load departments.")
       })

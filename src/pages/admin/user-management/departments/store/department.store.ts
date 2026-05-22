@@ -10,6 +10,7 @@ import type { DepartmentsState } from "../types/department.types"
 export const useDepartmentStore = create<DepartmentsState>((set) => ({
   // ── Initial state ──────────────────────────────────────────────────────────
   departments: [],
+  cards: [],
   isLoading: false,
   error: null,
 
@@ -25,8 +26,8 @@ export const useDepartmentStore = create<DepartmentsState>((set) => ({
     set({ isLoading: true, error: null })
 
     try {
-      const departments = await getAllDepartments()
-      set({ departments, isLoading: false })
+      const { departments, cards } = await getAllDepartments()
+      set({ departments, cards, isLoading: false })
     } catch (err) {
       // Ignore cancellation — not a real error
       if (err instanceof DOMException && err.name === "AbortError") {

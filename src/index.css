@@ -42,6 +42,9 @@
 	--sidebar-accent-foreground: oklch(0.99 0.01 290);
 	--sidebar-border: oklch(0.92 0.04 290);
 	--sidebar-ring: oklch(0.82 0.17 85);
+  --scrollbar-thumb: oklch(0.46 0.09 290 / 35%);
+  --scrollbar-thumb-hover: oklch(0.42 0.11 290 / 48%);
+  --scrollbar-thumb-border: oklch(0.99 0.01 290 / 24%);
 }
 
 .dark {
@@ -80,6 +83,9 @@
 	--sidebar-accent-foreground: oklch(0.98 0.01 290);
 	--sidebar-border: oklch(0.22 0.05 290 / 60%);
 	--sidebar-ring: oklch(0.84 0.19 88);
+  --scrollbar-thumb: oklch(0.88 0.03 290 / 18%);
+  --scrollbar-thumb-hover: oklch(0.92 0.04 290 / 28%);
+  --scrollbar-thumb-border: oklch(0.99 0.01 290 / 10%);
 }
 
 @theme inline {
@@ -122,8 +128,37 @@
 		@apply bg-background text-foreground;
 		-webkit-font-smoothing: antialiased;
 	}
-	* { @apply border-border outline-ring/50; }
-}@layer utilities {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 1px solid var(--scrollbar-thumb-border);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@layer utilities {
   .glass-panel {
     @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_28px_rgba(0,0,0,0.35)] rounded-xl transition-all duration-300;
   }
@@ -337,7 +372,7 @@
 
   .thin-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.16) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .thin-scrollbar::-webkit-scrollbar {
@@ -350,13 +385,13 @@
   }
 
   .thin-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.16);
+    background: var(--scrollbar-thumb);
     border-radius: 9999px;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid var(--scrollbar-thumb-border);
   }
 
   .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.22);
+    background: var(--scrollbar-thumb-hover);
   }
 
   /* ── Hover panel (floating submenu) animation ────────────────────────── */

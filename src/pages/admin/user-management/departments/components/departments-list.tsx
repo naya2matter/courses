@@ -16,8 +16,6 @@ import type { Department, DepartmentUser } from "../types/department.types"
  * Helper to display a single user.
  */
 function UserCard({ user }: { user: DepartmentUser }) {
-  const managerStr = user.manager ? String(user.manager) : "None"
-
   return (
     <div className="rounded-2xl border border-white/10 bg-muted/40 p-4">
       <div className="flex items-center gap-3">
@@ -31,6 +29,12 @@ function UserCard({ user }: { user: DepartmentUser }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
+        {user.role && (
+          <Badge variant="outline" className="gap-1 font-normal text-xs capitalize">
+            <ShieldIcon className="h-3 w-3" />
+            {user.role}
+          </Badge>
+        )}
         {user.tier && (
           <Badge variant="secondary" className="gap-1 font-normal">
             <CheckCircleIcon className="h-3 w-3" />
@@ -41,8 +45,8 @@ function UserCard({ user }: { user: DepartmentUser }) {
           </Badge>
         )}
         <Badge variant="outline" className="gap-1 font-normal text-xs text-muted-foreground">
-          <ShieldIcon className="h-3 w-3" />
-          Manager: {managerStr}
+          <UserIcon className="h-3 w-3" />
+          Manager: {user.manager?.name ?? "None"}
         </Badge>
       </div>
     </div>

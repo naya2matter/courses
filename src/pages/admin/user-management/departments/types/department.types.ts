@@ -12,13 +12,17 @@ export interface DepartmentUserTier {
   level?: DepartmentUserLevel
 }
 
+export interface DepartmentUserManager {
+  id: number
+  name: string
+}
+
 export interface DepartmentUser {
   id: number
   name: string
   email: string
-  // manager can be a string, object, or null based on the structure provided
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  manager?: any
+  role?: string
+  manager?: DepartmentUserManager | null
   tier?: DepartmentUserTier
   created_at?: string
   updated_at?: string
@@ -37,9 +41,17 @@ export interface Department {
   updated_at?: string
 }
 
+/** A summary card returned alongside departments by getAll */
+export interface DepartmentCard {
+  key: string
+  title: string
+  value: number
+}
+
 /** API response envelope for GET /admin/departments/getAll */
 export interface DepartmentsApiResponse {
   data: Department[]
+  cards?: DepartmentCard[]
   total?: number
   message?: string
 }
@@ -57,6 +69,8 @@ export interface DepartmentMutationPayload {
 export interface DepartmentsState {
   /** All departments fetched from the API, retaining their raw tree structure */
   departments: Department[]
+  /** Summary stat cards returned by the API */
+  cards: DepartmentCard[]
   /** Whether a fetch is in-flight */
   isLoading: boolean
   /** Error message if the last fetch failed */

@@ -2,7 +2,7 @@
 // Admin CRUD page for user evaluations.
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { RefreshCwIcon, PlusIcon, LayersIcon, AlertCircleIcon } from "lucide-react"
+import { RefreshCwIcon, PlusIcon, LayersIcon, AlertCircleIcon, BellIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getEvaluationConfigs } from "@/pages/admin/evaluation-management/configurations/service/evaluation-config.service"
@@ -17,6 +17,7 @@ import { EvaluationRescoreDialog } from "./components/evaluation-rescore-dialog"
 import { EvaluationDetailDrawer } from "./components/evaluation-detail-drawer"
 import { DeleteEvaluationDialog } from "./components/delete-evaluation-dialog"
 import { BulkEvaluationDialog } from "./components/bulk-evaluation-dialog"
+import { EvaluationNotificationComposeDialog } from "@/pages/admin/evaluation-management/notifications/components/evaluation-notification-compose-dialog"
 import type { Evaluation, EvaluationFilters } from "./types/evaluation.types"
 import type { EvaluationType } from "./components/score-rows-editor"
 
@@ -91,6 +92,7 @@ export default function UserEvaluationPage() {
   // Dialog / drawer state
   const [createOpen, setCreateOpen] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
+  const [notifyOpen, setNotifyOpen] = useState(false)
   const [rescoreTarget, setRescoreTarget] = useState<Evaluation | null>(null)
   const [detailTarget, setDetailTarget] = useState<Evaluation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Evaluation | null>(null)
@@ -136,6 +138,15 @@ export default function UserEvaluationPage() {
           >
             <LayersIcon className="h-4 w-4" />
             Bulk Create
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setNotifyOpen(true)}
+            className="gap-1.5 border-white/10 bg-white/5 text-white hover:bg-white/10"
+          >
+            <BellIcon className="h-4 w-4" />
+            Notify Managers
           </Button>
           <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
             <PlusIcon className="h-4 w-4" />
@@ -206,6 +217,12 @@ export default function UserEvaluationPage() {
         onOpenChange={setBulkOpen}
         availableTypes={availableTypes}
         onSuccess={refetch}
+      />
+
+      <EvaluationNotificationComposeDialog
+        open={notifyOpen}
+        onOpenChange={setNotifyOpen}
+        onSent={() => {}}
       />
     </div>
   )

@@ -1,10 +1,6 @@
 // ─── EvaluationNotificationHistoryTable ──────────────────────────────────────
 // Renders the notification history. Desktop = shadcn Table, mobile = cards.
 
-import { EyeIcon } from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -41,7 +37,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <TableRow key={i} className="border-white/5">
-          {Array.from({ length: 7 }).map((__, j) => (
+          {Array.from({ length: 5 }).map((__, j) => (
             <TableCell key={j}>
               <Skeleton className="h-4 w-full" />
             </TableCell>
@@ -58,7 +54,6 @@ interface EvaluationNotificationHistoryTableProps {
   items: EvaluationNotificationHistoryItem[]
   isLoading: boolean
   hasActiveFilters: boolean
-  onViewDetails: (item: EvaluationNotificationHistoryItem) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -67,7 +62,6 @@ export function EvaluationNotificationHistoryTable({
   items,
   isLoading,
   hasActiveFilters,
-  onViewDetails,
 }: EvaluationNotificationHistoryTableProps) {
   // ── Mobile card layout ─────────────────────────────────────────────────────
   function MobileCard({ item }: { item: EvaluationNotificationHistoryItem }) {
@@ -96,16 +90,6 @@ export function EvaluationNotificationHistoryTable({
           )}
           <span className="col-span-2">Created {formatDate(item.created_at)}</span>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full h-8 text-xs gap-1.5"
-          onClick={() => onViewDetails(item)}
-        >
-          <EyeIcon className="size-3.5" />
-          View Details
-        </Button>
       </div>
     )
   }
@@ -139,7 +123,7 @@ export function EvaluationNotificationHistoryTable({
               <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             ))
           : items.length === 0
@@ -148,20 +132,15 @@ export function EvaluationNotificationHistoryTable({
       </div>
 
       {/* ── Desktop ─────────────────────────────────────────────────────────── */}
-      <div className="hidden sm:block rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-        <Table>
+      <div className="hidden sm:block overflow-x-auto rounded-xl border border-white/10 bg-white/5">
+        <Table className="min-w-4xl">
           <TableHeader>
             <TableRow className="border-white/10 hover:bg-transparent">
-              <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Message</TableHead>
-              <TableHead className="text-muted-foreground font-medium text-center w-24">Sent</TableHead>
-              <TableHead className="text-muted-foreground font-medium text-center w-24">Failed</TableHead>
-              <TableHead className="text-muted-foreground font-medium w-40">Date Range</TableHead>
-              <TableHead className="text-muted-foreground font-medium w-36">Created At</TableHead>
-              <TableHead className="text-muted-foreground font-medium w-28">Status</TableHead>
-              <TableHead className="text-right w-28">
-                <span className="sr-only">Actions</span>
-              </TableHead>
+              <TableHead className="w-44 text-muted-foreground font-medium">Subject</TableHead>
+              <TableHead className="w-56 text-muted-foreground font-medium">Message</TableHead>
+              <TableHead className="w-40 text-muted-foreground font-medium">Date Range</TableHead>
+              <TableHead className="w-36 text-muted-foreground font-medium">Created At</TableHead>
+              <TableHead className="w-28 text-muted-foreground font-medium">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -169,7 +148,7 @@ export function EvaluationNotificationHistoryTable({
               <SkeletonRows />
             ) : items.length === 0 ? (
               <TableRow className="border-white/5 hover:bg-transparent">
-                <TableCell colSpan={8}>
+                <TableCell colSpan={5}>
                   <EmptyState />
                 </TableCell>
               </TableRow>
@@ -179,63 +158,28 @@ export function EvaluationNotificationHistoryTable({
                 return (
                   <TableRow
                     key={item.id}
-                    className="border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
-                    onClick={() => onViewDetails(item)}
+                    className="border-white/5"
                   >
-                    <TableCell className="font-medium text-foreground max-w-[180px]">
+                    <TableCell className="w-44 font-medium text-foreground">
                       <span className="block truncate" title={item.subject}>
                         {item.subject}
                       </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px]">
+                    <TableCell className="w-56 text-muted-foreground">
                       <span className="block truncate" title={item.message ?? ""}>
                         {item.message ? truncate(item.message, 60) : "—"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className="border-emerald-500/30 text-emerald-400"
-                      >
-                        {item.success_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={
-                          item.failed_count > 0
-                            ? "border-red-500/30 text-red-400"
-                            : "border-white/10 text-muted-foreground"
-                        }
-                      >
-                        {item.failed_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell className="w-40 text-muted-foreground text-xs">
                       {item.start_date || item.end_date
                         ? `${item.start_date ?? "all"} → ${item.end_date ?? "all"}`
                         : "All dates"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
+                    <TableCell className="w-36 text-muted-foreground text-xs whitespace-nowrap">
                       {formatDate(item.created_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-28">
                       <NotificationStatusBadge status={status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 gap-1 text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onViewDetails(item)
-                        }}
-                      >
-                        <EyeIcon className="size-3.5" />
-                        Details
-                      </Button>
                     </TableCell>
                   </TableRow>
                 )

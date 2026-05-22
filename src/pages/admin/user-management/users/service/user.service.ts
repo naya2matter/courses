@@ -8,6 +8,7 @@ import type {
   LaravelPaginated,
   UserListFilters,
   UserListResource,
+  UserResource,
   UpdateUserPayload,
 } from "../types/user.types"
 
@@ -70,13 +71,17 @@ export async function createUser(
  * Update an existing user.
  * Endpoint: PUT /admin/users/update/{id}
  *
- * Returns the updated user resource.
+ * Returns the updated user resource (unwrapped from the { data: {...} } envelope).
  */
 export async function updateUser(
   id: number,
   payload: UpdateUserPayload,
-): Promise<UserListResource> {
-  return apiClient.put<UserListResource>(`/admin/users/update/${id}`, payload)
+): Promise<UserResource> {
+  const res = await apiClient.put<{ data: UserResource }>(
+    `/admin/users/update/${id}`,
+    payload,
+  )
+  return res.data
 }
 
 /**

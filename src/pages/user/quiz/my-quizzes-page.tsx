@@ -180,12 +180,11 @@ function QuizCard({ quiz, onOpen, index }: QuizCardProps) {
   return (
     <div
       className={[
-        "group relative flex flex-col gap-4 rounded-2xl border overflow-hidden p-5",
-        "transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl",
+        "relative flex flex-col gap-4 rounded-2xl border overflow-hidden p-5",
         "animate-in fade-in slide-in-from-bottom-4",
         passed
-          ? "border-emerald-500/20 bg-emerald-500/4 hover:border-emerald-500/30 hover:shadow-emerald-500/8"
-          : "border-white/8 bg-white/2.5 hover:border-white/14 hover:bg-white/4 hover:shadow-violet-500/5",
+          ? "border-emerald-500/20 bg-emerald-500/4"
+          : "border-white/8 bg-white/2.5",
       ].join(" ")}
       style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
     >
@@ -326,7 +325,7 @@ function SummaryStats({ quizzes }: { quizzes: UserQuizListItem[] }) {
       icon: <BookOpenCheckIcon className="size-4.5" />,
       iconCls: "bg-indigo-500/15 text-indigo-400 border-indigo-500/20",
       valueCls: "text-indigo-300",
-      cardCls: "border-indigo-500/12 bg-indigo-500/[0.05]",
+      // cardCls: "border-indigo-500/12 bg-indigo-500/[0.05]",
     },
     {
       label: "Passed",
@@ -334,7 +333,7 @@ function SummaryStats({ quizzes }: { quizzes: UserQuizListItem[] }) {
       icon: <CheckCircle2Icon className="size-4.5" />,
       iconCls: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
       valueCls: "text-emerald-300",
-      cardCls: "border-emerald-500/12 bg-emerald-500/5",
+      // cardCls: "border-emerald-500/12 bg-emerald-500/5",
     },
     {
       label: "In Progress",
@@ -342,7 +341,7 @@ function SummaryStats({ quizzes }: { quizzes: UserQuizListItem[] }) {
       icon: <ClockIcon className="size-4.5" />,
       iconCls: "bg-amber-500/15 text-amber-400 border-amber-500/20",
       valueCls: "text-amber-300",
-      cardCls: "border-amber-500/12 bg-amber-500/5",
+      // cardCls: "border-amber-500/12 bg-amber-500/5",
     },
     {
       label: "Not Started",
@@ -350,7 +349,7 @@ function SummaryStats({ quizzes }: { quizzes: UserQuizListItem[] }) {
       icon: <PlayCircleIcon className="size-4.5" />,
       iconCls: "bg-white/8 text-white/45 border-white/10",
       valueCls: "text-white/60",
-      cardCls: "border-white/8 bg-white/2.5",
+      // cardCls: "border-white/8 bg-white/2.5",
     },
   ]
 
@@ -359,19 +358,19 @@ function SummaryStats({ quizzes }: { quizzes: UserQuizListItem[] }) {
       {stats.map((s) => (
         <div
           key={s.label}
-          className={`flex flex-col gap-3.5 rounded-2xl border p-4 ${s.cardCls}`}
+          className={`flex flex-col items-center text-center rounded-3xl p-4 transition  `}
         >
-          <div
-            className={`flex size-9 items-center justify-center rounded-xl border ${s.iconCls}`}
+          <span
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${s.iconCls}`}
           >
             {s.icon}
-          </div>
-          <div>
-            <p className={`text-2xl font-bold tabular-nums tracking-tight ${s.valueCls}`}>
-              {s.value}
-            </p>
-            <p className="text-xs text-white/40 mt-0.5 font-medium">{s.label}</p>
-          </div>
+          </span>
+          <p className={`mt-4 text-4xl font-semibold tabular-nums tracking-tight ${s.valueCls}`}>
+            {s.value}
+          </p>
+          <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-white/50">
+            {s.label}
+          </p>
         </div>
       ))}
     </div>

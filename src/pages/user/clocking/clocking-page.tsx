@@ -467,7 +467,7 @@ export function UserClockingPage() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-10 space-y-8 animate-in fade-in duration-500 text-foreground bg-background min-h-screen">
+    <div className="w-full  px-4 md:px-6 lg:px-8 py-8 md:py-10 space-y-8 animate-in fade-in duration-500 text-foreground bg-background min-h-screen">
       
       <AttendanceHeader onRefresh={() => { fetchActiveSession(); fetchHistory(page); }} />
 

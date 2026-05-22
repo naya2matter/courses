@@ -23,6 +23,7 @@ export interface UserQuizListItem {
   id: number
   title: string
   description?: string | null
+  total_points?: number | null
   max_attempts?: number | null
   retry_delay_hours?: number | null
   time_limit_minutes?: number | null
@@ -42,6 +43,8 @@ export interface UserQuizListItem {
 
 export interface UserQuizDetail extends UserQuizListItem {
   questions?: UserQuizQuestion[]
+  user_passed?: boolean | null
+  user_total_score?: number | null
 }
 
 // ── Answer item inside an attempt ────────────────────────────────────────────
@@ -83,10 +86,14 @@ export interface UserQuizAttemptResource {
   id: number
   quiz_id: number
   user_id: number
+  attempt_number?: number | null
   status?: string | null
   started_at?: string | null
+  completed_at?: string | null
   submitted_at?: string | null
   score?: number | null
+  manual_score?: number | null
+  total_score?: number | null
   total_points?: number | null
   passed?: boolean | null
   answers?: UserQuizAnswer[]

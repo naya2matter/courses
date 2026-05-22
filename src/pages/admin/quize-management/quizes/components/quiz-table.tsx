@@ -214,7 +214,7 @@ function QuizTableBody({
               return (
                 <tr
                   key={quiz.id}
-                  className="border-b border-white/5 transition-colors hover:bg-white/2.5 hover:shadow-sm cursor-pointer"
+                  className="border-b border-white/5 cursor-pointer"
                   onClick={(event) => {
                     const target = event.target as HTMLElement
                     if (target.closest("button, a")) return

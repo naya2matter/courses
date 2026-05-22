@@ -21,6 +21,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet"
 import { isApiError } from "@/lib/api"
 
@@ -136,71 +137,78 @@ export function CategoryFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
+      <SheetContent className="sm:max-w-md flex flex-col gap-0 p-0 border-l border-white/10">
+        <SheetHeader className="px-6 py-5 border-b border-white/10">
+          <SheetTitle className="text-xl">{title}</SheetTitle>
+          <SheetDescription className="text-muted-foreground">{description}</SheetDescription>
         </SheetHeader>
 
         {/* Form starts right after the header */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5 px-1">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
 
-          {/* ── Error alert ──────────────────────────────────────────────── */}
-          {submitError && (
-            <Alert variant="destructive">
-              <AlertCircleIcon className="h-4 w-4" />
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          )}
+            {/* ── Error alert ──────────────────────────────────────────────── */}
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertCircleIcon className="h-4 w-4" />
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
+            )}
 
-          {/* ── Name field ───────────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <Label htmlFor="category-name">
-              Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="category-name"
-              placeholder="e.g. Meditation"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={255}
-              disabled={isSubmitting}
-              autoFocus
-            />
-          </div>
+            {/* ── Name field ───────────────────────────────────────────────── */}
+            <div className="space-y-3">
+              <Label htmlFor="category-name" className="text-sm font-medium">
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="category-name"
+                placeholder="e.g. Meditation"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={255}
+                disabled={isSubmitting}
+                className="h-10"
+                autoFocus
+              />
+            </div>
 
-          {/* ── Sort Order field ─────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <Label htmlFor="category-sort-order">Sort Order</Label>
-            <Input
-              id="category-sort-order"
-              type="number"
-              placeholder="0"
-              min={0}
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Optional. Lower numbers appear first.
-            </p>
+            {/* ── Sort Order field ─────────────────────────────────────────── */}
+            <div className="space-y-3">
+              <Label htmlFor="category-sort-order" className="text-sm font-medium">Sort Order</Label>
+              <Input
+                id="category-sort-order"
+                type="number"
+                placeholder="0"
+                min={0}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                disabled={isSubmitting}
+                className="h-10"
+              />
+              <p className="text-sm text-muted-foreground">
+                Optional. Lower numbers appear first.
+              </p>
+            </div>
           </div>
 
           {/* ── Actions ──────────────────────────────────────────────────── */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-              {submitLabel}
-            </Button>
-          </div>
+          <SheetFooter className="px-6 py-4 border-t border-white/10 mt-auto bg-background/50 backdrop-blur-sm">
+            <div className="flex w-full justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="min-w-[100px]"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
+                {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                {submitLabel}
+              </Button>
+            </div>
+          </SheetFooter>
         </form>
       </SheetContent>
     </Sheet>

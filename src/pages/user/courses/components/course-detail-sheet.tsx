@@ -234,7 +234,7 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-xl overflow-y-auto bg-[#0d0d1a] border-white/10 p-0 thin-scrollbar"
+        className="w-full sm:max-w-xl flex flex-col gap-0 p-0 border-l border-white/10 bg-background"
       >
         {/* Visually-hidden title for a11y when course not yet loaded */}
         {(!course || isLoading) && (
@@ -243,7 +243,7 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
           </SheetHeader>
         )}
 
-        <div className="px-4 sm:px-6 pb-10 pt-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 thin-scrollbar">
           {/* Error */}
           {error && !isLoading && (
             <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-400">

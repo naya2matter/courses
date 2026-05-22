@@ -29,6 +29,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetFooter,
 } from "@/components/ui/sheet"
 import {
   Select,
@@ -191,14 +192,14 @@ export function CreateQuizAssignmentSheet({
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl flex flex-col gap-0 p-0">
+      <SheetContent className="w-full sm:max-w-xl flex flex-col gap-0 p-0 border-l border-white/10">
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
+        <SheetHeader className="px-6 py-5 border-b border-white/10">
+          <SheetTitle className="flex items-center gap-2 text-xl">
             <ClipboardListIcon className="h-5 w-5 text-primary" />
             Assign Quiz
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-muted-foreground">
             Select a quiz and one or more users to assign. Optionally send a
             notification.
           </SheetDescription>
@@ -208,7 +209,7 @@ export function CreateQuizAssignmentSheet({
           onSubmit={handleSubmit}
           className="flex flex-col flex-1 min-h-0 overflow-hidden"
         >
-          <div className="flex flex-col gap-5 px-6 py-5 overflow-y-auto flex-1">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
             {/* ── Error alert ────────────────────────────────────────────── */}
             {submitError && (
               <Alert variant="destructive">
@@ -415,52 +416,56 @@ export function CreateQuizAssignmentSheet({
           </div>
 
           {/* ── Footer ─────────────────────────────────────────────────────── */}
-          <div className="border-t px-6 py-4 flex items-center justify-between gap-3 bg-background">
-            <div className="text-xs text-muted-foreground">
-              {selectedUserIds.length > 0 ? (
-                <span>
-                  Assigning to{" "}
-                  <span className="font-medium text-foreground">
-                    {selectedUserIds.length}
-                  </span>{" "}
-                  user{selectedUserIds.length !== 1 ? "s" : ""}
-                </span>
-              ) : (
-                <span>Select at least one user</span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  isLoadingOptions ||
-                  !quizId ||
-                  selectedUserIds.length === 0
-                }
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                    Assigning…
-                  </>
+          <SheetFooter className="px-6 py-4 border-t border-white/10 mt-auto bg-background/50 backdrop-blur-sm">
+            <div className="flex w-full items-center justify-between gap-4 flex-col sm:flex-row">
+              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                {selectedUserIds.length > 0 ? (
+                  <span>
+                    Assigning to{" "}
+                    <span className="font-medium text-foreground">
+                      {selectedUserIds.length}
+                    </span>{" "}
+                    user{selectedUserIds.length !== 1 ? "s" : ""}
+                  </span>
                 ) : (
-                  <>
-                    <CheckIcon className="mr-2 h-4 w-4" />
-                    Assign Quiz
-                  </>
+                  <span>Select at least one user</span>
                 )}
-              </Button>
+              </div>
+              <div className="flex justify-end gap-3 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="min-w-[100px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    isLoadingOptions ||
+                    !quizId ||
+                    selectedUserIds.length === 0
+                  }
+                  className="min-w-[100px]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                      Assigning…
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="mr-2 h-4 w-4" />
+                      Assign Quiz
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          </SheetFooter>
         </form>
       </SheetContent>
     </Sheet>

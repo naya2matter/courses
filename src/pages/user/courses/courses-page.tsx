@@ -61,18 +61,15 @@ function CourseCard({ course, onClick, registration }: { course: Course; onClick
     <button
       type="button"
       onClick={onClick}
-      className="group text-left flex flex-col overflow-hidden rounded-[20px] border border-white/5 bg-[#0a0a0f] transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_12px_40px_rgba(99,102,241,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-full relative"
+      className="text-left flex flex-col overflow-hidden rounded-[20px] border border-white/5 bg-[#0a0a0f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-full relative"
     >
-      {/* Abstract glow behind the card content */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.06),transparent_50%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-      
       {/* Image Header */}
       <div className="relative h-45 w-full shrink-0 overflow-hidden bg-[#0c0c14]">
         {course.image_path ? (
           <img
             src={course.image_path}
             alt={course.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center bg-linear-to-br from-indigo-500/10 to-purple-500/10">

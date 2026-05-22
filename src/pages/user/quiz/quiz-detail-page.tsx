@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
   AlertCircleIcon,
+  BookOpenCheckIcon,
+  CheckCircle2Icon,
   ClockIcon,
   TrophyIcon,
   LayersIcon,
@@ -17,6 +19,7 @@ import {
   SquareCheckIcon,
   CircleDotIcon,
   EyeOffIcon,
+  XCircleIcon,
   Loader2Icon,
 } from "lucide-react"
 
@@ -75,24 +78,21 @@ const SHOW_ANSWERS_LABELS: Record<string, string> = {
 
 function QuestionRow({ q, index }: { q: UserQuizQuestion; index: number }) {
   return (
-    <div className="flex items-start gap-3 py-3">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/6 border border-white/10 text-xs font-semibold text-white/60">
+    <div className="flex items-start gap-3 py-3.5">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">
         {index + 1}
       </div>
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className="text-sm text-white/80 leading-snug">{q.question_text}</p>
+      <div className="flex-1 min-w-0 space-y-2">
+        <p className="text-sm text-white/80 leading-snug font-medium">{q.question_text}</p>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="flex items-center gap-1 text-xs text-white/40">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/40 bg-white/4 border border-white/8 rounded-full px-2 py-0.5">
             {QUESTION_ICONS[q.type]}
             {QUESTION_LABELS[q.type] ?? q.type}
           </span>
           {q.points != null && (
-            <>
-              <span className="text-white/20">·</span>
-              <span className="text-xs text-white/40">
-                {q.points} pt{q.points !== 1 ? "s" : ""}
-              </span>
-            </>
+            <span className="inline-flex text-[11px] font-semibold text-amber-400/80 bg-amber-500/8 border border-amber-500/15 rounded-full px-2 py-0.5">
+              {q.points} pt{q.points !== 1 ? "s" : ""}
+            </span>
           )}
         </div>
       </div>
@@ -114,12 +114,14 @@ function InfoChip({
   highlight?: string
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-white/8 bg-white/[0.03] p-4">
-      <div className="flex items-center gap-1.5 text-white/40 text-xs">
-        {icon}
-        {label}
+    <div className="flex flex-col gap-3 rounded-xl border border-white/8 bg-white/3 p-4 transition-colors hover:bg-white/5">
+      <div className="flex items-center gap-2 text-white/35">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+          {icon}
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-widest">{label}</span>
       </div>
-      <p className={`text-sm font-semibold ${highlight ?? "text-white/80"}`}>{value}</p>
+      <p className={`text-[15px] font-semibold leading-snug ${highlight ?? "text-white/85"}`}>{value}</p>
     </div>
   )
 }
@@ -253,29 +255,78 @@ export function QuizDetailPage() {
         <div className="space-y-7">
           {/* Title + status */}
           <div className="space-y-3">
-            <div className="flex flex-wrap items-start gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex-1 min-w-0">
-                {quiz.title}
-              </h1>
-              {quiz.status && (
-                <Badge
-                  variant="outline"
-                  className={`shrink-0 capitalize border-white/15 ${
-                    quiz.status === "published"
-                      ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                      : "text-white/50"
-                  }`}
-                >
-                  {quiz.status}
-                </Badge>
-              )}
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center size-12 shrink-0 rounded-2xl bg-indigo-600/20 border border-indigo-500/25 shadow-md shadow-indigo-500/10">
+                <BookOpenCheckIcon className="size-6 text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-start gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex-1 min-w-0">
+                    {quiz.title}
+                  </h1>
+                  {quiz.status && (
+                    <Badge
+                      variant="outline"
+                      className={`shrink-0 capitalize border-white/15 ${
+                        quiz.status === "published"
+                          ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                          : "text-white/50"
+                      }`}
+                    >
+                      {quiz.status}
+                    </Badge>
+                  )}
+                </div>
+                {quiz.description && (
+                  <p className="text-sm text-white/50 max-w-2xl leading-relaxed">
+                    {quiz.description}
+                  </p>
+                )}
+              </div>
             </div>
-            {quiz.description && (
-              <p className="text-sm text-white/50 max-w-2xl leading-relaxed">
-                {quiz.description}
-              </p>
-            )}
           </div>
+
+          {/* Pass/Fail status */}
+          {quiz.user_passed != null && (
+            <Card
+              className={`rounded-2xl border ${
+                quiz.user_passed
+                  ? "border-emerald-500/20 bg-emerald-500/8"
+                  : "border-rose-500/20 bg-rose-500/8"
+              }`}
+            >
+              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex size-10 items-center justify-center rounded-2xl border ${
+                      quiz.user_passed
+                        ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                        : "border-rose-500/30 bg-rose-500/15 text-rose-300"
+                    }`}
+                  >
+                    {quiz.user_passed ? (
+                      <CheckCircle2Icon className="size-5" />
+                    ) : (
+                      <XCircleIcon className="size-5" />
+                    )}
+                  </div>
+                  <div>
+                    <p className={`text-lg font-semibold ${quiz.user_passed ? "text-emerald-300" : "text-rose-300"}`}>
+                      {quiz.user_passed ? "Passed" : "Failed"}
+                    </p>
+                    {quiz.user_total_score != null && (
+                      <p className="text-sm text-white/50">
+                        Score: {quiz.user_total_score} pts
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-white/60">
+                  This quiz has been completed and your status is available here.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Info grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -354,14 +405,17 @@ export function QuizDetailPage() {
 
           {/* Questions preview */}
           {quiz.questions && quiz.questions.length > 0 && (
-            <Card className="border-white/8 bg-white/[0.02]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base text-white/80 flex items-center gap-2">
+            <Card className="border-white/8 bg-white/2 overflow-hidden">
+              <CardHeader className="pb-3 border-b border-white/6">
+                <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-white/40 flex items-center gap-2">
                   <ListChecksIcon className="size-4 text-indigo-400" />
                   Questions Overview
+                  <span className="ml-auto text-xs font-medium text-white/30 normal-case tracking-normal">
+                    {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}
+                  </span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="divide-y divide-white/6">
+              <CardContent className="divide-y divide-white/5 px-5 py-0">
                 {quiz.questions.map((q, i) => (
                   <QuestionRow key={q.id} q={q} index={i} />
                 ))}
@@ -370,10 +424,12 @@ export function QuizDetailPage() {
           )}
 
           {/* Instruction card */}
-          <Card className="border-indigo-500/20 bg-indigo-500/5">
-            <CardContent className="flex items-start gap-3 py-4">
-              <InfoIcon className="size-4 text-indigo-400 shrink-0 mt-0.5" />
-              <div className="text-sm text-white/50 space-y-1 leading-relaxed">
+          <Card className="border-indigo-500/20 bg-indigo-500/6 rounded-2xl">
+            <CardContent className="flex items-start gap-3.5 py-4 px-5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 border border-indigo-500/25">
+                <InfoIcon className="size-4 text-indigo-400" />
+              </div>
+              <div className="text-sm text-white/50 space-y-1 leading-relaxed pt-0.5">
                 <p>
                   Once you start the quiz, a new attempt will be created.
                   {quiz.time_limit_minutes != null &&
@@ -390,12 +446,12 @@ export function QuizDetailPage() {
           </Card>
 
           {/* CTA */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 pt-1">
             <Button
               size="lg"
               onClick={handleStart}
               disabled={isStarting}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white border-0 px-8"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white border-0 px-8 h-12 rounded-xl shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 transition-all"
             >
               {isStarting ? (
                 <>
@@ -414,7 +470,7 @@ export function QuizDetailPage() {
               size="lg"
               variant="outline"
               onClick={() => navigate("/user/quizzes")}
-              className="border-white/15 text-white/60 hover:text-white hover:border-white/30 bg-transparent"
+              className="border-white/15 text-white/60 hover:text-white hover:border-white/30 bg-transparent h-12 rounded-xl"
             >
               <ArrowLeftIcon className="size-4 mr-2" />
               Back
@@ -425,7 +481,7 @@ export function QuizDetailPage() {
 
       {/* Not found */}
       {!isLoading && !error && !quiz && (
-        <Card className="border-white/8 bg-white/[0.02]">
+        <Card className="border-white/8 bg-white/2">
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
             <LockIcon className="size-10 text-white/20" />
             <p className="text-white/50">Quiz not found or you do not have access to it.</p>

@@ -16,7 +16,7 @@ import {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
-} from "@radix-ui/react-dialog"
+} from "@/components/ui/dialog"
 
 import { isApiError } from "@/lib/api"
 import { deleteDepartment } from "../service/department.service"

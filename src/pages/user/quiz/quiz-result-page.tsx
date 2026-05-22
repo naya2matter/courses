@@ -65,6 +65,23 @@ function formatDurationMinutes(startIso?: string | null, endIso?: string | null)
   }
 }
 
+function formatSubmittedAnswer(answer: string | null | undefined): string {
+  if (!answer) return ""
+  const trimmed = answer.trim()
+  if (!trimmed) return ""
+
+  try {
+    const decoded = JSON.parse(trimmed)
+    if (Array.isArray(decoded)) {
+      return decoded.map((item) => String(item)).join(", ")
+    }
+  } catch {
+    // Keep plain text answers unchanged when not JSON.
+  }
+
+  return trimmed
+}
+
 const Q_ICONS: Record<string, React.ReactNode> = {
   radio: <CircleDotIcon className="size-3.5 text-indigo-400 shrink-0" />,
   checkbox: <SquareCheckIcon className="size-3.5 text-violet-400 shrink-0" />,
@@ -86,6 +103,7 @@ function ScoreRing({
 }) {
   const pct = total && total > 0 ? Math.round(((score ?? 0) / total) * 100) : 0
   const circumference = 2 * Math.PI * 54
+  const scoreTone = passed === true ? "text-emerald-300" : passed === false ? "text-red-300" : "text-white/70"
 
   return (
     <div className="flex flex-col items-center gap-4 py-4">
@@ -112,6 +130,9 @@ function ScoreRing({
             className="transition-all duration-700"
           />
         </svg>
+        {passed === true && (
+          <div className="absolute size-25 rounded-full bg-emerald-400/10 blur-xl pointer-events-none" />
+        )}
         <div className="absolute flex flex-col items-center">
           <span
             className={`text-3xl font-bold tabular-nums ${
@@ -139,7 +160,7 @@ function ScoreRing({
           <span className="text-white/50 text-sm">Pending Review</span>
         )}
         {total != null && (
-          <p className="text-sm text-white/50">
+          <p className={`text-sm ${scoreTone}`}>
             {score ?? 0} / {total} points
           </p>
         )}
@@ -168,6 +189,7 @@ function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }
 
   const correctAnswerArr = q?.correct_answer
   const showCorrectAnswer = Array.isArray(correctAnswerArr) && correctAnswerArr.length > 0
+  const submittedAnswer = formatSubmittedAnswer(answer.answer)
 
   return (
     <div className={`rounded-xl border p-4 space-y-3 ${borderColor}`}>
@@ -201,7 +223,7 @@ function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }
           ) : isCorrect === false ? (
             <XCircleIcon className="size-5 text-red-400" />
           ) : isPending ? (
-            <HelpCircleIcon className="size-5 text-amber-400" title="Pending manual grading" />
+            <HelpCircleIcon className="size-5 text-amber-400" aria-label="Pending manual grading" />
           ) : (
             <MinusCircleIcon className="size-5 text-white/30" />
           )}
@@ -230,7 +252,7 @@ function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }
             }
           `}
         >
-          {answer.answer ?? <span className="italic text-white/30">No answer given</span>}
+          {submittedAnswer || <span className="italic text-white/30">No answer given</span>}
         </div>
       </div>
 
@@ -319,10 +341,13 @@ export function QuizResultPage() {
 
   const quiz = attempt?.quiz
   const answers = attempt?.answers ?? []
+  const achievedScore = attempt?.total_score ?? attempt?.score ?? null
+  const totalPoints = attempt?.total_points ?? quiz?.total_points ?? null
   const correctCount = answers.filter((a) => a.is_correct === true).length
   const wrongCount = answers.filter((a) => a.is_correct === false).length
   const pendingCount = answers.filter((a) => a.is_correct === null).length
-  const duration = formatDurationMinutes(attempt?.started_at, attempt?.submitted_at)
+  const submittedAt = attempt?.submitted_at ?? attempt?.completed_at
+  const duration = formatDurationMinutes(attempt?.started_at, submittedAt)
 
   return (
     <div className="space-y-7">
@@ -403,8 +428,8 @@ export function QuizResultPage() {
           >
             <CardContent className="py-8">
               <ScoreRing
-                score={attempt.score ?? null}
-                total={attempt.total_points ?? null}
+                score={achievedScore}
+                total={totalPoints}
                 passed={attempt.passed ?? null}
                 threshold={quiz?.pass_threshold}
               />
@@ -459,10 +484,10 @@ export function QuizResultPage() {
                 Started: {formatDate(attempt.started_at)}
               </span>
             )}
-            {attempt.submitted_at && (
+            {submittedAt && (
               <span className="flex items-center gap-1.5">
                 <CalendarIcon className="size-3.5" />
-                Submitted: {formatDate(attempt.submitted_at)}
+                Submitted: {formatDate(submittedAt)}
               </span>
             )}
           </div>

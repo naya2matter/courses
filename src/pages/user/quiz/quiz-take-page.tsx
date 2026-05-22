@@ -335,7 +335,7 @@ export function QuizTakePage() {
           if (q.type === "checkbox") {
             const arr = Array.isArray(a) ? a : []
             if (arr.length === 0) return null
-            return { quiz_question_id: q.id, answer: arr.join(",") }
+            return { quiz_question_id: q.id, answer: JSON.stringify(arr) }
           }
           const str = typeof a === "string" ? a.trim() : ""
           if (!str) return null

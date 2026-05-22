@@ -497,7 +497,7 @@ export function ViewQuizPage() {
                 <Link
                   key={attempt.id}
                   to={`/admin/quiz-management/quizzes/${quiz.id}/attempts/${attempt.id}`}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/2 px-4 py-3.5 transition-colors hover:bg-white/5 group"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/2 px-4 py-3.5"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-xs font-semibold text-muted-foreground">
@@ -534,7 +534,7 @@ export function ViewQuizPage() {
                         In progress
                       </Badge>
                     )}
-                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground/50" />
                   </div>
                 </Link>
               )

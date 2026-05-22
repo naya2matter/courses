@@ -16,6 +16,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetFooter,
 } from "@/components/ui/sheet"
 import {
   Select,
@@ -157,113 +158,118 @@ export function CreateAssignmentSheet({ open, onClose, onSubmit }: CreateAssignm
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent className="sm:max-w-xl p-6 sm:p-8">
-        <SheetHeader>
-          <SheetTitle>Create Audio Assignment</SheetTitle>
-          <SheetDescription>
+      <SheetContent className="sm:max-w-xl flex flex-col gap-0 p-0 border-l border-white/10">
+        <SheetHeader className="px-6 py-5 border-b border-white/10">
+          <SheetTitle className="text-xl">Create Audio Assignment</SheetTitle>
+          <SheetDescription className="text-muted-foreground">
             Assign one audio item to one or more users.
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          {submitError && (
-            <Alert variant="destructive">
-              <AlertCircleIcon className="h-4 w-4" />
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertCircleIcon className="h-4 w-4" />
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
+            )}
 
-          {submitSuccess && (
-            <Alert>
-              <AlertDescription>{submitSuccess}</AlertDescription>
-            </Alert>
-          )}
+            {submitSuccess && (
+              <Alert>
+                <AlertDescription>{submitSuccess}</AlertDescription>
+              </Alert>
+            )}
 
-          {/* Audio selector */}
-          <div className="space-y-2">
-            <Label className="inline-flex items-center gap-2">
-              <HeadphonesIcon className="h-4 w-4 text-muted-foreground" />
-              Audio
-            </Label>
-            <Select value={audioId} onValueChange={setAudioId} disabled={isLoadingOptions || isSubmitting}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={isLoadingOptions ? "Loading audio..." : "Select audio"} />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {audioOptions.map((audio) => (
-                  <SelectItem key={audio.id} value={String(audio.id)}>
-                    {audio.title ?? audio.name ?? `Audio #${audio.id}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground mt-2">Available: {audioOptions.length}</p>
-          </div>
-
-          {/* User multi-select with search */}
-          <div className="space-y-2">
-            <Label className="inline-flex items-center gap-2">
-              <UsersIcon className="h-4 w-4 text-muted-foreground" />
-              Users
-            </Label>
-            <Input
-              className="w-full"
-              placeholder="Search users by name or email"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              disabled={isLoadingOptions || isSubmitting}
-            />
-
-            <div className="max-h-72 overflow-auto rounded-lg border p-4">
-              {filteredUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users found.</p>
-              ) : (
-                <div className="space-y-2">
-                  {filteredUsers.map((user) => {
-                    const checked = selectedUserIds.includes(user.id)
-                    return (
-                      <label
-                        key={user.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2 hover:bg-accent transition-colors"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() => toggleUser(user.id)}
-                          disabled={isSubmitting}
-                        />
-                        <span className="text-sm">
-                          <span className="block font-medium">{user.name}</span>
-                          <span className="text-muted-foreground">{user.email}</span>
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
+            {/* Audio selector */}
+            <div className="space-y-3">
+              <Label className="inline-flex items-center gap-2 text-sm font-medium">
+                <HeadphonesIcon className="h-4 w-4 text-muted-foreground" />
+                Audio
+              </Label>
+              <Select value={audioId} onValueChange={setAudioId} disabled={isLoadingOptions || isSubmitting}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder={isLoadingOptions ? "Loading audio..." : "Select audio"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {audioOptions.map((audio) => (
+                    <SelectItem key={audio.id} value={String(audio.id)}>
+                      {audio.title ?? audio.name ?? `Audio #${audio.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-2">Available: {audioOptions.length}</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredUsers.length} users · Selected: {selectedUserIds.length}
-            </p>
-          </div>
 
-          {/* Notification toggle */}
-          <label className="flex items-center gap-3 rounded-md border px-4 py-3 text-sm">
-            <Checkbox
-              checked={sendNotification}
-              onCheckedChange={(value) => setSendNotification(Boolean(value))}
-              disabled={isSubmitting}
-            />
-            Send assignment notification emails
-          </label>
-          <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || isLoadingOptions}>
-              {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-              Create Assignment
-            </Button>
+            {/* User multi-select with search */}
+            <div className="space-y-3">
+              <Label className="inline-flex items-center gap-2 text-sm font-medium">
+                <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                Users
+              </Label>
+              <Input
+                className="w-full h-10"
+                placeholder="Search users by name or email"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                disabled={isLoadingOptions || isSubmitting}
+              />
+
+              <div className="max-h-72 overflow-auto rounded-lg border p-4 bg-background px-3 py-2 text-sm">
+                {filteredUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No users found.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredUsers.map((user) => {
+                      const checked = selectedUserIds.includes(user.id)
+                      return (
+                        <label
+                          key={user.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-md px-3 py-2 hover:bg-accent transition-colors"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleUser(user.id)}
+                            disabled={isSubmitting}
+                          />
+                          <span className="text-sm">
+                            <span className="block font-medium">{user.name}</span>
+                            <span className="text-muted-foreground">{user.email}</span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredUsers.length} users · Selected: {selectedUserIds.length}
+              </p>
+            </div>
+
+            {/* Notification toggle */}
+            <label className="flex items-center gap-3 rounded-md border px-4 py-3 text-sm hover:bg-accent cursor-pointer transition-colors bg-background">
+              <Checkbox
+                checked={sendNotification}
+                onCheckedChange={(value) => setSendNotification(Boolean(value))}
+                disabled={isSubmitting}
+              />
+              Send assignment notification emails
+            </label>
           </div>
+          
+          <SheetFooter className="px-6 py-4 border-t border-white/10 mt-auto bg-background/50 backdrop-blur-sm">
+            <div className="flex w-full justify-end gap-3">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="min-w-[100px]">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || isLoadingOptions} className="min-w-[100px]">
+                {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+                Create Assignment
+              </Button>
+            </div>
+          </SheetFooter>
         </form>
       </SheetContent>
     </Sheet>

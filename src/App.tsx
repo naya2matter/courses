@@ -49,6 +49,8 @@ import AudioCategoriesPage from "@/pages/admin/audio-management/categories/categ
 
 // Admin — Video Management
 import VideoManagementPage from "@/pages/admin/video-management/video/video"
+import { CreateVideoPage } from "@/pages/admin/video-management/video/pages/create-video-page"
+import { ViewVideoPage } from "@/pages/admin/video-management/video/pages/view-video-page"
 import VideoCategoriesPage from "@/pages/admin/video-management/categories/categories"
 
 // Admin — Blog Management
@@ -131,6 +133,8 @@ function App() {
 
               {/* Video Management */}
               <Route path="/admin/video-management/video" element={<VideoManagementPage />} />
+              <Route path="/admin/video-management/video/create" element={<CreateVideoPage />} />
+              <Route path="/admin/video-management/video/:id" element={<ViewVideoPage />} />
               <Route path="/admin/video-management/categories" element={<VideoCategoriesPage />} />
 
               {/* Blog Management */}

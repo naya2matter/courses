@@ -1,7 +1,6 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  PlayIcon,
   SearchIcon,
   Loader2Icon,
   MusicIcon,
@@ -170,7 +169,7 @@ export function UserAudioPage() {
                   <div 
                       key={item.id}
                       onClick={() => navigate(`/user/audio/${item.id}`)}
-                      className="group flex items-center justify-between py-2.5 px-3 hover:bg-card/50 rounded-xl transition-colors cursor-pointer border-b border-border/40 last:border-0 w-full"
+                      className="flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer border-b border-border/40 last:border-0 w-full"
                     >
                     <div className="flex items-center gap-4 flex-1">
                       {/* Thumbnail or Hover Play */}
@@ -191,9 +190,6 @@ export function UserAudioPage() {
                             <MusicIcon className="size-5 text-muted-foreground" />
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <PlayIcon className="size-5 fill-white text-white" />
-                        </div>
                       </div>
 
                       {/* Title & Artist */}

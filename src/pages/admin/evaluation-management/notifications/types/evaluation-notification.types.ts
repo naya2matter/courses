@@ -85,14 +85,17 @@ export interface EvaluationNotificationHistoryItem {
   id: number
   subject: string
   message?: string | null
-  success_count: number
-  failed_count: number
+  success_count?: number
+  failed_count?: number
   sent_to?: EvaluationNotificationSentManager[] | null
   failed_to?: EvaluationNotificationFailedManager[] | null
+  managers?: EvaluationNotificationManager[] | null
+  employees?: EvaluationNotificationManager[] | null
+  sent_at?: string | null
   start_date?: string | null
   end_date?: string | null
   status?: string | null
-  created_at: string
+  created_at?: string
   updated_at?: string | null
 }
 

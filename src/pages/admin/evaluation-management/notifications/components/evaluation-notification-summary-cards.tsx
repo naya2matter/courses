@@ -26,18 +26,26 @@ interface CardDef {
 
 function buildCards(items: EvaluationNotificationHistoryItem[]): CardDef[] {
   const totalBatches = items.length
-  const totalSuccess = items.reduce((s, i) => s + (i.success_count ?? 0), 0)
+  const totalSuccess = items.reduce(
+    (s, i) => s + (i.success_count ?? i.managers?.length ?? i.sent_to?.length ?? 0),
+    0,
+  )
   const totalFailed = items.reduce((s, i) => s + (i.failed_count ?? 0), 0)
 
   const lastItem = items.slice().sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    (a, b) =>
+      new Date(b.created_at ?? b.sent_at ?? "").getTime() -
+      new Date(a.created_at ?? a.sent_at ?? "").getTime(),
   )[0]
   const lastSent = lastItem
-    ? new Date(lastItem.created_at).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
+    ? new Date(lastItem.created_at ?? lastItem.sent_at ?? "").toLocaleDateString(
+        undefined,
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        },
+      )
     : "—"
 
   // Silence unused import for deriveStatus if not directly used in rendering
@@ -79,10 +87,12 @@ function buildCards(items: EvaluationNotificationHistoryItem[]): CardDef[] {
 
 function CardSkeleton() {
   return (
-    <div className="flex flex-col items-center text-center rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-      <Skeleton className="h-12 w-12 rounded-xl mb-3" />
-      <Skeleton className="h-9 w-12 mt-1" />
-      <Skeleton className="h-3 w-24 mt-3" />
+    <div className="flex flex-col items-center text-center p-4">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+        <Skeleton className="h-5 w-5 rounded-sm" />
+      </div>
+      <Skeleton className="h-10 w-24" />
+      <Skeleton className="mt-3 h-3 w-24" />
     </div>
   )
 }
@@ -102,7 +112,7 @@ export function EvaluationNotificationSummaryCards({
 }: EvaluationNotificationSummaryCardsProps) {
   if (isLoading) {
     return (
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
       </section>
     )
@@ -111,10 +121,10 @@ export function EvaluationNotificationSummaryCards({
   const cards = buildCards(items)
 
   return (
-    <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map(({ key, title, value, Icon, iconColor }) => (
         <div key={key} className="flex flex-col items-center text-center p-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 border border-white/10 mb-3">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
             <Icon className={`size-6 ${iconColor}`} />
           </div>
           <p className="text-4xl font-semibold tabular-nums text-foreground">{value}</p>

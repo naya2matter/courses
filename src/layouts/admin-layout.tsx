@@ -19,7 +19,7 @@ export function AdminLayout() {
         <SidebarProvider className="bg-transparent">
           <AppSidebar />
           <div className="flex min-h-svh w-full flex-col">
-            <SiteHeader />
+            <SiteHeader showAdminCalendar />
             <main className="flex-1 p-5 md:p-6">
               <div className="mx-auto w-full max-w-350 pb-8">
                 <Outlet />

@@ -24,9 +24,11 @@ export const DEFAULT_FILTERS: EvaluationNotificationFilters = {
 /** Derives a status string from success/failed counts. */
 export function deriveStatus(item: EvaluationNotificationHistoryItem): string {
   if (item.status) return item.status
-  if (item.success_count === 0 && item.failed_count > 0) return "failed"
-  if (item.success_count > 0 && item.failed_count > 0) return "partial"
-  if (item.success_count > 0 && item.failed_count === 0) return "sent"
+  const success = item.success_count ?? 0
+  const failed = item.failed_count ?? 0
+  if (success === 0 && failed > 0) return "failed"
+  if (success > 0 && failed > 0) return "partial"
+  if (success > 0 && failed === 0) return "sent"
   return "unknown"
 }
 
@@ -98,7 +100,21 @@ export function useEvaluationNotificationHistory(): UseEvaluationNotificationHis
         (item) =>
           item.subject.toLowerCase().includes(term) ||
           (item.message ?? "").toLowerCase().includes(term) ||
-          (item.sent_to ?? []).some((m) => m.email.toLowerCase().includes(term)),
+          (item.sent_to ?? []).some(
+            (m) =>
+              m.email.toLowerCase().includes(term) ||
+              (m.name ?? "").toLowerCase().includes(term),
+          ) ||
+          (item.managers ?? []).some(
+            (m) =>
+              m.email.toLowerCase().includes(term) ||
+              m.name.toLowerCase().includes(term),
+          ) ||
+          (item.employees ?? []).some(
+            (e) =>
+              e.email.toLowerCase().includes(term) ||
+              e.name.toLowerCase().includes(term),
+          ),
       )
     }
     if (filters.status) {

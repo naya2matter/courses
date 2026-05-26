@@ -84,6 +84,7 @@ export interface CreateBugReportPayload {
   priority: BugReportPriority
   steps_to_reproduce?: string
   page_url?: string
+  assigned_to?: number | null
 }
 
 /**

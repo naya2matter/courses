@@ -102,18 +102,7 @@ function DrawerContent({ entry }: { entry: EvaluationHistoryEntry }) {
           label="Score Range"
           value={`${entry.performance_level.range.min} – ${entry.performance_level.range.max}`}
         />
-        <InfoRow
-          label="Color"
-          value={
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block h-3.5 w-3.5 rounded-full border border-white/20"
-                style={{ backgroundColor: entry.performance_level.color }}
-              />
-              <span className="font-mono text-xs">{entry.performance_level.color}</span>
-            </div>
-          }
-        />
+       
       </div>
 
       {/* ── Score snapshot ────────────────────────────────────────────────── */}

@@ -18,11 +18,11 @@ import { AdminDashboard } from "@/pages/admin/dashboard"
 import UsersPage from "@/pages/admin/user-management/users/users"
 import { CreateUserPage } from "@/pages/admin/user-management/users/pages/create-user-page"
 import { EditUserPage } from "@/pages/admin/user-management/users/pages/edit-user-page"
+import { ViewUserPage } from "@/pages/admin/user-management/users/pages/view-user-page"
 import DepartmentsPage from "@/pages/admin/user-management/departments/departments"
-import ResendLinksPage from "@/pages/admin/user-management/resend-links/resend-links"
-
 // Admin — Course Management
 import LiveCoursesPage from "@/pages/admin/course-management/live-courses/live-courses"
+import ResendLinksPage from "@/pages/admin/course-management/resend-links/resend-links"
 import ViewCoursePage from "@/pages/admin/course-management/live-courses/pages/view-course-page"
 import CourseFormPage from "@/pages/admin/course-management/live-courses/pages/course-form-page"
 import OnlineCoursesPage from "@/pages/admin/course-management/online-courses/online-courses"
@@ -55,6 +55,9 @@ import VideoCategoriesPage from "@/pages/admin/video-management/categories/categ
 
 // Admin — Blog Management
 import BlogManagementPage from "@/pages/admin/blog-management/blog/blog"
+import { BlogCreatePage } from "@/pages/admin/blog-management/pages/blog-create-page"
+import { BlogEditPage } from "@/pages/admin/blog-management/pages/blog-edit-page"
+import { BlogDetailPage } from "@/pages/admin/blog-management/pages/blog-detail-page"
 
 // Admin — Quiz Management
 import QuizzesPage, { CreateQuizPage, ViewQuizPage, EditQuizPage, ViewAttemptPage } from "@/pages/admin/quize-management/quizes/quizzes"
@@ -77,6 +80,14 @@ import { UserAudioDetailPage } from "@/pages/user/audio/audio-detail"
 
 // User — Clocking / Attendance
 import { UserClockingPage } from "@/pages/user/clocking/clocking-page"
+import { UserEvaluationsPage } from "@/pages/user/evaluations/evaluations-page"
+
+// User — Feedback
+import { UserFeedbackPage } from "@/pages/user/feedback/user-feedback-page"
+
+// User — Blog feed
+import { UserBlogFeedPage } from "@/pages/user/blog/blog-feed-page"
+import { UserBlogDetailPage } from "@/pages/user/blog/blog-detail-page"
 
 // User — Quiz pages
 import { MyQuizzesPage } from "@/pages/user/quiz/my-quizzes-page"
@@ -100,12 +111,13 @@ function App() {
               {/* User Management */}
               <Route path="/admin/user-management/users" element={<UsersPage />} />
               <Route path="/admin/user-management/users/create" element={<CreateUserPage />} />
+              <Route path="/admin/user-management/users/:id" element={<ViewUserPage />} />
               <Route path="/admin/user-management/users/edit/:id" element={<EditUserPage />} />
               <Route path="/admin/user-management/departments" element={<DepartmentsPage />} />
-              <Route path="/admin/user-management/resend-links" element={<ResendLinksPage />} />
 
               {/* Course Management */}
               <Route path="/admin/course-management/live-courses" element={<LiveCoursesPage />} />
+              <Route path="/admin/course-management/resend-links" element={<ResendLinksPage />} />
               <Route path="/admin/course-management/live-courses/create" element={<CourseFormPage />} />
               <Route path="/admin/course-management/live-courses/edit/:id" element={<CourseFormPage />} />
               <Route path="/admin/course-management/live-courses/:id" element={<ViewCoursePage />} />
@@ -139,6 +151,9 @@ function App() {
 
               {/* Blog Management */}
               <Route path="/admin/blog-management/blog" element={<BlogManagementPage />} />
+              <Route path="/admin/blog-management/blog/create" element={<BlogCreatePage />} />
+              <Route path="/admin/blog-management/blog/edit/:id" element={<BlogEditPage />} />
+              <Route path="/admin/blog-management/blog/:id" element={<BlogDetailPage />} />
 
               {/* Quiz Management */}
               <Route path="/admin/quiz-management/list-quizzes" element={<QuizzesPage />} />
@@ -171,6 +186,16 @@ function App() {
 
               {/* Clocking / Attendance */}
               <Route path="/user/clocking" element={<UserClockingPage />} />
+
+              {/* Evaluations */}
+              <Route path="/user/evaluations" element={<UserEvaluationsPage />} />
+
+              {/* Feedback */}
+              <Route path="/user/feedback" element={<UserFeedbackPage />} />
+
+              {/* Blog feed */}
+              <Route path="/user/blog" element={<UserBlogFeedPage />} />
+              <Route path="/user/blog/:slug" element={<UserBlogDetailPage />} />
 
               {/* Quiz pages */}
               <Route path="/user/quizzes" element={<MyQuizzesPage />} />

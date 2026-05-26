@@ -3,7 +3,7 @@
 // Fields: title (required), description (required), priority (required),
 //         steps_to_reproduce (optional), page_url (optional, valid URL ≤255).
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Loader2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,8 +26,10 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { isApiError } from "@/lib/api"
+import { getAllUsers } from "@/pages/admin/user-management/users/service/user.service"
 import { createBugReport } from "../service/bug-report.service"
 import type { BugReportPriority, CreateBugReportPayload } from "../types/bug-report.types"
+import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 
 interface BugReportFormDialogProps {
   open: boolean
@@ -41,6 +43,7 @@ const INITIAL: CreateBugReportPayload = {
   priority: "medium",
   steps_to_reproduce: "",
   page_url: "",
+  assigned_to: null,
 }
 
 export function BugReportFormDialog({
@@ -49,6 +52,8 @@ export function BugReportFormDialog({
   onCreated,
 }: BugReportFormDialogProps) {
   const [form, setForm] = useState<CreateBugReportPayload>(INITIAL)
+  const [admins, setAdmins] = useState<UserListResource[]>([])
+  const [loadingAdmins, setLoadingAdmins] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -56,11 +61,24 @@ export function BugReportFormDialog({
   function handleOpenChange(next: boolean) {
     if (!next) {
       setForm(INITIAL)
+      setAdmins([])
       setError(null)
       setFieldErrors({})
     }
     onOpenChange(next)
   }
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setLoadingAdmins(true)
+    getAllUsers({ per_page: 200 })
+      .then((res) => setAdmins(res.data.filter((u) => u.role === "admin")))
+      .catch(() => setError("Failed to load admin users."))
+      .finally(() => setLoadingAdmins(false))
+  }, [open])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -78,6 +96,9 @@ export function BugReportFormDialog({
     }
     if (form.page_url?.trim()) {
       payload.page_url = form.page_url.trim()
+    }
+    if (form.assigned_to != null) {
+      payload.assigned_to = form.assigned_to
     }
 
     try {
@@ -178,6 +199,42 @@ export function BugReportFormDialog({
             </Select>
             {fieldErrors.priority && (
               <p className="text-xs text-destructive">{fieldErrors.priority}</p>
+            )}
+          </div>
+
+          {/* Assigned to */}
+          <div className="space-y-1.5">
+            <Label htmlFor="brf-assigned-to">Assign to</Label>
+            <Select
+              value={form.assigned_to != null ? String(form.assigned_to) : undefined}
+              onValueChange={(v) =>
+                setForm((f) => ({
+                  ...f,
+                  assigned_to: v === "none" ? null : Number(v),
+                }))
+              }
+              disabled={loadingAdmins || isSubmitting}
+            >
+              <SelectTrigger id="brf-assigned-to">
+                <SelectValue
+                  placeholder={
+                    loadingAdmins
+                      ? "Loading admins..."
+                      : "Unassigned"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {admins.map((admin) => (
+                  <SelectItem key={admin.id} value={String(admin.id)}>
+                    {admin.name} ({admin.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {fieldErrors.assigned_to && (
+              <p className="text-xs text-destructive">{fieldErrors.assigned_to}</p>
             )}
           </div>
 

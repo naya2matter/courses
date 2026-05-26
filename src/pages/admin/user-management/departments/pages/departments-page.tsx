@@ -6,6 +6,7 @@ import { useState } from "react"
 import { AlertCircleIcon, XIcon, Loader2Icon, PlusIcon, BuildingIcon, UsersIcon, LayoutGridIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useDepartments } from "../hook/use-departments"
 import type { DepartmentCard } from "../types/department.types"
 import { DepartmentsList } from "../components/departments-list"
@@ -24,25 +25,27 @@ const CARD_ICONS: Record<string, React.ReactNode> = {
 function SummaryCards({ cards, isLoading }: { cards: DepartmentCard[]; isLoading: boolean }) {
   if (cards.length === 0 && !isLoading) return null
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {isLoading && cards.length === 0
-        ? Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl border border-white/10 bg-white/5" />
-          ))
-        : cards.map((card) => (
-            <div
-              key={card.key}
-              className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 px-5 py-4"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                {CARD_ICONS[card.key] ?? <LayoutGridIcon className="h-5 w-5" />}
-              </div>
-              <div>
-                <p className="text-2xl font-bold tabular-nums text-white">{card.value.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{card.title}</p>
-              </div>
-            </div>
-          ))}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {(cards.length > 0
+        ? cards
+        : [
+            { key: "total_departments", title: "Total Departments", value: 0 },
+            { key: "root_departments", title: "Root Departments", value: 0 },
+            { key: "users_with_department", title: "Users With Department", value: 0 },
+          ]
+      ).map((card) => (
+        <div key={card.key} className="flex flex-col items-center justify-between text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-primary">
+            {CARD_ICONS[card.key] ?? <LayoutGridIcon className="h-5 w-5" />}
+          </div>
+          <p className="text-4xl font-semibold tabular-nums text-foreground">
+            {isLoading ? <Skeleton className="h-10 w-24" /> : card.value.toLocaleString()}
+          </p>
+          <p className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            {card.title}
+          </p>
+        </div>
+      ))}
     </div>
   )
 }

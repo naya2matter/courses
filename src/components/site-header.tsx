@@ -1,4 +1,5 @@
 import * as React from "react"
+import { CalendarDaysIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import {
@@ -9,11 +10,37 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  showAdminCalendar?: boolean
+}
+
+function formatCalendarDate(date?: Date) {
+  if (!date) return "Pick a date"
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+export function SiteHeader({ showAdminCalendar = false }: SiteHeaderProps) {
   const [scrolled, setScrolled] = React.useState(false)
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
+    () => new Date(),
+  )
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -52,7 +79,51 @@ export function SiteHeader() {
 
         {/* Right-side actions */}
         <div className="ms-auto flex items-center gap-2">
-          
+          {showAdminCalendar ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                >
+                  <CalendarDaysIcon className="size-4" />
+                  <span className="hidden sm:inline">{formatCalendarDate(selectedDate)}</span>
+                  <span className="sm:hidden">Calendar</span>
+                </Button>
+              </DialogTrigger>
+
+              <DialogContent className="sm:max-w-[24rem]">
+                <DialogHeader>
+                  <DialogTitle>Admin Calendar</DialogTitle>
+                  <DialogDescription>
+                    Available from every admin page through the shared header.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="mx-auto"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>Selected: {formatCalendarDate(selectedDate)}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedDate(new Date())}
+                  >
+                    Today
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </div>
       </div>
     </header>

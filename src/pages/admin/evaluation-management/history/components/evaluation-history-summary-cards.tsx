@@ -153,10 +153,12 @@ function buildCards(
 
 function CardSkeleton() {
   return (
-    <div className="flex flex-col items-center text-center rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-      <Skeleton className="h-12 w-12 rounded-xl mb-3" />
-      <Skeleton className="h-9 w-12 mt-1" />
-      <Skeleton className="h-3 w-24 mt-3" />
+    <div className="flex flex-col items-center text-center p-4">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+        <Skeleton className="h-5 w-5 rounded-sm" />
+      </div>
+      <Skeleton className="h-10 w-24" />
+      <Skeleton className="mt-3 h-3 w-24" />
     </div>
   )
 }
@@ -176,7 +178,7 @@ export function EvaluationHistorySummaryCards({
 }: EvaluationHistorySummaryCardsProps) {
   if (isLoading) {
     return (
-      <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
@@ -187,13 +189,13 @@ export function EvaluationHistorySummaryCards({
   const cards = buildCards(analytics, entries)
 
   return (
-    <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
       {cards.map(({ key, title, value, Icon, iconColor }) => (
         <div
           key={key}
           className="flex flex-col items-center text-center p-4"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 border border-white/10 mb-3">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
             <Icon className={`size-6 ${iconColor}`} />
           </div>
           <p className="text-4xl font-semibold tabular-nums text-foreground">

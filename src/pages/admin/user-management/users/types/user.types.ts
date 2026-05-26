@@ -29,6 +29,27 @@ export interface UserTier {
   level?: UserLevel | null
 }
 
+/** Tier item returned by GET /admin/user-levels/with-tiers */
+export interface UserLevelTierResource {
+  id: number
+  tier_name: string
+  tier_order: number
+}
+
+/** Level item returned by GET /admin/user-levels/with-tiers */
+export interface UserLevelWithTiers {
+  id: number
+  code: string
+  name: string
+  hierarchy_level: number
+  tiers: UserLevelTierResource[]
+}
+
+/** Envelope returned by GET /admin/user-levels/with-tiers */
+export interface UserLevelsWithTiersResponse {
+  data: UserLevelWithTiers[]
+}
+
 /** Embedded manager / report_to object */
 export interface UserManager {
   id: number

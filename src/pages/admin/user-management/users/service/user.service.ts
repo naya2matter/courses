@@ -8,6 +8,7 @@ import type {
   LaravelPaginated,
   UserListFilters,
   UserListResource,
+  UserLevelsWithTiersResponse,
   UserResource,
   UpdateUserPayload,
 } from "../types/user.types"
@@ -56,6 +57,17 @@ export async function getAllUsers(
 }
 
 /**
+ * Fetch a single user by ID.
+ * Endpoint: GET /admin/users/getById/{id}
+ *
+ * Returns the user resource (unwrapped from the { data: {...} } envelope).
+ */
+export async function getUserById(id: number): Promise<UserResource> {
+  const res = await apiClient.get<{ data: UserResource }>(`/admin/users/getById/${id}`)
+  return res.data
+}
+
+/**
  * Create a new user.
  * Endpoint: POST /admin/users/create
  *
@@ -90,4 +102,12 @@ export async function updateUser(
  */
 export async function deleteUser(id: number): Promise<void> {
   return apiClient.delete<void>(`/admin/users/delete/${id}`)
+}
+
+/**
+ * Fetch all user levels with their tiers.
+ * Endpoint: GET /admin/user-levels/with-tiers
+ */
+export async function getUserLevelsWithTiers(): Promise<UserLevelsWithTiersResponse> {
+  return apiClient.get<UserLevelsWithTiersResponse>("/admin/user-levels/with-tiers")
 }

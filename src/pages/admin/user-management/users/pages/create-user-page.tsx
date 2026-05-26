@@ -34,6 +34,7 @@ import { isApiError } from "@/lib/api"
 import { createUser } from "../service/user.service"
 import type { CreateUserPayload } from "../types/user.types"
 import { useDepartmentOptions } from "../hook/use-department-options"
+import { useUserLevelTierOptions } from "../hook/use-user-level-tier-options"
 
 // -- Helpers -------------------------------------------------------------------
 
@@ -79,8 +80,10 @@ export function CreateUserPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Linked options from departments page data.
-  const { departments, allUsers, allTiers, isLoadingOptions } =
+  const { departments, allUsers, isLoadingOptions } =
     useDepartmentOptions()
+  const { tiers, isLoadingTierOptions, tierOptionsError } =
+    useUserLevelTierOptions()
 
   function validate(): string | null {
     if (!name.trim()) return "Name is required."
@@ -386,23 +389,26 @@ export function CreateUserPage() {
                       onValueChange={(value) =>
                         setUserLevelTierId(value === NONE_VALUE ? "" : value)
                       }
-                      disabled={submitting || isLoadingOptions}
+                      disabled={submitting || isLoadingTierOptions}
                     >
                       <SelectTrigger id="user-tier" className="h-9 w-full">
-                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select tier"} />
+                        <SelectValue placeholder={isLoadingTierOptions ? "Loading..." : "Select tier"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
                           <SelectItem value={NONE_VALUE}>No tier</SelectItem>
-                          {allTiers.map((tier) => (
+                          {tiers.map((tier) => (
                             <SelectItem key={tier.id} value={String(tier.id)}>
                               {tier.tier_name}
-                              {tier.level?.name ? ` / ${tier.level.name}` : ""}
+                              {tier.level.name ? ` / ${tier.level.name}` : ""}
                             </SelectItem>
                           ))}
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {tierOptionsError && (
+                      <p className="text-xs text-destructive">{tierOptionsError}</p>
+                    )}
                   </div>
                 </div>
               </div>

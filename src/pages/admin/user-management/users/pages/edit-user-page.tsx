@@ -2,8 +2,8 @@
 // A standalone page for updating an existing user.
 // It updates any editable field and keeps password optional.
 
-import { useState, type FormEvent } from "react"
-import { useLocation, useNavigate, useParams } from "react-router-dom"
+import { useEffect, useState, type FormEvent } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -38,8 +38,8 @@ import {
 } from "@/components/ui/select"
 
 import { isApiError } from "@/lib/api"
-import { updateUser } from "../service/user.service"
-import type { UpdateUserPayload, UserListResource } from "../types/user.types"
+import { getUserById, updateUser } from "../service/user.service"
+import type { UpdateUserPayload } from "../types/user.types"
 import { useDepartmentOptions } from "../hook/use-department-options"
 
 // Radix Select item values cannot be empty strings.
@@ -52,6 +52,7 @@ function extractErrorMessage(err: unknown): string {
       const first = Object.values(err.data.errors as Record<string, string[]>)[0]
       if (Array.isArray(first) && first.length > 0) return first[0]
     }
+    if (err.status === 404) return "User not found."
     if (err.status === 401) return "You are not authenticated. Please log in again."
     if (err.status === 403) return "You do not have permission to perform this action."
     return err.message || "An unexpected error occurred."
@@ -64,36 +65,63 @@ function extractErrorMessage(err: unknown): string {
 export function EditUserPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const location = useLocation()
-
-  // Passed from users table on Edit click.
-  const userFromState = location.state?.user as UserListResource | undefined
 
   const userId = Number(id)
 
-  const [name, setName] = useState(userFromState?.name ?? "")
-  const [email, setEmail] = useState(userFromState?.email ?? "")
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
-  const [role, setRole] = useState<"admin" | "user">(userFromState?.role ?? "user")
-  const [departmentId, setDepartmentId] = useState(
-    userFromState?.department?.id ? String(userFromState.department.id) : "",
-  )
-  const [reportTo, setReportTo] = useState(
-    userFromState?.report_to?.id ? String(userFromState.report_to.id) : "",
-  )
-  const [userLevelTierId, setUserLevelTierId] = useState(
-    userFromState?.tier?.id ? String(userFromState.tier.id) : "",
-  )
+  const [role, setRole] = useState<"admin" | "user">("user")
+  const [departmentId, setDepartmentId] = useState("")
+  const [reportTo, setReportTo] = useState("")
+  const [userLevelTierId, setUserLevelTierId] = useState("")
 
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Linked options from departments data.
   const { departments, allUsers, allTiers, isLoadingOptions } =
     useDepartmentOptions()
+
+  // Canonical load from GET /admin/users/getById/{id}.
+  useEffect(() => {
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setError("Invalid user id.")
+      setIsLoadingUser(false)
+      return
+    }
+
+    let cancelled = false
+    setError(null)
+    setIsLoadingUser(true)
+
+    getUserById(userId)
+      .then((user) => {
+        if (cancelled) return
+        setName(user.name ?? "")
+        setEmail(user.email ?? "")
+        setRole((user.role as "admin" | "user") ?? "user")
+        setDepartmentId(user.department?.id ? String(user.department.id) : "")
+        setReportTo(user.manager?.id ? String(user.manager.id) : "")
+        setUserLevelTierId(user.tier?.id ? String(user.tier.id) : "")
+      })
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof DOMException && err.name === "AbortError") return
+        setError(extractErrorMessage(err))
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingUser(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
 
   function validate(): string | null {
     if (!name.trim()) return "Name is required."
@@ -116,6 +144,8 @@ export function EditUserPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (isLoadingUser) return
 
     if (!Number.isInteger(userId) || userId <= 0) {
       setError("Invalid user id.")
@@ -212,10 +242,10 @@ export function EditUserPage() {
               </Alert>
             )}
 
-            {!userFromState && (
+            {isLoadingUser && (
               <Alert>
                 <AlertDescription>
-                  This page works best when opened from the Users table edit action.
+                  Loading user details...
                 </AlertDescription>
               </Alert>
             )}
@@ -235,7 +265,7 @@ export function EditUserPage() {
                     maxLength={255}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    disabled={submitting}
+                    disabled={submitting || isLoadingUser}
                     required
                     autoComplete="name"
                     className="h-10"
@@ -253,7 +283,7 @@ export function EditUserPage() {
                     maxLength={255}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={submitting}
+                    disabled={submitting || isLoadingUser}
                     required
                     autoComplete="email"
                     className="h-10"
@@ -271,7 +301,7 @@ export function EditUserPage() {
                         minLength={8}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={submitting}
+                        disabled={submitting || isLoadingUser}
                         autoComplete="new-password"
                         className="h-9 pr-10"
                       />
@@ -308,7 +338,7 @@ export function EditUserPage() {
                         minLength={8}
                         value={passwordConfirmation}
                         onChange={(e) => setPasswordConfirmation(e.target.value)}
-                        disabled={submitting}
+                        disabled={submitting || isLoadingUser}
                         autoComplete="new-password"
                         className="h-9 pr-10"
                       />
@@ -352,7 +382,7 @@ export function EditUserPage() {
                     <Select
                       value={role}
                       onValueChange={(value) => setRole(value as "user" | "admin")}
-                      disabled={submitting}
+                      disabled={submitting || isLoadingUser}
                     >
                       <SelectTrigger id="user-role" className="h-9 w-full">
                         <SelectValue />
@@ -373,7 +403,7 @@ export function EditUserPage() {
                       onValueChange={(value) =>
                         setDepartmentId(value === NONE_VALUE ? "" : value)
                       }
-                      disabled={submitting || isLoadingOptions}
+                      disabled={submitting || isLoadingUser || isLoadingOptions}
                     >
                       <SelectTrigger id="user-department" className="h-9 w-full">
                         <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select department"} />
@@ -398,7 +428,7 @@ export function EditUserPage() {
                       onValueChange={(value) =>
                         setReportTo(value === NONE_VALUE ? "" : value)
                       }
-                      disabled={submitting || isLoadingOptions}
+                      disabled={submitting || isLoadingUser || isLoadingOptions}
                     >
                       <SelectTrigger id="user-report-to" className="h-9 w-full">
                         <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select manager"} />
@@ -423,7 +453,7 @@ export function EditUserPage() {
                       onValueChange={(value) =>
                         setUserLevelTierId(value === NONE_VALUE ? "" : value)
                       }
-                      disabled={submitting || isLoadingOptions}
+                      disabled={submitting || isLoadingUser || isLoadingOptions}
                     >
                       <SelectTrigger id="user-tier" className="h-9 w-full">
                         <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select tier"} />
@@ -457,12 +487,12 @@ export function EditUserPage() {
               type="button"
               variant="outline"
               onClick={() => navigate(-1)}
-              disabled={submitting}
+              disabled={submitting || isLoadingUser}
               className="w-full border-white/15 sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+            <Button type="submit" disabled={submitting || isLoadingUser} className="w-full sm:w-auto">
               {submitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               {submitting ? "Saving..." : "Save changes"}
             </Button>

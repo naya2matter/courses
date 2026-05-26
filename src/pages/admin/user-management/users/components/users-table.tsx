@@ -6,6 +6,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Loader2Icon,
+  EyeIcon,
   PencilIcon,
   SearchIcon,
   ChevronLeftIcon,
@@ -124,6 +125,11 @@ export function UsersTable({
     })
   }
 
+  /** Open user details page. */
+  function handleView(user: UserListResource) {
+    navigate(`/admin/user-management/users/${user.id}`)
+  }
+
   /** Execute confirmed deletion and keep dialog open on error. */
   async function handleConfirmDelete() {
     if (!userToDelete) return
@@ -186,7 +192,7 @@ export function UsersTable({
               <TableHead>Department</TableHead>
               <TableHead>Tier / Level</TableHead>
               <TableHead>Joined</TableHead>
-              <TableHead className="w-28 text-right">Actions</TableHead>
+              <TableHead className="w-36 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -220,7 +226,11 @@ export function UsersTable({
 
             {/* Data rows */}
             {users.map((user) => (
-              <TableRow key={user.id} className={isLoading ? "opacity-50" : ""}>
+              <TableRow
+                key={user.id}
+                className={isLoading ? "group cursor-pointer opacity-50" : "group cursor-pointer hover:bg-muted/30"}
+                onClick={() => handleView(user)}
+              >
                 {/* User cell: avatar + name + email */}
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -283,7 +293,23 @@ export function UsersTable({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => handleEdit(user)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleView(user)
+                      }}
+                      aria-label={`View ${user.name}`}
+                    >
+                      <EyeIcon className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleEdit(user)
+                      }}
                       aria-label={`Edit ${user.name}`}
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
@@ -293,7 +319,8 @@ export function UsersTable({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation()
                         setDeleteError(null)
                         setUserToDelete(user)
                       }}

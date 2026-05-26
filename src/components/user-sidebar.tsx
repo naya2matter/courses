@@ -5,11 +5,12 @@ import {
   BookOpenIcon,
   TrendingUpIcon,
   CalendarIcon,
-  CircleHelpIcon,
   ClockIcon,
   MessageSquareIcon,
   HeadphonesIcon,
   BookOpenCheckIcon,
+  ClipboardListIcon,
+  NewspaperIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -56,15 +57,24 @@ const navLearning = [
     icon: <ClockIcon />,
   },
   {
+    title: "My Evaluations",
+    url: "/user/evaluations",
+    icon: <ClipboardListIcon />,
+  },
+  {
     title: "My Quiz",
     url: "/user/quizzes",
     icon: <BookOpenCheckIcon />,
   },
+  {
+    title: "Blog",
+    url: "/user/blog",
+    icon: <NewspaperIcon />,
+  },
 ]
 
 const navSecondary = [
-  { title: "Get Help", url: "#", icon: <CircleHelpIcon /> },
-  { title: "Feedback", url: "#", icon: <MessageSquareIcon /> },
+  { title: "My Feedback", url: "/user/feedback", icon: <MessageSquareIcon /> },
 ]
 
 export function UserSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

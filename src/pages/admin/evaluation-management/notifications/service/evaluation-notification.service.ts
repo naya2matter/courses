@@ -56,7 +56,17 @@ export async function getEvaluationNotificationHistory(
   if (params.page) p.set("page", String(params.page))
   if (params.per_page) p.set("per_page", String(params.per_page))
   const qs = p.toString()
-  return apiClient.get<EvaluationNotificationHistoryResponse>(
+  const response = await apiClient.get<EvaluationNotificationHistoryResponse>(
     `/admin/evaluation-notifications/getAll${qs ? `?${qs}` : ""}`,
   )
+
+  return {
+    ...response,
+    data: response.data.map((item) => ({
+      ...item,
+      created_at: item.created_at ?? item.sent_at ?? "",
+      success_count: item.success_count ?? item.managers?.length ?? item.sent_to?.length ?? 0,
+      failed_count: item.failed_count ?? 0,
+    })),
+  }
 }

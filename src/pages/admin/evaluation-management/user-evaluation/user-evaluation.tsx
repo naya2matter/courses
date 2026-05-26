@@ -165,7 +165,7 @@ export default function UserEvaluationPage() {
       )}
 
       {/* Summary cards */}
-      <EvaluationSummaryCards evaluations={displayedEvaluations} />
+      <EvaluationSummaryCards evaluations={displayedEvaluations} isLoading={isLoading} />
 
       {/* Filters */}
       <EvaluationFiltersToolbar

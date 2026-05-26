@@ -43,7 +43,6 @@ export const adminSidebarConfig: AdminSidebarConfig = {
           items: [
             { title: "Users", url: "/admin/user-management/users" },
             { title: "Department Management", url: "/admin/user-management/departments" },
-            { title: "Resend Login Links", url: "/admin/user-management/resend-links" },
           ],
         },
       ],
@@ -58,6 +57,7 @@ export const adminSidebarConfig: AdminSidebarConfig = {
             { title: "Live Courses", url: "/admin/course-management/live-courses" },
             { title: "Online Courses", url: "/admin/course-management/online-courses" },
             { title: "Attendance", url: "/admin/course-management/attendance" },
+            { title: "Resend Login Links", url: "/admin/course-management/resend-links" },
           ],
         },
       ],

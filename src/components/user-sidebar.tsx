@@ -37,6 +37,11 @@ const navLearning = [
     icon: <BookOpenIcon />,
   },
   {
+    title: "My Online Courses",
+    url: "/user/online-courses",
+    icon: <BookOpenIcon />,
+  },
+  {
     title: "My Progress",
     url: "/user/progress",
     icon: <TrendingUpIcon />,

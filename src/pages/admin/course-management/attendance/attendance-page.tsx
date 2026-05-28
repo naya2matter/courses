@@ -351,9 +351,13 @@ export default function AttendancePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 mb-3">
                   <Icon className="h-5 w-5 text-sky-400" />
                 </div>
-                <p className="text-4xl font-semibold tabular-nums text-foreground">
-                  {isLoading ? <Skeleton className="h-10 w-24" /> : card.value}
-                </p>
+                {isLoading ? (
+                  <div className="text-4xl font-semibold tabular-nums text-foreground">
+                    <Skeleton className="h-10 w-24" />
+                  </div>
+                ) : (
+                  <p className="text-4xl font-semibold tabular-nums text-foreground">{card.value}</p>
+                )}
                 <p className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
                   {card.title}
                 </p>

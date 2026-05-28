@@ -168,7 +168,7 @@ function CourseCard({ course, onClick, registration }: { course: Course; onClick
             {course.duration != null && (
               <span className="flex items-center gap-1.5">
                  <ClockIcon className="size-3.5 text-white/20" />
-                {course.duration}h
+                {course.duration}m
               </span>
             )}
             <span className="flex items-center gap-1.5">

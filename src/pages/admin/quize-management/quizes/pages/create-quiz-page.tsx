@@ -25,6 +25,8 @@ import { createQuiz } from "../service/quiz.service"
 import { QuestionBuilder } from "../components/question-builder"
 import { getAllCourses } from "@/pages/admin/course-management/live-courses/service/course.service"
 import type { CourseResource } from "@/pages/admin/course-management/live-courses/types/course.types"
+import { getOnlineCourses, getOnlineCourseById } from "@/pages/admin/course-management/online-courses/service/online-course.service"
+import type { OnlineCourse, OnlineCourseModule } from "@/pages/admin/course-management/online-courses/types/online-course.types"
 import type { CreateQuizPayload, CreateQuizQuestion, QuizStatus, ShowCorrectAnswers } from "../types/quiz.types"
 
 // ── Error helpers ─────────────────────────────────────────────────────────────
@@ -59,6 +61,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 
 export function CreateQuizPage() {
   const navigate = useNavigate()
+  type CourseTarget = "none" | "online" | "live"
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [title, setTitle] = useState("")
@@ -71,9 +74,16 @@ export function CreateQuizPage() {
   const [showCorrectAnswers, setShowCorrectAnswers] = useState<ShowCorrectAnswers>("after_pass")
   const [requiredToProceed, setRequiredToProceed] = useState(false)
   const [deadline, setDeadline] = useState("")
-  const [courseId, setCourseId] = useState<string>("")
-  const [courses, setCourses] = useState<CourseResource[]>([])
-  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [courseTarget, setCourseTarget] = useState<CourseTarget>("none")
+  const [courseId, setCourseId] = useState<string>("none")
+  const [liveCourses, setLiveCourses] = useState<CourseResource[]>([])
+  const [liveCoursesLoading, setLiveCoursesLoading] = useState(false)
+  const [courseOnlineId, setCourseOnlineId] = useState<string>("none")
+  const [onlineCourses, setOnlineCourses] = useState<OnlineCourse[]>([])
+  const [onlineCoursesLoading, setOnlineCoursesLoading] = useState(false)
+  const [moduleId, setModuleId] = useState<string>("none")
+  const [quizModules, setQuizModules] = useState<OnlineCourseModule[]>([])
+  const [modulesLoading, setModulesLoading] = useState(false)
   const [questions, setQuestions] = useState<CreateQuizQuestion[]>([])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -81,26 +91,54 @@ export function CreateQuizPage() {
 
   useEffect(() => {
     let active = true
-    setCoursesLoading(true)
+    setLiveCoursesLoading(true)
+    setOnlineCoursesLoading(true)
 
-    getAllCourses({ per_page: 100 })
+    getAllCourses({ per_page: 200 })
       .then((result) => {
         if (!active) return
-        setCourses(result.data)
+        setLiveCourses(result.data)
       })
       .catch(() => {
         if (!active) return
-        setCourses([])
+        setLiveCourses([])
       })
       .finally(() => {
         if (!active) return
-        setCoursesLoading(false)
+        setLiveCoursesLoading(false)
+      })
+
+    getOnlineCourses({ per_page: 200 })
+      .then((result) => {
+        if (!active) return
+        setOnlineCourses(result.data)
+      })
+      .catch(() => {
+        if (!active) return
+        setOnlineCourses([])
+      })
+      .finally(() => {
+        if (!active) return
+        setOnlineCoursesLoading(false)
       })
 
     return () => {
       active = false
     }
   }, [])
+
+  async function fetchModulesForCourse(courseId: number) {
+    setModulesLoading(true)
+    setQuizModules([])
+    try {
+      const detail = await getOnlineCourseById(courseId)
+      setQuizModules(detail.modules.filter((m) => m.has_quiz && m.quiz_required))
+    } catch {
+      setQuizModules([])
+    } finally {
+      setModulesLoading(false)
+    }
+  }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
@@ -123,8 +161,15 @@ export function CreateQuizPage() {
       show_correct_answers: showCorrectAnswers,
       required_to_proceed: requiredToProceed,
       deadline: deadline ? new Date(deadline).toISOString() : null,
-      course_id: courseId && courseId !== "none" ? Number(courseId) : null,
+      course_id: courseTarget === "live" && courseId !== "none" ? Number(courseId) : null,
+      course_online_id:
+        courseTarget === "online" && courseOnlineId !== "none" ? Number(courseOnlineId) : null,
+      module_id: courseTarget === "online" && moduleId !== "none" ? Number(moduleId) : null,
       questions: questions.length > 0 ? questions : undefined,
+    }
+
+    if (courseTarget === "online" && moduleId !== "none") {
+      payload.course_online_id = null
     }
 
     setIsSubmitting(true)
@@ -289,7 +334,7 @@ export function CreateQuizPage() {
             </Field>
           </div>
 
-          {/* Deadline + Course */}
+          {/* Deadline + Quiz Course Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Deadline" hint="Optional">
               <Input
@@ -301,18 +346,44 @@ export function CreateQuizPage() {
               />
             </Field>
 
-            <Field label="Select a course" hint="Optional — link this quiz to a course by name">
+            <Field label="Quiz For" hint="Choose whether this quiz is for an online or live course">
               <Select
-                value={courseId}
-                onValueChange={(value) => setCourseId(value)}
-                disabled={isSubmitting || coursesLoading}
+                value={courseTarget}
+                onValueChange={(value) => {
+                  const next = value as CourseTarget
+                  setCourseTarget(next)
+                  setCourseId("none")
+                  setCourseOnlineId("none")
+                  setModuleId("none")
+                  setQuizModules([])
+                }}
+                disabled={isSubmitting}
               >
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select a course"} />
+                  <SelectValue placeholder="Select course type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No course</SelectItem>
-                  {courses.map((course) => (
+                  <SelectItem value="online">Online course</SelectItem>
+                  <SelectItem value="live">Live course</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          {courseTarget === "live" && (
+            <Field label="Live Course" hint="Select the live course name">
+              <Select
+                value={courseId}
+                onValueChange={(value) => setCourseId(value)}
+                disabled={isSubmitting || liveCoursesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={liveCoursesLoading ? "Loading courses…" : "Select a live course"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No course</SelectItem>
+                  {liveCourses.map((course) => (
                     <SelectItem key={course.id} value={String(course.id)}>
                       {course.name}
                     </SelectItem>
@@ -320,7 +391,65 @@ export function CreateQuizPage() {
                 </SelectContent>
               </Select>
             </Field>
-          </div>
+          )}
+
+          {courseTarget === "online" && (
+            <Field label="Online Course" hint="Select the online course name">
+              <Select
+                value={courseOnlineId}
+                onValueChange={(value) => {
+                  setCourseOnlineId(value)
+                  setModuleId("none")
+                  if (value && value !== "none") {
+                    fetchModulesForCourse(Number(value))
+                  } else {
+                    setQuizModules([])
+                  }
+                }}
+                disabled={isSubmitting || onlineCoursesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={onlineCoursesLoading ? "Loading…" : "Select an online course"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No course</SelectItem>
+                  {onlineCourses.map((course) => (
+                    <SelectItem key={course.id} value={String(course.id)}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {/* Module (appears once an online course is selected) */}
+          {courseTarget === "online" && courseOnlineId !== "none" && (
+            <Field label="Module" hint="Only modules with quiz enabled are shown">
+              <Select
+                value={moduleId}
+                onValueChange={(value) => setModuleId(value)}
+                disabled={isSubmitting || modulesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={modulesLoading ? "Loading modules…" : "Select a module"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No module</SelectItem>
+                  {quizModules.map((mod) => (
+                    <SelectItem key={mod.id} value={String(mod.id)}>
+                      {mod.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!modulesLoading && quizModules.length === 0 && (
+                <p className="text-xs text-amber-400/80 mt-1">
+                  No quiz-enabled modules found in this course.
+                </p>
+              )}
+            </Field>
+          )}
 
           {/* Required to proceed */}
           <div className="flex items-center gap-3">

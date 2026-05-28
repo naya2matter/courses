@@ -52,6 +52,8 @@ import {
 } from "../service/quiz.service"
 import { getAllCourses } from "@/pages/admin/course-management/live-courses/service/course.service"
 import type { CourseResource } from "@/pages/admin/course-management/live-courses/types/course.types"
+import { getOnlineCourses, getOnlineCourseById } from "@/pages/admin/course-management/online-courses/service/online-course.service"
+import type { OnlineCourse, OnlineCourseModule } from "@/pages/admin/course-management/online-courses/types/online-course.types"
 import type {
   CreateQuizPayload,
   QuizStatus,
@@ -540,6 +542,7 @@ function QuestionViewCard({ question, index, dimmed, onEdit, onDelete }: Questio
 export function EditQuizPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  type CourseTarget = "none" | "online" | "live"
 
   // ── Load state ─────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true)
@@ -556,9 +559,16 @@ export function EditQuizPage() {
   const [showCorrectAnswers, setShowCorrectAnswers] = useState<ShowCorrectAnswers>("after_pass")
   const [requiredToProceed, setRequiredToProceed] = useState(false)
   const [deadline, setDeadline] = useState("")
+  const [courseTarget, setCourseTarget] = useState<CourseTarget>("none")
   const [courseId, setCourseId] = useState<string>("none")
-  const [courses, setCourses] = useState<CourseResource[]>([])
-  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [liveCourses, setLiveCourses] = useState<CourseResource[]>([])
+  const [liveCoursesLoading, setLiveCoursesLoading] = useState(false)
+  const [courseOnlineId, setCourseOnlineId] = useState<string>("none")
+  const [onlineCourses, setOnlineCourses] = useState<OnlineCourse[]>([])
+  const [onlineCoursesLoading, setOnlineCoursesLoading] = useState(false)
+  const [moduleId, setModuleId] = useState<string>("none")
+  const [quizModules, setQuizModules] = useState<OnlineCourseModule[]>([])
+  const [modulesLoading, setModulesLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -581,16 +591,23 @@ export function EditQuizPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // ── Fetch quiz + courses on mount ─────────────────────────────────────────
+  // ── Fetch quiz + online courses on mount ──────────────────────────────────
   useEffect(() => {
     if (!id) return
     let active = true
     setIsLoading(true)
     setLoadError(null)
-    setCoursesLoading(true)
+    setLiveCoursesLoading(true)
+    setOnlineCoursesLoading(true)
 
-    Promise.all([getQuizById(Number(id)), getAllCourses({ per_page: 100 })])
-      .then(([quiz, coursesResult]) => {
+    async function load() {
+      try {
+        const [quiz, liveCoursesResult, onlineCoursesResult] = await Promise.all([
+          getQuizById(Number(id!)),
+          getAllCourses({ per_page: 200 }),
+          getOnlineCourses({ per_page: 200 }),
+        ])
+
         if (!active) return
 
         setTitle(quiz.title ?? "")
@@ -602,7 +619,16 @@ export function EditQuizPage() {
         setRetryDelayHours(quiz.retry_delay_hours != null ? String(quiz.retry_delay_hours) : "0")
         setShowCorrectAnswers((quiz.show_correct_answers ?? "after_pass") as ShowCorrectAnswers)
         setRequiredToProceed(quiz.required_to_proceed ?? false)
+        setCourseTarget(
+          quiz.course_online_id != null
+            ? "online"
+            : quiz.course_id != null
+              ? "live"
+              : "none",
+        )
         setCourseId(quiz.course_id != null ? String(quiz.course_id) : "none")
+        setCourseOnlineId(quiz.course_online_id != null ? String(quiz.course_online_id) : "none")
+        setModuleId(quiz.module_id != null ? String(quiz.module_id) : "none")
 
         if (quiz.deadline) {
           const dt = new Date(quiz.deadline)
@@ -614,23 +640,50 @@ export function EditQuizPage() {
 
         setQuestions(quiz.questions ?? [])
         setNewForm(emptyQuestionForm((quiz.questions?.length ?? 0) + 1))
-        setCourses(coursesResult.data)
-      })
-      .catch((err) => {
+        setLiveCourses(liveCoursesResult.data)
+        setOnlineCourses(onlineCoursesResult.data)
+
+        if (quiz.course_online_id != null) {
+          try {
+            const detail = await getOnlineCourseById(quiz.course_online_id)
+            if (!active) return
+            setQuizModules(detail.modules.filter((m) => m.has_quiz && m.quiz_required))
+          } catch {
+            if (!active) return
+            setQuizModules([])
+          }
+        }
+      } catch (err) {
         if (!active) return
         if (err instanceof DOMException && err.name === "AbortError") return
         setLoadError(extractError(err))
-      })
-      .finally(() => {
+      } finally {
         if (!active) return
         setIsLoading(false)
-        setCoursesLoading(false)
-      })
+        setLiveCoursesLoading(false)
+        setOnlineCoursesLoading(false)
+      }
+    }
+
+    load()
 
     return () => {
       active = false
     }
   }, [id])
+
+  async function fetchModulesForCourse(courseId: number) {
+    setModulesLoading(true)
+    setQuizModules([])
+    try {
+      const detail = await getOnlineCourseById(courseId)
+      setQuizModules(detail.modules.filter((m) => m.has_quiz && m.quiz_required))
+    } catch {
+      setQuizModules([])
+    } finally {
+      setModulesLoading(false)
+    }
+  }
 
   // ── Quiz metadata submit ───────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
@@ -653,7 +706,14 @@ export function EditQuizPage() {
       show_correct_answers: showCorrectAnswers,
       required_to_proceed: requiredToProceed,
       deadline: deadline ? new Date(deadline).toISOString() : null,
-      course_id: courseId && courseId !== "none" ? Number(courseId) : null,
+      course_id: courseTarget === "live" && courseId !== "none" ? Number(courseId) : null,
+      course_online_id:
+        courseTarget === "online" && courseOnlineId !== "none" ? Number(courseOnlineId) : null,
+      module_id: courseTarget === "online" && moduleId !== "none" ? Number(moduleId) : null,
+    }
+
+    if (courseTarget === "online" && moduleId !== "none") {
+      payload.course_online_id = null
     }
 
     setIsSubmitting(true)
@@ -958,20 +1018,48 @@ export function EditQuizPage() {
               />
             </Field>
 
-            <Field label="Course" hint="Optional — link this quiz to a course">
+            <Field label="Quiz For" hint="Choose whether this quiz is for an online or live course">
               <Select
-                value={courseId}
-                onValueChange={(value) => setCourseId(value)}
-                disabled={isSubmitting || coursesLoading}
+                value={courseTarget}
+                onValueChange={(value) => {
+                  const next = value as CourseTarget
+                  setCourseTarget(next)
+                  setCourseId("none")
+                  setCourseOnlineId("none")
+                  setModuleId("none")
+                  setQuizModules([])
+                }}
+                disabled={isSubmitting}
               >
                 <SelectTrigger className="h-10">
                   <SelectValue
-                    placeholder={coursesLoading ? "Loading courses…" : "Select a course"}
+                    placeholder="Select course type"
                   />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No course</SelectItem>
-                  {courses.map((course) => (
+                  <SelectItem value="online">Online course</SelectItem>
+                  <SelectItem value="live">Live course</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          {courseTarget === "live" && (
+            <Field label="Live Course" hint="Select the live course name">
+              <Select
+                value={courseId}
+                onValueChange={(value) => setCourseId(value)}
+                disabled={isSubmitting || liveCoursesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue
+                    placeholder={liveCoursesLoading ? "Loading courses…" : "Select a live course"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No course</SelectItem>
+                  {liveCourses.map((course) => (
                     <SelectItem key={course.id} value={String(course.id)}>
                       {course.name}
                     </SelectItem>
@@ -979,7 +1067,67 @@ export function EditQuizPage() {
                 </SelectContent>
               </Select>
             </Field>
-          </div>
+          )}
+
+          {courseTarget === "online" && (
+            <Field label="Online Course" hint="Select the online course name">
+              <Select
+                value={courseOnlineId}
+                onValueChange={(value) => {
+                  setCourseOnlineId(value)
+                  setModuleId("none")
+                  if (value && value !== "none") {
+                    fetchModulesForCourse(Number(value))
+                  } else {
+                    setQuizModules([])
+                  }
+                }}
+                disabled={isSubmitting || onlineCoursesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue
+                    placeholder={onlineCoursesLoading ? "Loading courses…" : "Select an online course"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No course</SelectItem>
+                  {onlineCourses.map((course) => (
+                    <SelectItem key={course.id} value={String(course.id)}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {/* Module (appears once an online course is selected) */}
+          {courseTarget === "online" && courseOnlineId !== "none" && (
+            <Field label="Module" hint="Only modules with quiz enabled are shown">
+              <Select
+                value={moduleId}
+                onValueChange={(value) => setModuleId(value)}
+                disabled={isSubmitting || modulesLoading}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={modulesLoading ? "Loading modules…" : "Select a module"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No module</SelectItem>
+                  {quizModules.map((mod) => (
+                    <SelectItem key={mod.id} value={String(mod.id)}>
+                      {mod.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!modulesLoading && quizModules.length === 0 && (
+                <p className="text-xs text-amber-400/80 mt-1">
+                  No quiz-enabled modules found in this course.
+                </p>
+              )}
+            </Field>
+          )}
 
           <div className="flex items-center gap-3">
             <Checkbox

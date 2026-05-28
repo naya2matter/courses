@@ -26,6 +26,9 @@ import ResendLinksPage from "@/pages/admin/course-management/resend-links/resend
 import ViewCoursePage from "@/pages/admin/course-management/live-courses/pages/view-course-page"
 import CourseFormPage from "@/pages/admin/course-management/live-courses/pages/course-form-page"
 import OnlineCoursesPage from "@/pages/admin/course-management/online-courses/online-courses"
+import ViewOnlineCoursePage from "@/pages/admin/course-management/online-courses/pages/view-online-course-page"
+import OnlineCourseFormPage from "@/pages/admin/course-management/online-courses/pages/online-course-form-page"
+import OnlineCourseAssignmentsPage from "@/pages/admin/course-management/online-courses/pages/online-course-assignments-page"
 import AttendancePage from "@/pages/admin/course-management/attendance/attendance-page"
 
 // Admin — Report Management
@@ -89,6 +92,11 @@ import { UserFeedbackPage } from "@/pages/user/feedback/user-feedback-page"
 import { UserBlogFeedPage } from "@/pages/user/blog/blog-feed-page"
 import { UserBlogDetailPage } from "@/pages/user/blog/blog-detail-page"
 
+// User — Online Courses
+import { UserOnlineCoursesPage } from "@/pages/user/online-courses/online-courses-page"
+import { OnlineCourseDetailPage } from "@/pages/user/online-courses/online-course-detail-page"
+import { OnlineContentViewerPage } from "@/pages/user/online-courses/online-content-viewer-page"
+
 // User — Quiz pages
 import { MyQuizzesPage } from "@/pages/user/quiz/my-quizzes-page"
 import { QuizDetailPage } from "@/pages/user/quiz/quiz-detail-page"
@@ -122,6 +130,10 @@ function App() {
               <Route path="/admin/course-management/live-courses/edit/:id" element={<CourseFormPage />} />
               <Route path="/admin/course-management/live-courses/:id" element={<ViewCoursePage />} />
               <Route path="/admin/course-management/online-courses" element={<OnlineCoursesPage />} />
+              <Route path="/admin/course-management/online-courses/assignments" element={<OnlineCourseAssignmentsPage />} />
+              <Route path="/admin/course-management/online-courses/create" element={<OnlineCourseFormPage />} />
+              <Route path="/admin/course-management/online-courses/edit/:id" element={<OnlineCourseFormPage />} />
+              <Route path="/admin/course-management/online-courses/:id" element={<ViewOnlineCoursePage />} />
               <Route path="/admin/course-management/attendance" element={<AttendancePage />} />
 
               {/* Report Management */}
@@ -202,6 +214,11 @@ function App() {
               <Route path="/user/quizzes/:id" element={<QuizDetailPage />} />
               <Route path="/user/quizzes/:id/take/:attemptId" element={<QuizTakePage />} />
               <Route path="/user/quizzes/:id/result/:attemptId" element={<QuizResultPage />} />
+
+              {/* Online Courses */}
+              <Route path="/user/online-courses" element={<UserOnlineCoursesPage />} />
+              <Route path="/user/online-courses/:id" element={<OnlineCourseDetailPage />} />
+              <Route path="/user/online-courses/:courseId/content/:contentId" element={<OnlineContentViewerPage />} />
             </Route>
           </Route>
 

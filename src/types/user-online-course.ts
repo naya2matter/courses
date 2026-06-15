@@ -123,6 +123,19 @@ export interface UserCourseContent {
   progress: UserContentProgress | null
 }
 
+export type UserCourseQuizStatus = "not_attempted" | "passed" | "failed"
+
+export interface UserCourseQuiz {
+  id: number
+  title: string
+  description: string | null
+  required_to_proceed: boolean
+  max_attempts: number | null
+  time_limit_minutes: number | null
+  deadline: string | null
+  pass_threshold: number | null
+}
+
 // ── Module inside the course detail ─────────────────────────────────────────
 
 export interface UserCourseModule {
@@ -131,10 +144,12 @@ export interface UserCourseModule {
   description: string | null
   order_number: number
   has_quiz: boolean
+  quiz_required: boolean
   is_required: boolean
   is_unlocked: boolean
   is_completed: boolean
-  quiz_status: string | null
+  quiz_status: UserCourseQuizStatus | null
+  quiz: UserCourseQuiz | null
   content: UserCourseContent[]
 }
 

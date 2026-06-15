@@ -25,6 +25,7 @@ import { getMyOnlineCourseById } from "@/services/userOnlineCourse.service"
 import type {
   UserCourseContent,
   UserCourseModule,
+  UserCourseQuiz,
   UserOnlineCourseDetail,
 } from "@/types/user-online-course"
 
@@ -51,6 +52,29 @@ function formatDuration(s: number): string {
 function toPercent(value: unknown): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getQuizStatusMeta(status: UserCourseModule["quiz_status"]): {
+  label: string
+  className: string
+} {
+  switch (status) {
+    case "passed":
+      return {
+        label: "Passed",
+        className: "border-emerald-500/25 text-emerald-400",
+      }
+    case "failed":
+      return {
+        label: "Retry available",
+        className: "border-rose-500/25 text-rose-300",
+      }
+    default:
+      return {
+        label: "Not attempted",
+        className: "border-amber-500/25 text-amber-400",
+      }
+  }
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
@@ -182,22 +206,124 @@ function ContentRow({
   )
 }
 
+function QuizRow({
+  quiz,
+  quizStatus,
+  isLocked,
+  onOpen,
+}: {
+  quiz: UserCourseQuiz
+  quizStatus: UserCourseModule["quiz_status"]
+  isLocked: boolean
+  onOpen: (quizId: number) => void
+}) {
+  const statusMeta = getQuizStatusMeta(quizStatus)
+  const isPassed = quizStatus === "passed"
+
+  return (
+    <div
+      className={`group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${
+        isLocked
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer hover:bg-white/5"
+      }`}
+      onClick={() => !isLocked && onOpen(quiz.id)}
+      role={isLocked ? undefined : "button"}
+      tabIndex={isLocked ? -1 : 0}
+      onKeyDown={(e) => {
+        if (!isLocked && (e.key === "Enter" || e.key === " ")) onOpen(quiz.id)
+      }}
+    >
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+          isPassed
+            ? "bg-emerald-500/15"
+            : isLocked
+              ? "bg-white/5"
+              : "bg-amber-500/12 group-hover:bg-amber-500/20"
+        }`}
+      >
+        {isLocked ? (
+          <LockIcon className="size-4 text-white/30" />
+        ) : isPassed ? (
+          <CheckCircle2Icon className="size-4 text-emerald-400" />
+        ) : (
+          <TrophyIcon className="size-4 text-amber-400" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`truncate text-sm font-medium ${
+              isLocked ? "text-white/35" : "text-white/85"
+            }`}
+          >
+            {quiz.title}
+          </span>
+          {!isLocked && (
+            <Badge
+              variant="outline"
+              className="shrink-0 rounded-full border-amber-500/25 px-1.5 py-0 text-[9px] font-semibold text-amber-400"
+            >
+              Quiz
+            </Badge>
+          )}
+          {quiz.required_to_proceed && !isLocked && (
+            <Badge
+              variant="outline"
+              className="shrink-0 rounded-full border-indigo-500/25 px-1.5 py-0 text-[9px] font-semibold text-indigo-300"
+            >
+              Required
+            </Badge>
+          )}
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[11px] text-white/35">
+          <span>Module quiz</span>
+          {quiz.time_limit_minutes != null && quiz.time_limit_minutes > 0 && (
+            <span className="flex items-center gap-1">
+              <ClockIcon className="size-2.5" />
+              {quiz.time_limit_minutes}m limit
+            </span>
+          )}
+          {quiz.pass_threshold != null && (
+            <span className="tabular-nums">Pass {quiz.pass_threshold}%</span>
+          )}
+          {!isLocked && (
+            <span className={`rounded-full border px-2 py-0.5 font-medium ${statusMeta.className}`}>
+              {statusMeta.label}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {!isLocked && (
+        <ChevronRightIcon className="size-4 shrink-0 text-white/25 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-white/50" />
+      )}
+    </div>
+  )
+}
+
 // ── Module accordion item ─────────────────────────────────────────────────────
 
 function ModuleAccordion({
   module,
   defaultOpen,
   onContentOpen,
+  onQuizOpen,
   isLast,
 }: {
   module: UserCourseModule
   courseId?: number
   defaultOpen: boolean
   onContentOpen: (contentId: number) => void
+  onQuizOpen: (quizId: number) => void
   isLast?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const isLocked = !module.is_unlocked
+  const hasModuleQuiz = Boolean(module.quiz)
+  const quizStatusMeta = hasModuleQuiz ? getQuizStatusMeta(module.quiz_status) : null
   const completedCount = module.content.filter(
     (c) => c.progress?.is_completed,
   ).length
@@ -281,6 +407,14 @@ function ModuleAccordion({
                 Quiz
               </Badge>
             )}
+            {quizStatusMeta && !isLocked && (
+              <Badge
+                variant="outline"
+                className={`rounded-full px-2 py-0 text-[9px] font-semibold ${quizStatusMeta.className}`}
+              >
+                {quizStatusMeta.label}
+              </Badge>
+            )}
             {isLocked && (
               <Badge
                 variant="outline"
@@ -337,9 +471,9 @@ function ModuleAccordion({
                   {module.description}
                 </p>
               )}
-              {module.content.length === 0 ? (
+              {module.content.length === 0 && !module.quiz ? (
                 <p className="px-3 py-4 text-sm text-white/30">
-                  No content items in this module.
+                  No learning items in this module.
                 </p>
               ) : (
                 <div className="flex flex-col gap-1.5 pt-2">
@@ -350,6 +484,14 @@ function ModuleAccordion({
                       onOpen={onContentOpen}
                     />
                   ))}
+                  {module.quiz && (
+                    <QuizRow
+                      quiz={module.quiz}
+                      quizStatus={module.quiz_status}
+                      isLocked={isLocked}
+                      onOpen={onQuizOpen}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -416,6 +558,10 @@ export function OnlineCourseDetailPage() {
 
   function openContent(contentId: number) {
     navigate(`/user/online-courses/${courseId}/content/${contentId}`)
+  }
+
+  function openQuiz(quizId: number) {
+    navigate(`/user/quizzes/${quizId}`)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -606,6 +752,7 @@ export function OnlineCourseDetailPage() {
                     courseId={courseId}
                     defaultOpen={mod.is_unlocked && !mod.is_completed && idx === 0}
                     onContentOpen={openContent}
+                    onQuizOpen={openQuiz}
                     isLast={idx === course.modules.length - 1}
                   />
                 ))}

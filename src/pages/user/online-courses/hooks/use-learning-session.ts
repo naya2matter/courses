@@ -206,6 +206,7 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
   const latestPositionRef = useRef(Math.max(0, initialResumePosition))
   const latestCompletionRef = useRef(clampCompletion(initialCompletion))
   const latestContentTypeRef = useRef<ContentType | null>(contentType)
+  const latestVideoDurationRef = useRef(0)
 
   const playingRef = useRef(false)
   const playStartedAtRef = useRef<number | null>(null)
@@ -266,6 +267,46 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     setDisplayedCompletion((prev) => Math.max(prev, latestCompletionRef.current))
   }, [])
 
+  const getVideoProgressSnapshot = useCallback((position: number, duration?: number) => {
+    const safePosition = Math.max(0, position)
+
+    if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+      latestVideoDurationRef.current = duration
+    }
+
+    const safeDuration = latestVideoDurationRef.current
+    const rawCompletion =
+      safeDuration > 0
+        ? clampCompletion((safePosition / safeDuration) * 100)
+        : latestCompletionRef.current
+
+    latestPositionRef.current = safePosition
+
+    return {
+      position: safePosition,
+      rawCompletion,
+      completion: Math.max(latestCompletionRef.current, rawCompletion),
+    }
+  }, [])
+
+  const captureVideoProgress = useCallback((position: number, duration: number) => {
+    const snapshot = getVideoProgressSnapshot(position, duration)
+    let crossedMilestone = false
+
+    for (const milestone of MILESTONES) {
+      if (snapshot.rawCompletion >= milestone && !milestonesRef.current.has(milestone)) {
+        milestonesRef.current.add(milestone)
+        crossedMilestone = true
+        pushEvent({ type: "milestone", at: snapshot.position, pct: milestone })
+      }
+    }
+
+    return {
+      ...snapshot,
+      crossedMilestone,
+    }
+  }, [getVideoProgressSnapshot, pushEvent])
+
   const syncPdfProgress = useCallback(async () => {
     if (latestContentTypeRef.current !== "pdf") return
     if (!courseId || !contentId) return
@@ -314,27 +355,6 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     }
   }, [])
 
-  const startProgressTicker = useCallback(() => {
-    if (progressTickerRef.current != null) return
-    progressTickerRef.current = window.setInterval(() => {
-      void sendProgressSnapshot(latestPositionRef.current, latestCompletionRef.current)
-    }, 120000)
-  }, [])
-
-  const startPlaybackClock = useCallback(() => {
-    if (playingRef.current) return
-    playingRef.current = true
-    playStartedAtRef.current = Date.now()
-    startProgressTicker()
-  }, [startProgressTicker])
-
-  const stopPlaybackClock = useCallback(() => {
-    addPlaybackSlice()
-    playingRef.current = false
-    playStartedAtRef.current = null
-    stopProgressTicker()
-  }, [addPlaybackSlice, stopProgressTicker])
-
   const toMetrics = useCallback((position: number, completion: number): SessionMetrics => {
     const next: SessionMetrics = {
       ...metricsRef.current,
@@ -349,7 +369,8 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
   const sendProgressSnapshot = useCallback(async (position: number, completion: number) => {
     if (!sessionIdRef.current || endedRef.current) return
 
-    const payload = toMetrics(position, completion)
+    const monotonicCompletion = Math.max(latestCompletionRef.current, clampCompletion(completion))
+    const payload = toMetrics(position, monotonicCompletion)
     latestPositionRef.current = payload.playback_position
     trackDisplayedCompletion(payload.completion_percentage)
     persistSessionSnapshot()
@@ -374,6 +395,28 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     }
   }, [onRealError, persistSessionSnapshot, toMetrics, trackDisplayedCompletion])
 
+  const startProgressTicker = useCallback(() => {
+    if (progressTickerRef.current != null) return
+    progressTickerRef.current = window.setInterval(() => {
+      const snapshot = getVideoProgressSnapshot(latestPositionRef.current)
+      void sendProgressSnapshot(snapshot.position, snapshot.completion)
+    }, 120000)
+  }, [getVideoProgressSnapshot, sendProgressSnapshot])
+
+  const startPlaybackClock = useCallback(() => {
+    if (playingRef.current) return
+    playingRef.current = true
+    playStartedAtRef.current = Date.now()
+    startProgressTicker()
+  }, [startProgressTicker])
+
+  const stopPlaybackClock = useCallback(() => {
+    addPlaybackSlice()
+    playingRef.current = false
+    playStartedAtRef.current = null
+    stopProgressTicker()
+  }, [addPlaybackSlice, stopProgressTicker])
+
   const resetSessionState = useCallback((resumePos: number, completion: number, pages: number | null) => {
     sessionIdRef.current = null
     startPromiseRef.current = null
@@ -390,6 +433,7 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     latestPositionRef.current = Math.max(0, resumePos)
     latestCompletionRef.current = clampCompletion(completion)
     latestContentTypeRef.current = contentType
+  latestVideoDurationRef.current = 0
 
     activePlaybackSecondsRef.current = 0
     playingRef.current = false
@@ -544,13 +588,16 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     const position = latestContentTypeRef.current === "pdf"
       ? pdfCurrentPageRef.current
       : latestPositionRef.current
+    const completion = latestContentTypeRef.current === "video"
+      ? getVideoProgressSnapshot(position).completion
+      : latestCompletionRef.current
 
     if (!useKeepAlive) {
-      await sendProgressSnapshot(position, latestCompletionRef.current)
+      await sendProgressSnapshot(position, completion)
       return
     }
 
-    const payload = toMetrics(position, latestCompletionRef.current)
+    const payload = toMetrics(position, completion)
     latestPositionRef.current = payload.playback_position
     trackDisplayedCompletion(payload.completion_percentage)
     persistSessionSnapshot()
@@ -572,7 +619,7 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
     } catch {
       // Best-effort flush on pagehide: local snapshot is already persisted for resume.
     }
-  }, [addPlaybackSlice, persistSessionSnapshot, sendProgressSnapshot, toMetrics, trackDisplayedCompletion])
+  }, [addPlaybackSlice, getVideoProgressSnapshot, persistSessionSnapshot, sendProgressSnapshot, toMetrics, trackDisplayedCompletion])
 
   const endSession = useCallback(async (opts: EndSessionOptions = {}) => {
     const { useKeepAlive = false, completionOverride, reason } = opts
@@ -687,39 +734,29 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
   }, [ensureSessionStarted, startPlaybackClock])
 
   const onVideoProgress = useCallback((position: number, duration: number) => {
-    latestPositionRef.current = Math.max(0, position)
-    if (duration > 0) {
-      const computed = clampCompletion((position / duration) * 100)
-      trackDisplayedCompletion(computed)
+    const snapshot = captureVideoProgress(position, duration)
 
-      for (const milestone of MILESTONES) {
-        if (computed >= milestone && !milestonesRef.current.has(milestone)) {
-          milestonesRef.current.add(milestone)
-          pushEvent({ type: "milestone", at: position, pct: milestone })
-          void sendProgressSnapshot(position, latestCompletionRef.current)
-        }
-      }
+    if (snapshot.crossedMilestone) {
+      void sendProgressSnapshot(snapshot.position, snapshot.completion)
     }
-
-    toMetrics(latestPositionRef.current, latestCompletionRef.current)
-  }, [pushEvent, sendProgressSnapshot, toMetrics, trackDisplayedCompletion])
+  }, [captureVideoProgress, sendProgressSnapshot])
 
   const onVideoPause = useCallback((position: number, duration: number) => {
     metricsRef.current.pause_count += 1
     pushEvent({ type: "pause", at: position })
     stopPlaybackClock()
-    onVideoProgress(position, duration)
-    void sendProgressSnapshot(latestPositionRef.current, latestCompletionRef.current)
-  }, [onVideoProgress, pushEvent, sendProgressSnapshot, stopPlaybackClock])
+    const snapshot = captureVideoProgress(position, duration)
+    void sendProgressSnapshot(snapshot.position, snapshot.completion)
+  }, [captureVideoProgress, pushEvent, sendProgressSnapshot, stopPlaybackClock])
 
   const onVideoSeek = useCallback((from: number, to: number, duration: number) => {
     metricsRef.current.seek_count += 1
     if (to < from) metricsRef.current.replay_count += 1
     if (to - from >= 10) metricsRef.current.skip_count += 1
     pushEvent({ type: "seek", at: to, from, to })
-    onVideoProgress(to, duration)
-    void sendProgressSnapshot(to, latestCompletionRef.current)
-  }, [onVideoProgress, pushEvent, sendProgressSnapshot])
+    const snapshot = captureVideoProgress(to, duration)
+    void sendProgressSnapshot(snapshot.position, snapshot.completion)
+  }, [captureVideoProgress, pushEvent, sendProgressSnapshot])
 
   const onVideoRateChange = useCallback(() => {
     metricsRef.current.speed_changes += 1
@@ -729,10 +766,10 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
   const onVideoEnd = useCallback((position: number, duration: number) => {
     pushEvent({ type: "ended", at: position, pct: 100 })
     stopPlaybackClock()
-    onVideoProgress(position, duration)
+    captureVideoProgress(position, duration)
     void sendProgressSnapshot(position, 100)
     void endSession({ completionOverride: 100, reason: "ended" })
-  }, [endSession, onVideoProgress, pushEvent, sendProgressSnapshot, stopPlaybackClock])
+  }, [captureVideoProgress, endSession, pushEvent, sendProgressSnapshot, stopPlaybackClock])
 
   const onPdfOpen = useCallback(() => {
     void (async () => {
@@ -785,8 +822,12 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
       ? pdfCurrentPageRef.current
       : latestPositionRef.current
 
-    void sendProgressSnapshot(position, latestCompletionRef.current)
-  }, [addPlaybackSlice, pushEvent, sendProgressSnapshot])
+    const completion = latestContentTypeRef.current === "video"
+      ? getVideoProgressSnapshot(position).completion
+      : latestCompletionRef.current
+
+    void sendProgressSnapshot(position, completion)
+  }, [addPlaybackSlice, getVideoProgressSnapshot, pushEvent, sendProgressSnapshot])
 
   const handleFullscreen = useCallback(() => {
     if (!sessionIdRef.current || endedRef.current) return

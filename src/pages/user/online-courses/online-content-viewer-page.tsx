@@ -22,6 +22,7 @@ import {
   CheckCircle2Icon,
   BookOpenIcon,
   ListIcon,
+  TrophyIcon,
   XIcon,
 } from "lucide-react"
 
@@ -53,6 +54,26 @@ function formatDuration(s: number): string {
   const rem = m % 60
   if (h > 0) return `${h}h ${rem > 0 ? `${rem}m` : ""}`
   return `${m}m`
+}
+
+function getQuizStatusMeta(status: string | null): { label: string; className: string } {
+  switch (status) {
+    case "passed":
+      return {
+        label: "Passed",
+        className: "text-emerald-400",
+      }
+    case "failed":
+      return {
+        label: "Retry available",
+        className: "text-rose-300",
+      }
+    default:
+      return {
+        label: "Not attempted",
+        className: "text-amber-400",
+      }
+  }
 }
 
 // ── Video player ──────────────────────────────────────────────────────────────
@@ -474,6 +495,11 @@ export function OnlineContentViewerPage() {
     navigate(`/user/online-courses/${cId}/content/${id}`)
   }
 
+  async function goToQuiz(quizId: number) {
+    await persistBeforeLeave()
+    navigate(`/user/quizzes/${quizId}`)
+  }
+
   async function goBack() {
     await persistBeforeLeave()
     navigate(`/user/online-courses/${cId}`)
@@ -760,37 +786,86 @@ export function OnlineContentViewerPage() {
                   Module {mod.order_number}
                 </h3>
                 <div className="flex flex-col gap-1">
-                  {mod.content.map(c => {
+                  {mod.content.map((c) => {
                     const isActive = c.id === ctId
                     const isLocked = !c.is_unlocked
                     const isCompleted = c.progress?.is_completed
+
                     return (
                       <button
                         type="button"
                         key={c.id}
                         disabled={isLocked}
                         onClick={() => {
-                          if (!isLocked && !isActive) goToContent(c.id)
+                          if (!isLocked && !isActive) {
+                            void goToContent(c.id)
+                          }
                           setSidebarOpen(false)
                         }}
-                        className={`group flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                          isActive 
-                            ? "bg-indigo-500/20 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]" 
-                            : isLocked 
-                              ? "opacity-40 cursor-not-allowed" 
-                              : "hover:bg-white/5 border border-transparent"
+                        className={`group flex items-center gap-3 rounded-xl p-3 text-left transition-all ${
+                          isActive
+                            ? "border border-indigo-500/30 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                            : isLocked
+                              ? "cursor-not-allowed opacity-40"
+                              : "border border-transparent hover:bg-white/5"
                         }`}
                       >
-                        <div className={`flex shrink-0 items-center justify-center size-8 rounded-lg ${isActive ? "bg-indigo-500/20 text-indigo-400" : isCompleted ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/50"}`}>
-                          {isLocked ? <LockIcon className="size-3.5" /> : isCompleted ? <CheckCircle2Icon className="size-4" /> : c.content_type === 'video' ? <PlayCircleIcon className="size-3.5" /> : <FileTextIcon className="size-3.5" />}
+                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-indigo-500/20 text-indigo-400" : isCompleted ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/50"}`}>
+                          {isLocked ? <LockIcon className="size-3.5" /> : isCompleted ? <CheckCircle2Icon className="size-4" /> : c.content_type === "video" ? <PlayCircleIcon className="size-3.5" /> : <FileTextIcon className="size-3.5" />}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className={`truncate text-sm font-medium ${isActive ? "text-indigo-100" : "text-white/80"} ${!isLocked && !isActive ? "group-hover:text-white" : ""}`}>{c.title}</p>
-                          <p className="text-[10px] text-white/40 mt-0.5 font-medium">{formatDuration(c.duration_seconds)}</p>
+                          <p className="mt-0.5 text-[10px] font-medium text-white/40">{formatDuration(c.duration_seconds)}</p>
                         </div>
                       </button>
                     )
                   })}
+                  {mod.quiz && (() => {
+                    const quiz = mod.quiz
+                    const isLocked = !mod.is_unlocked
+                    const isPassed = mod.quiz_status === "passed"
+                    const statusMeta = getQuizStatusMeta(mod.quiz_status)
+
+                    return (
+                      <button
+                        type="button"
+                        key={`quiz-${quiz.id}`}
+                        disabled={isLocked}
+                        onClick={() => {
+                          if (!isLocked) {
+                            void goToQuiz(quiz.id)
+                          }
+                          setSidebarOpen(false)
+                        }}
+                        className={`group flex items-center gap-3 rounded-xl p-3 text-left transition-all ${
+                          isLocked
+                            ? "cursor-not-allowed opacity-40"
+                            : "border border-transparent hover:bg-white/5"
+                        }`}
+                      >
+                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${isLocked ? "bg-white/5 text-white/30" : isPassed ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
+                          {isLocked ? <LockIcon className="size-3.5" /> : isPassed ? <CheckCircle2Icon className="size-4" /> : <TrophyIcon className="size-3.5" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className={`truncate text-sm font-medium ${isLocked ? "text-white/35" : "text-white/80 group-hover:text-white"}`}>{quiz.title}</p>
+                            {quiz.required_to_proceed && !isLocked && (
+                              <Badge
+                                variant="outline"
+                                className="rounded-full border-amber-500/25 px-1.5 py-0 text-[9px] font-semibold text-amber-400"
+                              >
+                                Required
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-[10px] font-medium text-white/40">
+                            Quiz
+                            {!isLocked ? <span className={`ml-2 ${statusMeta.className}`}>{statusMeta.label}</span> : null}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })()}
                 </div>
               </div>
             ))

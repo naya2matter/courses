@@ -49,7 +49,11 @@ export function formatDuration(seconds: number | null | undefined): string {
  */
 export function getThumbnailUrl(thumbnailPath: string | null | undefined): string | null {
   if (!thumbnailPath) return null
-  // Strip "/api" from the base to get the server origin, then append storage path
+  // The backend already returns a full URL via Storage::disk('public')->url(),
+  // so return it directly. Only build a URL when given a relative path.
+  if (thumbnailPath.startsWith('http://') || thumbnailPath.startsWith('https://')) {
+    return thumbnailPath
+  }
   const origin = API_BASE.replace(/\/api$/, "")
   return `${origin}/storage/${thumbnailPath}`
 }

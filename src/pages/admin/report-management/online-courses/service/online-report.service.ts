@@ -1,0 +1,90 @@
+// ─── Online Course Reporting Service ─────────────────────────────────────────
+
+import { apiClient } from "@/lib/api"
+import { downloadCsv, buildExportQuery } from "../../shared/download-csv"
+import type {
+  UserCourseDailyFilters,
+  DeptCourseDailyFilters,
+  SessionFactFilters,
+  UserPerfFilters,
+  UserCourseProgressFilters,
+  DeptEvalFilters,
+  PaginatedResponse,
+  UserCourseDailyRow,
+  DeptCourseDailyRow,
+  SessionFactRow,
+  UserPerformanceRow,
+  UserCourseProgressRow,
+  DeptEvalResponse,
+} from "../types/online-report.types"
+
+function buildQuery(filters: Record<string, unknown>): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value))
+    }
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ""
+}
+
+// ── Datasets ──────────────────────────────────────────────────────────────────
+
+export async function getUserCourseDaily(
+  filters: Partial<UserCourseDailyFilters> = {},
+): Promise<PaginatedResponse<UserCourseDailyRow>> {
+  return apiClient.get(`/admin/reporting/datasets/user-course-daily${buildQuery(filters)}`)
+}
+
+export async function getDeptCourseDaily(
+  filters: Partial<DeptCourseDailyFilters> = {},
+): Promise<PaginatedResponse<DeptCourseDailyRow>> {
+  return apiClient.get(`/admin/reporting/datasets/department-course-daily${buildQuery(filters)}`)
+}
+
+export async function getSessionFact(
+  filters: Partial<SessionFactFilters> = {},
+): Promise<PaginatedResponse<SessionFactRow>> {
+  return apiClient.get(`/admin/reporting/datasets/session-fact${buildQuery(filters)}`)
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export async function getUserPerformance(
+  filters: Partial<UserPerfFilters> = {},
+): Promise<PaginatedResponse<UserPerformanceRow>> {
+  return apiClient.get(`/admin/reporting/user-performance${buildQuery(filters)}`)
+}
+
+export async function getUserCourseProgress(
+  filters: Partial<UserCourseProgressFilters> = {},
+): Promise<PaginatedResponse<UserCourseProgressRow>> {
+  return apiClient.get(`/admin/reporting/user-course-progress${buildQuery(filters)}`)
+}
+
+export async function getDeptEvalPerformance(
+  filters: Partial<DeptEvalFilters> = {},
+): Promise<DeptEvalResponse> {
+  return apiClient.get(`/admin/reporting/evaluation/department-performance${buildQuery(filters)}`)
+}
+
+// ── CSV Exports ───────────────────────────────────────────────────────────────
+
+export const exportUserCourseDaily = (f: Partial<UserCourseDailyFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/user-course-daily${buildExportQuery(f as Record<string, unknown>)}`, "user-course-daily.csv")
+
+export const exportDeptCourseDaily = (f: Partial<DeptCourseDailyFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/department-course-daily${buildExportQuery(f as Record<string, unknown>)}`, "dept-course-daily.csv")
+
+export const exportSessionFact = (f: Partial<SessionFactFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/session-fact${buildExportQuery(f as Record<string, unknown>)}`, "session-fact.csv")
+
+export const exportUserPerformance = (f: Partial<UserPerfFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/user-performance${buildExportQuery(f as Record<string, unknown>)}`, "user-performance.csv")
+
+export const exportUserCourseProgress = (f: Partial<UserCourseProgressFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/user-course-progress${buildExportQuery(f as Record<string, unknown>)}`, "user-course-progress.csv")
+
+export const exportDeptEvalPerformance = (f: Partial<DeptEvalFilters> = {}) =>
+  downloadCsv(`/admin/reporting/export/evaluation/department-performance${buildExportQuery(f as Record<string, unknown>)}`, "dept-eval-performance.csv")

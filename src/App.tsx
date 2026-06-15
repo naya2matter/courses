@@ -35,6 +35,8 @@ import AttendancePage from "@/pages/admin/course-management/attendance/attendanc
 import ReportLiveCoursesPage from "@/pages/admin/report-management/live-courses/live-courses"
 import ReportOnlineCoursesPage from "@/pages/admin/report-management/online-courses/online-courses"
 import KpisPage from "@/pages/admin/report-management/kpis/kpis"
+import QuizReportPage from "@/pages/admin/report-management/quiz/quiz-report"
+import RefreshOperationsPage from "@/pages/admin/report-management/refresh/refresh-operations"
 
 // Admin — Evaluation Management
 import UserEvaluationPage from "@/pages/admin/evaluation-management/user-evaluation/user-evaluation"
@@ -140,6 +142,8 @@ function App() {
               <Route path="/admin/report-management/live-courses" element={<ReportLiveCoursesPage />} />
               <Route path="/admin/report-management/online-courses" element={<ReportOnlineCoursesPage />} />
               <Route path="/admin/report-management/kpis" element={<KpisPage />} />
+              <Route path="/admin/report-management/quiz" element={<QuizReportPage />} />
+              <Route path="/admin/report-management/refresh" element={<RefreshOperationsPage />} />
 
               {/* Evaluation Management */}
               <Route path="/admin/evaluation-management/user-evaluation" element={<UserEvaluationPage />} />

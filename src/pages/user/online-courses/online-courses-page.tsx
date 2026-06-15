@@ -73,6 +73,13 @@ function calcStats(courses: UserOnlineCourse[]): SummaryStats {
   return { total, notStarted, inProgress, completed, avgProgress, completedContentItems }
 }
 
+function getThumbnailUrl(relativePath: string | null): string | null {
+  if (!relativePath) return null
+  if (relativePath.startsWith("http")) return relativePath
+  const base = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api").replace(/\/api\/?$/, "")
+  return `${base}/storage/${relativePath}`
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString(undefined, {
@@ -170,9 +177,9 @@ function OnlineCourseCard({ course }: { course: UserOnlineCourse }) {
 
       {/* Thumbnail / placeholder */}
       <div className="relative h-48 w-full shrink-0 overflow-hidden bg-linear-to-b from-[#101018] to-[#090912]">
-        {course.thumbnail_url ? (
+        {getThumbnailUrl(course.thumbnail_url) ? (
           <img
-            src={course.thumbnail_url}
+            src={getThumbnailUrl(course.thumbnail_url)!}
             alt={course.title}
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />

@@ -326,9 +326,19 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
       trackDisplayedCompletion(result.completion_percentage)
     } catch (err) {
       if (isAbortError(err)) return
-      // Keep PDF progress failures non-fatal during interaction; end-session still retries separately.
+      const e = err as { status?: number; data?: { message?: string } }
+      // Surface access / validation errors once per session so the user understands
+      // why progress isn't being tracked (403 = not assigned, 422 = content not PDF).
+      if ((e?.status === 403 || e?.status === 422) && !progressErrorShownRef.current) {
+        progressErrorShownRef.current = true
+        const msg =
+          e.status === 403
+            ? "Access denied — you are not assigned to this course."
+            : e?.data?.message ?? "PDF progress could not be saved — the content type is invalid."
+        onRealError?.(msg, e.status)
+      }
     }
-  }, [contentId, courseId, trackDisplayedCompletion])
+  }, [contentId, courseId, onRealError, trackDisplayedCompletion])
 
   const elapsedSinceStart = useCallback(() => {
     if (!startedAtRef.current) return 0
@@ -774,7 +784,10 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
   const onPdfOpen = useCallback(() => {
     void (async () => {
       const startedResume = await ensureSessionStarted("pdf")
-      const page = Math.max(1, Math.floor(startedResume ?? resumePosition ?? 1))
+      // Use the ref — NOT the resumePosition state — to avoid this callback being
+      // recreated every time the session-start state update triggers a re-render,
+      // which would cause PdfViewer's onOpenSession effect to fire in a loop.
+      const page = Math.max(1, Math.floor(startedResume ?? latestPositionRef.current ?? 1))
       pdfCurrentPageRef.current = page
       viewedPagesRef.current.add(page)
       latestPositionRef.current = page
@@ -786,7 +799,7 @@ export function useLearningSession(options: UseLearningSessionOptions): UseLearn
       void sendProgressSnapshot(page, latestCompletionRef.current)
       void syncPdfProgress()
     })()
-  }, [ensureSessionStarted, pushEvent, resumePosition, sendProgressSnapshot, syncPdfProgress, trackDisplayedCompletion])
+  }, [ensureSessionStarted, pushEvent, sendProgressSnapshot, syncPdfProgress, trackDisplayedCompletion])
 
   const onPdfPageChange = useCallback((page: number, pages: number | null) => {
     if (!sessionIdRef.current || endedRef.current) return

@@ -15,6 +15,7 @@ import {
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ExternalLinkIcon,
   FileTextIcon,
   LockIcon,
   PlayCircleIcon,
@@ -39,6 +40,7 @@ import {
   getMyOnlineCourseById,
 } from "@/services/userOnlineCourse.service"
 import { useLearningSession } from "./hooks/use-learning-session"
+import { SessionSummaryCard } from "./components/session-summary-card"
 import type {
   ResumeProgressResponse,
   UserCourseMediaResponse,
@@ -204,85 +206,98 @@ function PdfViewer({
   onPageChange: (page: number, totalPages: number | null) => void
 }) {
   const [currentPage, setCurrentPage] = useState(Math.max(1, resumePage))
-  const [loadFailed, setLoadFailed] = useState(false)
+  const [iframeKey, setIframeKey] = useState(0)
+  // Prevents onPageChange from firing on the initial mount — that's handled by
+  // onOpenSession (onPdfOpen). Firing both causes duplicate syncPdfProgress calls.
+  const hasMountedRef = useRef(false)
 
   useEffect(() => {
     const next = Math.max(1, resumePage)
     setCurrentPage(next)
   }, [resumePage])
 
-  const pageSrc = currentPage > 1 ? `${src}#page=${currentPage}` : src
-
   useEffect(() => {
     onOpenSession()
   }, [onOpenSession])
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
     onPageChange(currentPage, totalPages)
   }, [currentPage, onPageChange, totalPages])
 
   function movePage(step: number) {
     const maxPage = totalPages ?? Number.MAX_SAFE_INTEGER
-    setCurrentPage((prev) => Math.max(1, Math.min(maxPage, prev + step)))
+    setCurrentPage((prev) => {
+      const next = Math.max(1, Math.min(maxPage, prev + step))
+      // Force iframe remount to navigate the browser's PDF viewer to the new page.
+      // The PDF binary is in the browser cache so the remount is near-instant.
+      if (next !== prev) setIframeKey((k) => k + 1)
+      return next
+    })
   }
 
-  if (loadFailed) return null
+  // Build PDF URL with page anchor so Chrome/Firefox/Edge PDF viewers jump to
+  // the right page on load without requiring the user to scroll manually.
+  const pdfSrc = currentPage > 1 ? `${src}#page=${currentPage}` : src
 
   return (
     <div className="flex flex-col bg-[#05050A]">
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2 text-xs text-white/45">
-        <span>
-          Page {currentPage}{totalPages ? ` / ${totalPages}` : ""}
+      {/* ── Toolbar ── */}
+      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2">
+        <span className="text-xs font-medium text-white/40">
+          Page <span className="text-white/70 tabular-nums">{currentPage}</span>
+          {totalPages ? <span className="text-white/30"> / {totalPages}</span> : ""}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-7 border-white/10 bg-white/5 px-2.5 text-white/70"
+            className="h-7 gap-1 border-white/10 bg-white/5 px-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"
             onClick={() => movePage(-1)}
             disabled={currentPage <= 1}
           >
+            <ChevronLeftIcon className="size-3.5" />
             Prev
           </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-7 border-white/10 bg-white/5 px-2.5 text-white/70"
+            className="h-7 gap-1 border-white/10 bg-white/5 px-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"
             onClick={() => movePage(1)}
             disabled={totalPages != null && currentPage >= totalPages}
           >
             Next
+            <ChevronRightIcon className="size-3.5" />
           </Button>
-        </div>
-      </div>
-
-      <object
-        data={pageSrc}
-        type="application/pdf"
-        className="h-[75vh] w-full rounded-none border-none bg-transparent"
-        onError={() => {
-          setLoadFailed(true)
-          onExpired()
-        }}
-      >
-        {/* Fallback for browsers that can't embed PDFs */}
-        <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-          <FileTextIcon className="size-12 text-white/15" />
-          <p className="text-sm text-white/50">
-            Your browser cannot display this PDF inline.
-          </p>
           <a
             href={src}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-400 hover:bg-indigo-500/30"
+            className="ml-1 flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
           >
-            Open PDF in new tab
+            <ExternalLinkIcon className="size-3" />
+            Open in new tab
           </a>
         </div>
-      </object>
+      </div>
+
+      {/* ── PDF iframe ─────────────────────────────────────────────────────────
+          <object> no longer works for inline PDFs in modern Chrome/Edge/Firefox.
+          <iframe> triggers the browser's built-in PDF viewer correctly.
+      ── */}
+      <iframe
+        key={iframeKey}
+        src={pdfSrc}
+        title={`PDF — page ${currentPage}${totalPages ? ` of ${totalPages}` : ""}`}
+        className="h-[75vh] w-full border-none bg-white"
+        allow="fullscreen"
+        onError={() => onExpired()}
+      />
     </div>
   )
 }
@@ -348,7 +363,9 @@ export function OnlineContentViewerPage() {
   const [error, setError] = useState<{ message: string; status?: number } | null>(null)
   const [mediaExpired, setMediaExpired] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const autoAdvanceTimeoutRef = useRef<number | null>(null)
+  // When the user navigates away manually we still finalize the session, but we
+  // must not fire the "moving to next content" toast / auto-advance for it.
+  const suppressAutoAdvanceRef = useRef(false)
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -385,13 +402,60 @@ export function OnlineContentViewerPage() {
     fetchContent(true)
   }, [fetchContent])
 
-  useEffect(() => {
-    return () => {
-      if (autoAdvanceTimeoutRef.current != null) {
-        window.clearTimeout(autoAdvanceTimeoutRef.current)
-      }
+  // Stable callbacks — must not be recreated on every render so that the hook's
+  // internal useCallbacks (ensureSessionStarted, onPdfOpen, …) stay referentially
+  // stable. Inline functions cause the whole chain to cascade every render and
+  // fire PdfViewer's onOpenSession effect in a loop, triggering 422 spam.
+  const handleSessionError = useCallback((message: string, status?: number) => {
+    if (status === 403 && message.includes("already been completed")) {
+      toast.warning(message, { duration: 6000 })
+    } else if (status === 401) {
+      toast.error(message, { duration: 8000 })
+    } else {
+      toast.error(message, { duration: 6000 })
     }
   }, [])
+
+  const handleSessionEnded = useCallback(
+    (result: { session_id: number; attention_score: number; content_completed: boolean; course_progress_percentage: number }) => {
+      if (result.content_completed) {
+        setCourse((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            modules: prev.modules.map((mod) => ({
+              ...mod,
+              content: mod.content.map((c) =>
+                c.id === ctId
+                  ? {
+                      ...c,
+                      progress: {
+                        ...(c.progress ?? { playback_position: 0 }),
+                        is_completed: true,
+                        completion_percentage: 100,
+                      },
+                    }
+                  : c
+              ),
+            })),
+          }
+        })
+
+        if (suppressAutoAdvanceRef.current) {
+          suppressAutoAdvanceRef.current = false
+          return
+        }
+
+        toast.success(
+          media?.next_content
+            ? "Content completed! Review your summary, then continue."
+            : "Content completed! Your progress has been saved.",
+          { duration: 6000 },
+        )
+      }
+    },
+    [ctId, media],
+  )
 
   const {
     displayedCompletion,
@@ -422,68 +486,27 @@ export function OnlineContentViewerPage() {
       ?? resume?.completion_percentage
       ?? 0,
     totalPdfPages: media?.pdf_total_pages ?? null,
-    onRealError: (message, status) => {
-      // 403 "already completed" is an expected state — use a softer warning.
-      // All other session errors (401, 422, network) are surfaced as error toasts
-      // so the player stays visible and the user understands what happened.
-      if (status === 403 && message.includes("already been completed")) {
-        toast.warning(message, { duration: 6000 })
-      } else if (status === 401) {
-        toast.error(message, { duration: 8000 })
-      } else {
-        toast.error(message, { duration: 6000 })
-      }
-    },
-    onSessionEnded: (result) => {
-      if (result.content_completed) {
-        // Mark the current content as completed in the sidebar immediately.
-        setCourse((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            modules: prev.modules.map((mod) => ({
-              ...mod,
-              content: mod.content.map((c) =>
-                c.id === ctId
-                  ? {
-                      ...c,
-                      progress: {
-                        ...(c.progress ?? { playback_position: 0 }),
-                        is_completed: true,
-                        completion_percentage: 100,
-                      },
-                    }
-                  : c
-              ),
-            })),
-          }
-        })
-
-        if (media?.next_content) {
-          toast.success("Content completed! Moving to the next content...", { duration: 3500 })
-          if (autoAdvanceTimeoutRef.current != null) {
-            window.clearTimeout(autoAdvanceTimeoutRef.current)
-          }
-          autoAdvanceTimeoutRef.current = window.setTimeout(() => {
-            navigate(`/user/online-courses/${cId}/content/${media.next_content!.id}`)
-          }, 3000)
-        } else {
-          toast.success("Content completed! Your progress has been saved.", { duration: 7000 })
-        }
-      }
-    },
+    onRealError: handleSessionError,
+    onSessionEnded: handleSessionEnded,
   })
 
   // ── Navigation helpers ────────────────────────────────────────────────────
 
   async function persistBeforeLeave() {
-    if (autoAdvanceTimeoutRef.current != null) {
-      window.clearTimeout(autoAdvanceTimeoutRef.current)
-      autoAdvanceTimeoutRef.current = null
-    }
-
     if (media?.content_type === "video") {
-      await flushProgressSnapshot({ markUnmountHandled: true })
+      // A video watched past the completion threshold (>= 95%) is finalized so
+      // the backend marks it complete + writes the fact row (per the API guide).
+      // Below the threshold we only flush progress and leave the session open
+      // so a return visit resumes the same session.
+      if (displayedCompletion >= 95) {
+        suppressAutoAdvanceRef.current = true
+        await endSession({
+          reason: "route_change",
+          completionOverride: Math.max(displayedCompletion, 95),
+        })
+      } else {
+        await flushProgressSnapshot({ markUnmountHandled: true })
+      }
       return
     }
 
@@ -632,18 +655,15 @@ export function OnlineContentViewerPage() {
               </div>
 
               {sessionSummary && (
-                <div className="grid grid-cols-1 gap-4 rounded-3xl border border-indigo-500/20 bg-indigo-500/5 backdrop-blur-sm p-5 sm:grid-cols-2 shadow-inner">
-                  <div className="flex items-center gap-3 text-sm text-indigo-100/90">
-                    <div className="h-2 w-2 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
-                    <span className="text-indigo-200/80 font-medium tracking-wide">Attention score:</span>
-                    <span className="font-bold tabular-nums text-white text-base">{sessionSummary.attention_score}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-indigo-100/90">
-                    <div className="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
-                    <span className="text-violet-200/80 font-medium tracking-wide">Course progress:</span>
-                    <span className="font-bold tabular-nums text-white text-base">{(Number(sessionSummary.course_progress_percentage) || 0).toFixed(2)}%</span>
-                  </div>
-                </div>
+                <SessionSummaryCard
+                  summary={sessionSummary}
+                  continueLabel={media.next_content?.title ?? null}
+                  onContinue={
+                    media.next_content
+                      ? () => goToContent(media.next_content!.id)
+                      : undefined
+                  }
+                />
               )}
 
               {/* Expired notice */}

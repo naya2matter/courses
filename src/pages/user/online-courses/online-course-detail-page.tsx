@@ -31,6 +31,13 @@ import type {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function getThumbnailUrl(relativePath: string | null): string | null {
+  if (!relativePath) return null
+  if (relativePath.startsWith("http")) return relativePath
+  const base = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api").replace(/\/api\/?$/, "")
+  return `${base}/storage/${relativePath}`
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString(undefined, {
@@ -627,10 +634,10 @@ export function OnlineCourseDetailPage() {
           {/* ── Course hero ── */}
           <section className="relative overflow-hidden rounded-[2rem] border border-white/5 ring-1 ring-black/5 shadow-2xl">
             {/* Thumbnail or gradient backdrop */}
-            {course.thumbnail_url ? (
+            {getThumbnailUrl(course.thumbnail_url) ? (
               <div className="relative h-64 w-full sm:h-80">
                 <img
-                  src={course.thumbnail_url}
+                  src={getThumbnailUrl(course.thumbnail_url)!}
                   alt={course.title}
                   className="h-full w-full object-cover transition-transform duration-1000 hover:scale-105"
                 />

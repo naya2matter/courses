@@ -10,6 +10,7 @@ import {
   MessageSquareIcon,
   BugIcon,
   FileTextIcon,
+  RefreshCwIcon,
 } from "lucide-react"
 
 export type SidebarSubItem = {
@@ -82,9 +83,11 @@ export const adminSidebarConfig: AdminSidebarConfig = {
           url: "/admin/report-management",
           icon: <BarChart2Icon />,
           items: [
-            { title: "Live Courses", url: "/admin/report-management/live-courses" },
-            { title: "Online Courses", url: "/admin/report-management/online-courses" },
             { title: "KPIs", url: "/admin/report-management/kpis" },
+            { title: "Online Courses", url: "/admin/report-management/online-courses" },
+            { title: "Live Courses", url: "/admin/report-management/live-courses" },
+            { title: "Quiz", url: "/admin/report-management/quiz" },
+            { title: "Refresh Operations", url: "/admin/report-management/refresh" },
           ],
         },
       ],

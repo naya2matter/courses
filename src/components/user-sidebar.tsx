@@ -3,8 +3,6 @@ import faviconUrl from "@/assets/favicon.svg"
 import {
   LayoutDashboardIcon,
   BookOpenIcon,
-  TrendingUpIcon,
-  CalendarIcon,
   ClockIcon,
   MessageSquareIcon,
   HeadphonesIcon,
@@ -40,16 +38,6 @@ const navLearning = [
     title: "My Online Courses",
     url: "/user/online-courses",
     icon: <BookOpenIcon />,
-  },
-  {
-    title: "My Progress",
-    url: "/user/progress",
-    icon: <TrendingUpIcon />,
-  },
-  {
-    title: "Schedule",
-    url: "/user/schedule",
-    icon: <CalendarIcon />,
   },
   {
     title: "My Audio",

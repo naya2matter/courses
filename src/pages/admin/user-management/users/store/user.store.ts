@@ -64,10 +64,14 @@ export const useUsersStore = create<UsersState>((set, get) => ({
 
   /**
    * Update the active filters and immediately re-fetch the list.
-   * Always resets to page 1 so the user doesn't land on an empty page.
+   * Resets to page 1 only when the caller does not provide an explicit page.
    */
   setFilters: (filters: UserListFilters) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    const next = {
+      ...get().filters,
+      ...filters,
+      page: filters.page ?? 1,
+    }
     set({ filters: next })
     get().fetchUsers(next)
   },

@@ -50,9 +50,9 @@ const TABS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function countActiveFilters(obj: Record<string, unknown>): number {
+function countActiveFilters(obj: object): number {
   const IGNORED = new Set(["page", "per_page"])
-  return Object.entries(obj).filter(([k, v]) => !IGNORED.has(k) && v !== "" && v !== undefined && v !== null).length
+  return Object.entries(obj as Record<string, unknown>).filter(([k, v]) => !IGNORED.has(k) && v !== "" && v !== undefined && v !== null).length
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

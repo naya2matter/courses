@@ -10,7 +10,6 @@ import {
   MessageSquareIcon,
   BugIcon,
   FileTextIcon,
-  RefreshCwIcon,
 } from "lucide-react"
 
 export type SidebarSubItem = {

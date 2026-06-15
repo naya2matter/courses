@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import {
   useOnlineReport,
-  DEFAULT_UCD, DEFAULT_DCD, DEFAULT_SF, DEFAULT_UP, DEFAULT_UCP, DEFAULT_DE,
+  DEFAULT_UCD, DEFAULT_DCD, DEFAULT_SF, DEFAULT_UP, DEFAULT_UCP,
 } from "./hook/use-online-report"
 import { UserCourseDailyTable } from "./components/user-course-daily-table"
 import { DeptCourseDailyTable } from "./components/dept-course-daily-table"
@@ -59,9 +59,9 @@ const TABS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function countActiveFilters(obj: Record<string, unknown>): number {
+function countActiveFilters(obj: object): number {
   const IGNORED = new Set(["page", "per_page"])
-  return Object.entries(obj).filter(([k, v]) => !IGNORED.has(k) && v !== "" && v !== undefined && v !== null).length
+  return Object.entries(obj as Record<string, unknown>).filter(([k, v]) => !IGNORED.has(k) && v !== "" && v !== undefined && v !== null).length
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

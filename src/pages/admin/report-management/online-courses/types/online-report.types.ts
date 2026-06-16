@@ -17,17 +17,18 @@ export interface UserCourseDailyFilters extends CommonOnlineFilters {
 
 export interface UserCourseDailyRow {
   id?: number
-  date: string
+  report_date: string
   user_id: number
   user_name: string
-  department_name?: string
   course_online_id: number
   course_name: string
+  department_id?: number
+  department_name?: string
   sessions_count: number
-  completions_count: number
-  total_watch_time_minutes: number
-  avg_attention_score: number
-  is_suspicious?: boolean
+  active_playback_time: number      // seconds
+  content_items_completed: number
+  course_progress_pct: number       // 0-100
+  updated_at?: string
 }
 
 // ── Department-Course Daily ───────────────────────────────────────────────────
@@ -38,16 +39,17 @@ export interface DeptCourseDailyFilters extends CommonOnlineFilters {
 
 export interface DeptCourseDailyRow {
   id?: number
-  date: string
   department_id: number
   department_name: string
   course_online_id: number
   course_name: string
-  sessions_count: number
-  completions_count: number
-  total_watch_time_minutes: number
-  avg_attention_score: number
+  report_date: string
+  enrolled_users: number
   active_users: number
+  completed_users: number
+  avg_progress_percentage: number   // 0-100
+  total_active_seconds: number      // seconds
+  updated_at?: string
 }
 
 // ── Session Fact ──────────────────────────────────────────────────────────────
@@ -63,15 +65,19 @@ export interface SessionFactRow {
   session_id?: number
   user_id: number
   user_name: string
-  department_name?: string
   course_online_id: number
   course_name: string
-  started_at: string
-  ended_at: string | null
+  department_id?: number
+  department_name?: string
+  content_id?: number
+  session_date: string
+  active_playback_time: number      // seconds
+  wall_clock_seconds: number        // seconds
+  completion_percentage: number     // 0-100
   attention_score: number
-  content_completed: boolean
   is_suspicious: boolean
-  duration_minutes?: number
+  content_completed: boolean
+  created_at?: string
 }
 
 // ── User Performance ──────────────────────────────────────────────────────────
@@ -80,22 +86,27 @@ export interface UserPerfFilters extends CommonOnlineFilters {
   course_online_id?: string | number
 }
 
-export type PerformanceRating = "excellent" | "good" | "needs_attention" | "poor"
+export type PerformanceRating = "excellent" | "good" | "average" | "needs_improvement"
 export type RiskLevel = "high" | "medium" | "low"
 
 export interface UserPerformanceRow {
   user_id: number
   user_name: string
   user_email?: string
+  department_id?: number
   department_name?: string
-  assigned_courses: number
+  total_assignments: number
   completed_courses: number
-  completion_rate: number
-  avg_quiz_score: number | null
-  avg_progress: number
-  avg_attention_score: number
-  total_sessions: number
+  in_progress_courses: number
+  completion_rate: number           // 0-100, computed by Resource
+  avg_progress: number              // 0-100
+  sessions_count: number
+  total_active_seconds: number      // seconds
+  avg_attention: number             // 0-100
   suspicious_sessions: number
+  quiz_attempts_count: number
+  quiz_passed_count: number
+  avg_quiz_pct: number              // 0-100
   performance_score: number
   performance_rating: PerformanceRating
   risk_level: RiskLevel
@@ -112,19 +123,25 @@ export type ComplianceStatus = "compliant" | "on_track" | "at_risk" | "non_compl
 export type ScoreBand = "excellent" | "good" | "average" | "poor"
 
 export interface UserCourseProgressRow {
+  id?: number
   user_id: number
   user_name: string
   user_email?: string
+  department_id?: number
   department_name?: string
   course_online_id: number
   course_name: string
-  status: "not_started" | "in_progress" | "completed"
+  course_deadline?: string | null
   progress_percentage: number
-  deadline?: string | null
+  status: "not_started" | "in_progress" | "completed"
+  total_content_items: number
+  completed_content_items: number
+  started_at?: string | null
+  completed_at?: string | null
+  last_accessed_at?: string | null
   days_overdue: number
   compliance_status: ComplianceStatus
   score_band: ScoreBand
-  last_accessed_at?: string | null
 }
 
 // ── Dept Evaluation Performance ───────────────────────────────────────────────

@@ -6,22 +6,32 @@ import { ReportTableShell } from "./report-table-shell"
 import type { UserPerformanceRow, PaginationMeta, PerformanceRating, RiskLevel } from "../types/online-report.types"
 
 const COLS = [
-  { header: "User" }, { header: "Department" }, { header: "Courses" },
-  { header: "Completion Rate", align: "right" as const }, { header: "Perf. Score", align: "right" as const },
-  { header: "Rating", align: "right" as const }, { header: "Risk", align: "right" as const },
+  { header: "User" },
+  { header: "Department" },
+  { header: "Courses" },
+  { header: "Completion",  align: "right" as const },
+  { header: "Attention",   align: "right" as const },
+  { header: "Quiz",        align: "right" as const },
+  { header: "Perf. Score", align: "right" as const },
+  { header: "Rating",      align: "right" as const },
+  { header: "Risk",        align: "right" as const },
 ]
 
 const RATING_CFG: Record<PerformanceRating, string> = {
-  excellent: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
-  good: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
-  needs_attention: "bg-amber-500/15 text-amber-400 border-amber-500/25",
-  poor: "bg-rose-500/15 text-rose-400 border-rose-500/25",
+  excellent:        "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  good:             "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
+  average:          "bg-amber-500/15 text-amber-400 border-amber-500/25",
+  needs_improvement:"bg-rose-500/15 text-rose-400 border-rose-500/25",
 }
 
 const RISK_CFG: Record<RiskLevel, string> = {
-  low: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+  low:    "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
   medium: "bg-amber-500/15 text-amber-400 border-amber-500/25",
-  high: "bg-rose-500/15 text-rose-400 border-rose-500/25",
+  high:   "bg-rose-500/15 text-rose-400 border-rose-500/25",
+}
+
+function attentionColor(score: number) {
+  return score >= 70 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-rose-400"
 }
 
 interface Props {
@@ -42,14 +52,38 @@ export function UserPerformanceTable({ data, meta, isLoading, error, page, onPag
         {r.user_email && <div className="text-xs text-white/40">{r.user_email}</div>}
       </TableCell>
       <TableCell className="text-white/70">{r.department_name ?? "—"}</TableCell>
-      <TableCell className="text-white/70">{r.completed_courses}/{r.assigned_courses}</TableCell>
-      <TableCell className="text-right">
-        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-white/10 ml-auto">
-          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${r.completion_rate}%` }} />
-        </div>
-        <span className="text-xs text-white/50 tabular-nums">{Number(r.completion_rate).toFixed(0)}%</span>
+      <TableCell>
+        <div className="text-white/70 tabular-nums">{r.completed_courses}/{r.total_assignments}</div>
+        {r.in_progress_courses > 0 && (
+          <div className="text-[11px] text-indigo-400">{r.in_progress_courses} in progress</div>
+        )}
       </TableCell>
-      <TableCell className="text-right font-semibold tabular-nums text-white">{Number(r.performance_score).toFixed(1)}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-indigo-500" style={{ width: `${r.completion_rate}%` }} />
+          </div>
+          <span className="text-[11px] tabular-nums text-white/50">{Number(r.completion_rate).toFixed(0)}%</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className={`font-semibold tabular-nums ${attentionColor(r.avg_attention)}`}>
+          {Number(r.avg_attention).toFixed(1)}
+        </span>
+      </TableCell>
+      <TableCell className="text-right">
+        {r.quiz_attempts_count > 0 ? (
+          <div>
+            <span className="text-white/70 tabular-nums">{r.quiz_passed_count}/{r.quiz_attempts_count}</span>
+            <div className="text-[11px] text-white/40 tabular-nums">{Number(r.avg_quiz_pct).toFixed(0)}% avg</div>
+          </div>
+        ) : (
+          <span className="text-xs text-white/25">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right font-semibold tabular-nums text-white">
+        {Number(r.performance_score).toFixed(1)}
+      </TableCell>
       <TableCell className="text-right">
         <Badge variant="outline" className={`rounded-full text-[10px] capitalize ${RATING_CFG[r.performance_rating] ?? ""}`}>
           {r.performance_rating.replace("_", " ")}

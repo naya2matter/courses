@@ -6,14 +6,31 @@ import { ReportTableShell } from "./report-table-shell"
 import type { SessionFactRow, PaginationMeta } from "../types/online-report.types"
 
 const COLS = [
-  { header: "User" }, { header: "Course" }, { header: "Started" }, { header: "Ended" },
-  { header: "Attention", align: "right" as const }, { header: "Completed", align: "right" as const },
-  { header: "Suspicious", align: "right" as const },
+  { header: "Date" },
+  { header: "User" },
+  { header: "Course" },
+  { header: "Playback",    align: "right" as const },
+  { header: "Completion",  align: "right" as const },
+  { header: "Attention",   align: "right" as const },
+  { header: "Done",        align: "right" as const },
+  { header: "Suspicious",  align: "right" as const },
 ]
 
-function fmt(iso: string | null) {
-  if (!iso) return "—"
-  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+}
+
+function fmtSec(s: number) {
+  if (!s) return "—"
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m`
+  return `${s}s`
+}
+
+function attentionColor(score: number) {
+  return score >= 70 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-rose-400"
 }
 
 interface Props {
@@ -29,16 +46,24 @@ interface Props {
 export function SessionFactTable({ data, meta, isLoading, error, page, onPageChange, onRetry }: Props) {
   const rows = data.map((r) => (
     <TableRow key={r.id} className="border-white/5 hover:bg-white/3">
+      <TableCell className="text-white/60 text-sm">{fmtDate(r.session_date)}</TableCell>
       <TableCell>
         <div className="font-medium text-white">{r.user_name}</div>
         {r.department_name && <div className="text-xs text-white/40">{r.department_name}</div>}
       </TableCell>
       <TableCell className="text-white/70">{r.course_name}</TableCell>
-      <TableCell className="text-white/60 text-sm">{fmt(r.started_at)}</TableCell>
-      <TableCell className="text-white/60 text-sm">{fmt(r.ended_at)}</TableCell>
+      <TableCell className="text-right text-white/60 text-sm tabular-nums">{fmtSec(r.active_playback_time)}</TableCell>
       <TableCell className="text-right">
-        <span className={`font-semibold tabular-nums ${Number(r.attention_score) >= 70 ? "text-emerald-400" : Number(r.attention_score) >= 50 ? "text-amber-400" : "text-rose-400"}`}>
-          {Number(r.attention_score).toFixed(1)}
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(r.completion_percentage, 100)}%` }} />
+          </div>
+          <span className="text-[11px] tabular-nums text-white/50">{Number(r.completion_percentage).toFixed(0)}%</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className={`font-semibold tabular-nums ${attentionColor(r.attention_score)}`}>
+          {r.attention_score}
         </span>
       </TableCell>
       <TableCell className="text-right">

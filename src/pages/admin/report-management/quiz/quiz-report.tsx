@@ -3,7 +3,6 @@
 import { useState } from "react"
 import {
   DownloadIcon,
-  FileTextIcon,
   Loader2Icon,
   RefreshCwIcon,
   SlidersHorizontalIcon,
@@ -75,16 +74,11 @@ export default function QuizReportPage() {
   return (
     <div className="space-y-5">
       {/* ── Header ── */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15">
-          <FileTextIcon className="size-5 text-amber-400" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Quiz Report</h1>
-          <p className="mt-0.5 text-sm text-white/40">
-            Attempt summaries with scores, pass/fail status, and detailed question-level exports.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Quiz Report</h1>
+        <p className="mt-0.5 text-sm text-white/40">
+          Attempt summaries with scores, pass/fail status, and detailed question-level exports.
+        </p>
       </div>
 
       {/* ── Unified filter + action bar ── */}

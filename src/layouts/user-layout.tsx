@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { UserSidebar } from "@/components/user-sidebar"
+import { BreadcrumbProvider } from "@/context/breadcrumb"
 
 export function UserLayout() {
   return (
@@ -17,14 +18,16 @@ export function UserLayout() {
       <div className="min-h-screen bg-[#080713]">
         <SidebarProvider className="bg-transparent">
           <UserSidebar />
-          <div className="flex h-screen flex-1 flex-col overflow-hidden">
-            <SiteHeader />
-            <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
-              <div className="mx-auto w-full max-w-350">
-                <Outlet />
-              </div>
-            </main>
-          </div>
+          <BreadcrumbProvider>
+            <div className="flex h-screen flex-1 flex-col overflow-hidden">
+              <SiteHeader />
+              <main className="flex-1 overflow-auto p-5 md:p-6 thin-scrollbar">
+                <div className="mx-auto w-full max-w-350">
+                  <Outlet />
+                </div>
+              </main>
+            </div>
+          </BreadcrumbProvider>
         </SidebarProvider>
       </div>
     </TooltipProvider>

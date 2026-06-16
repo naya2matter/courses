@@ -144,6 +144,22 @@ class ApiClient {
     return this.request<T>("DELETE", path)
   }
 
+  // ── Blob download (authenticated) ─────────────────────────────────────────
+
+  async getBlob(path: string): Promise<Blob> {
+    const token = this.getToken()
+    const headers: Record<string, string> = { Accept: "*/*" }
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    const res = await fetch(`${this.baseUrl}${path}`, { method: "GET", headers })
+    if (!res.ok) {
+      const err = new Error(`Download failed with status ${res.status}`) as ApiError
+      err.status = res.status
+      err.data = {}
+      throw err
+    }
+    return res.blob()
+  }
+
   // ── Public methods (multipart / FormData) ─────────────────────────────────
 
   /** POST with a FormData body (file uploads) */

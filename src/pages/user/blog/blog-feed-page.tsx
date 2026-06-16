@@ -182,7 +182,7 @@ export function UserBlogFeedPage() {
     const needle = search.trim().toLowerCase()
     return items.filter((p) => {
       if (needle) {
-        const haystack = [p.title, p.excerpt ?? "", ...p.tags]
+        const haystack = [p.title, p.excerpt ?? "", ...(Array.isArray(p.tags) ? p.tags : [])]
           .join(" ")
           .toLowerCase()
         if (!haystack.includes(needle)) return false

@@ -1,906 +1,286 @@
+// ─── useLearningSession ───────────────────────────────────────────────────────
+// Manages the full learning-session lifecycle for a VIDEO content item:
+//
+//   start  → on first Play (skipped if the content is already completed)
+//   progress → at milestones (25/50/75/95%), on pause, on seek, and every 120s
+//   end    → on natural end, on unmount (SPA navigation), and on tab close
+//
+// The video player is a thin DOM layer that forwards semantic events to the
+// handlers returned here; all metric accounting, timing, throttling and network
+// calls live in this hook. PDFs do NOT use this hook (they post to /progress/pdf).
+
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
-  endLearningSession,
+  startSession,
   sendSessionProgress,
-  startLearningSession,
-  updatePdfProgress,
-} from "@/services/userOnlineCourse.service"
+  endSession,
+  endSessionBeacon,
+} from "../service/user-online-courses.service"
 import type {
-  LearningSessionEvent,
-  SessionEndPayload,
-  SessionEndResponse,
-  SessionMetrics,
-} from "@/types/user-online-course"
+  SessionEndData,
+  SessionEventLogEntry,
+} from "../types/user-online-courses.types"
 
-type ContentType = "video" | "pdf"
+const PROGRESS_INTERVAL_MS = 120_000 // periodic ping cadence while playing
+const MILESTONES = [25, 50, 75, 95] as const
+const SEEK_EPSILON = 2 // seconds — ignore micro-seeks when classifying direction
+const MAX_EVENTS = 50 // backend caps events_log at 50 entries
 
-interface UseLearningSessionOptions {
+interface Options {
   courseId: number
   contentId: number
-  contentType: ContentType | null
-  initialResumePosition: number
-  initialCompletion: number
-  totalPdfPages: number | null
-  onRealError?: (message: string, status?: number) => void
-  /** Called once when a non-beacon session end completes successfully. */
-  onSessionEnded?: (result: SessionEndResponse["data"]) => void
+  /** When true the content is already 100% done → review mode, no tracking. */
+  alreadyCompleted: boolean
 }
 
-interface EndSessionOptions {
-  reason?: string
-  useKeepAlive?: boolean
-  completionOverride?: number
+interface Counters {
+  skip: number
+  seek: number
+  replay: number
+  pause: number
+  speed: number
+  fullscreen: number
 }
 
-interface FlushProgressOptions {
-  useKeepAlive?: boolean
-  markUnmountHandled?: boolean
-}
+export function useLearningSession({ courseId, contentId, alreadyCompleted }: Options) {
+  const [sessionId, setSessionId] = useState<number | null>(null)
+  const [isEnding, setIsEnding] = useState(false)
+  const [result, setResult] = useState<SessionEndData | null>(null)
+  const [liveContentPct, setLiveContentPct] = useState(0)
+  const lastRenderedPctRef = useRef(-1)
 
-interface UseLearningSessionResult {
-  displayedCompletion: number
-  resumePosition: number
-  resumeHint: string | null
-  sessionSummary: SessionEndResponse["data"] | null
-  ensureSessionStarted: (forceType?: ContentType) => Promise<number | null>
-  flushProgressSnapshot: (opts?: FlushProgressOptions) => Promise<void>
-  onVideoPlay: () => void
-  onVideoProgress: (position: number, duration: number) => void
-  onVideoPause: (position: number, duration: number) => void
-  onVideoSeek: (from: number, to: number, duration: number) => void
-  onVideoRateChange: () => void
-  onVideoEnd: (position: number, duration: number) => void
-  onPdfOpen: () => void
-  onPdfPageChange: (page: number, totalPages: number | null) => void
-  endSession: (opts?: EndSessionOptions) => Promise<SessionEndResponse["data"] | null>
-}
-
-const MILESTONES = [25, 50, 75, 95] as const
-const ALLOWED_EVENT_TYPES = new Set([
-  "pause",
-  "resume",
-  "skip",
-  "seek",
-  "milestone",
-])
-
-const EMPTY_METRICS: SessionMetrics = {
-  active_playback_time: 0,
-  playback_position: 0,
-  completion_percentage: 0,
-  skip_count: 0,
-  seek_count: 0,
-  replay_count: 0,
-  pause_count: 0,
-  speed_changes: 0,
-}
-
-interface PersistedLearningSessionSnapshot {
-  version: 1
-  sessionId: number
-  startedAt: number | null
-  latestPosition: number
-  latestCompletion: number
-  metrics: SessionMetrics
-  events: LearningSessionEvent[]
-  milestones: number[]
-  activePlaybackSeconds: number
-  fullscreenCount: number
-  viewedPages: number[]
-  pdfCurrentPage: number
-  pdfTotalPages: number | null
-}
-
-const PERSISTED_SNAPSHOT_VERSION = 1 as const
-const LEARNING_SESSION_STORAGE_PREFIX = "online-course-learning-session:"
-
-function getPersistedSnapshotKey(courseId: number, contentId: number): string {
-  return `${LEARNING_SESSION_STORAGE_PREFIX}${courseId}:${contentId}`
-}
-
-function readPersistedSnapshot(courseId: number, contentId: number): PersistedLearningSessionSnapshot | null {
-  if (typeof window === "undefined") return null
-
-  const key = getPersistedSnapshotKey(courseId, contentId)
-  const raw = window.sessionStorage.getItem(key)
-  if (!raw) return null
-
-  try {
-    const parsed = JSON.parse(raw) as PersistedLearningSessionSnapshot
-    if (parsed?.version !== PERSISTED_SNAPSHOT_VERSION || typeof parsed.sessionId !== "number") {
-      window.sessionStorage.removeItem(key)
-      return null
-    }
-    return parsed
-  } catch {
-    window.sessionStorage.removeItem(key)
-    return null
-  }
-}
-
-function writePersistedSnapshot(
-  courseId: number,
-  contentId: number,
-  snapshot: PersistedLearningSessionSnapshot,
-): void {
-  if (typeof window === "undefined") return
-  window.sessionStorage.setItem(getPersistedSnapshotKey(courseId, contentId), JSON.stringify(snapshot))
-}
-
-function removePersistedSnapshot(courseId: number, contentId: number): void {
-  if (typeof window === "undefined") return
-  window.sessionStorage.removeItem(getPersistedSnapshotKey(courseId, contentId))
-}
-
-function clampCompletion(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.max(0, Math.min(100, value))
-}
-
-function formatClock(seconds: number): string {
-  const safe = Math.max(0, Math.floor(seconds))
-  const h = Math.floor(safe / 3600)
-  const m = Math.floor((safe % 3600) / 60)
-  const s = safe % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-}
-
-function isAbortError(err: unknown): boolean {
-  return (
-    (err instanceof DOMException && err.name === "AbortError")
-    || (err instanceof Error && err.name === "AbortError")
-  )
-}
-
-function toSafeEventType(type: string): LearningSessionEvent["type"] | null {
-  if (ALLOWED_EVENT_TYPES.has(type)) return type
-  if (
-    type === "ended"
-    || type === "pdf_open"
-    || type === "pdf_page_change"
-    || type === "visibility_hidden"
-    || type === "visibility_visible"
-    || type === "fullscreen_enter"
-    || type === "fullscreen_exit"
-    || type === "pagehide"
-    || type === "unmount"
-  ) {
-    return "pause"
-  }
-  if (type === "speed_change") return "seek"
-  return null
-}
-
-export function useLearningSession(options: UseLearningSessionOptions): UseLearningSessionResult {
-  const {
-    courseId,
-    contentId,
-    contentType,
-    initialResumePosition,
-    initialCompletion,
-    totalPdfPages,
-    onRealError,
-    onSessionEnded,
-  } = options
-
-  const [resumePosition, setResumePosition] = useState(Math.max(0, initialResumePosition))
-  const [displayedCompletion, setDisplayedCompletion] = useState(clampCompletion(initialCompletion))
-  const [resumeHint, setResumeHint] = useState<string | null>(null)
-  const [sessionSummary, setSessionSummary] = useState<SessionEndResponse["data"] | null>(null)
+  // Keep the latest identifiers in refs so the unload listeners (registered
+  // once) always read current values without re-subscribing.
+  const courseIdRef = useRef(courseId)
+  const contentIdRef = useRef(contentId)
+  const completedRef = useRef(alreadyCompleted)
+  courseIdRef.current = courseId
+  contentIdRef.current = contentId
+  completedRef.current = alreadyCompleted
 
   const sessionIdRef = useRef<number | null>(null)
-  const startPromiseRef = useRef<Promise<number | null> | null>(null)
-  const endingPromiseRef = useRef<Promise<SessionEndResponse["data"] | null> | null>(null)
-
-  const startedAtRef = useRef<number | null>(null)
-  const endedRef = useRef(false)
-  const closedByPagehideRef = useRef(false)
-  const skipNextUnmountFlushRef = useRef(false)
-
-  const metricsRef = useRef<SessionMetrics>({ ...EMPTY_METRICS })
-  const eventsRef = useRef<LearningSessionEvent[]>([])
-  const milestonesRef = useRef<Set<number>>(new Set())
-
-  const latestPositionRef = useRef(Math.max(0, initialResumePosition))
-  const latestCompletionRef = useRef(clampCompletion(initialCompletion))
-  const latestContentTypeRef = useRef<ContentType | null>(contentType)
-  const latestVideoDurationRef = useRef(0)
-
+  const startedAtRef = useRef(0)         // wall-clock session start (ms)
   const playingRef = useRef(false)
-  const playStartedAtRef = useRef<number | null>(null)
-  const activePlaybackSecondsRef = useRef(0)
-  const progressTickerRef = useRef<number | null>(null)
+  const segmentStartRef = useRef(0)      // ms when the current play segment began
+  const activeTimeRef = useRef(0)        // accumulated active-play seconds
+  const maxCompletionRef = useRef(0)
+  const lastPositionRef = useRef(0)
+  const durationRef = useRef(0)
+  const lastSentRef = useRef(0)          // ms of last progress ping
+  const endedRef = useRef(false)
+  const startingRef = useRef(false)
+  const milestonesRef = useRef<Set<number>>(new Set())
+  const eventsRef = useRef<SessionEventLogEntry[]>([])
+  const counters = useRef<Counters>({ skip: 0, seek: 0, replay: 0, pause: 0, speed: 0, fullscreen: 0 })
 
-  const fullscreenCountRef = useRef(0)
-  const viewedPagesRef = useRef<Set<number>>(new Set())
-  const pdfCurrentPageRef = useRef(Math.max(1, Math.floor(initialResumePosition || 1)))
-  const pdfTotalPagesRef = useRef<number | null>(totalPdfPages)
-  // Deduplicate progress-error toasts: only fire once per session for 401/403.
-  const progressErrorShownRef = useRef(false)
+  const wallSeconds = () => (startedAtRef.current ? (Date.now() - startedAtRef.current) / 1000 : 0)
 
-  const clearPersistedSnapshot = useCallback(() => {
-    if (!courseId || !contentId) return
-    removePersistedSnapshot(courseId, contentId)
-  }, [contentId, courseId])
+  /** Fold the in-flight play segment into the active-time accumulator. */
+  const foldSegment = useCallback(() => {
+    if (playingRef.current) {
+      const secs = (Date.now() - segmentStartRef.current) / 1000
+      activeTimeRef.current += Math.max(0, secs)
+      segmentStartRef.current = Date.now()
+    }
+  }, [])
 
-  const persistSessionSnapshot = useCallback(() => {
-    if (!courseId || !contentId || !sessionIdRef.current) return
+  const liveActiveTime = () => {
+    let t = activeTimeRef.current
+    if (playingRef.current) t += Math.max(0, (Date.now() - segmentStartRef.current) / 1000)
+    return Math.round(t)
+  }
 
-    writePersistedSnapshot(courseId, contentId, {
-      version: PERSISTED_SNAPSHOT_VERSION,
-      sessionId: sessionIdRef.current,
-      startedAt: startedAtRef.current,
-      latestPosition: latestPositionRef.current,
-      latestCompletion: latestCompletionRef.current,
-      metrics: metricsRef.current,
-      events: eventsRef.current,
-      milestones: [...milestonesRef.current],
-      activePlaybackSeconds: activePlaybackSecondsRef.current,
-      fullscreenCount: fullscreenCountRef.current,
-      viewedPages: [...viewedPagesRef.current],
-      pdfCurrentPage: pdfCurrentPageRef.current,
-      pdfTotalPages: pdfTotalPagesRef.current,
+  const pushEvent = useCallback((entry: SessionEventLogEntry) => {
+    if (eventsRef.current.length >= MAX_EVENTS) return
+    eventsRef.current.push(entry)
+  }, [])
+
+  const buildProgressBody = useCallback(() => {
+    const c = counters.current
+    return {
+      active_playback_time: liveActiveTime(),
+      playback_position: Math.round(lastPositionRef.current * 10) / 10,
+      completion_percentage: Math.round(maxCompletionRef.current * 100) / 100,
+      skip_count: c.skip,
+      seek_count: c.seek,
+      replay_count: c.replay,
+      pause_count: c.pause,
+      speed_changes: c.speed,
+    }
+  }, [])
+
+  const sendProgress = useCallback(() => {
+    const id = sessionIdRef.current
+    if (id == null || endedRef.current) return
+    lastSentRef.current = Date.now()
+    void sendSessionProgress(id, buildProgressBody()).catch(() => {
+      /* best-effort ping — ignore transient failures */
     })
-  }, [contentId, courseId])
+  }, [buildProgressBody])
 
-  const pushEvent = useCallback((event: LearningSessionEvent) => {
-    const safeType = toSafeEventType(event.type)
-    if (!safeType) return
-
-    const safe: LearningSessionEvent = {
-      ...event,
-      type: safeType,
-      at: Math.floor(event.at),
-      ...(event.from != null && { from: Math.floor(event.from) }),
-      ...(event.to != null && { to: Math.floor(event.to) }),
-    }
-    const next = [...eventsRef.current, safe]
-    eventsRef.current = next.slice(-50)
-    persistSessionSnapshot()
-  }, [persistSessionSnapshot])
-
-  const trackDisplayedCompletion = useCallback((next: number) => {
-    const clamped = clampCompletion(next)
-    latestCompletionRef.current = Math.max(latestCompletionRef.current, clamped)
-    setDisplayedCompletion((prev) => Math.max(prev, latestCompletionRef.current))
-  }, [])
-
-  const getVideoProgressSnapshot = useCallback((position: number, duration?: number) => {
-    const safePosition = Math.max(0, position)
-
-    if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
-      latestVideoDurationRef.current = duration
-    }
-
-    const safeDuration = latestVideoDurationRef.current
-    const rawCompletion =
-      safeDuration > 0
-        ? clampCompletion((safePosition / safeDuration) * 100)
-        : latestCompletionRef.current
-
-    latestPositionRef.current = safePosition
-
-    return {
-      position: safePosition,
-      rawCompletion,
-      completion: Math.max(latestCompletionRef.current, rawCompletion),
-    }
-  }, [])
-
-  const captureVideoProgress = useCallback((position: number, duration: number) => {
-    const snapshot = getVideoProgressSnapshot(position, duration)
-    let crossedMilestone = false
-
-    for (const milestone of MILESTONES) {
-      if (snapshot.rawCompletion >= milestone && !milestonesRef.current.has(milestone)) {
-        milestonesRef.current.add(milestone)
-        crossedMilestone = true
-        pushEvent({ type: "milestone", at: snapshot.position, pct: milestone })
-      }
-    }
-
-    return {
-      ...snapshot,
-      crossedMilestone,
-    }
-  }, [getVideoProgressSnapshot, pushEvent])
-
-  const syncPdfProgress = useCallback(async () => {
-    if (latestContentTypeRef.current !== "pdf") return
-    if (!courseId || !contentId) return
-
-    const totalPages = pdfTotalPagesRef.current
-    if (!totalPages || totalPages < 1) return
-
+  /** Start the session lazily on first play (no-op for completed content). */
+  const ensureStarted = useCallback(async () => {
+    if (completedRef.current) return
+    if (sessionIdRef.current != null || startingRef.current) return
+    startingRef.current = true
     try {
-      const result = await updatePdfProgress({
-        content_id: contentId,
-        course_online_id: courseId,
-        current_page: pdfCurrentPageRef.current,
-        pages_viewed: viewedPagesRef.current.size,
-        total_pages: totalPages,
+      const res = await startSession({
+        course_online_id: courseIdRef.current,
+        content_id: contentIdRef.current,
+        content_type: "video",
       })
-
-      trackDisplayedCompletion(result.completion_percentage)
-    } catch (err) {
-      if (isAbortError(err)) return
-      const e = err as { status?: number; data?: { message?: string } }
-      // Surface access / validation errors once per session so the user understands
-      // why progress isn't being tracked (403 = not assigned, 422 = content not PDF).
-      if ((e?.status === 403 || e?.status === 422) && !progressErrorShownRef.current) {
-        progressErrorShownRef.current = true
-        const msg =
-          e.status === 403
-            ? "Access denied — you are not assigned to this course."
-            : e?.data?.message ?? "PDF progress could not be saved — the content type is invalid."
-        onRealError?.(msg, e.status)
-      }
-    }
-  }, [contentId, courseId, onRealError, trackDisplayedCompletion])
-
-  const elapsedSinceStart = useCallback(() => {
-    if (!startedAtRef.current) return 0
-    return Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000))
-  }, [])
-
-  const addPlaybackSlice = useCallback(() => {
-    if (!playingRef.current || !playStartedAtRef.current) return
-    const delta = Math.max(0, Math.floor((Date.now() - playStartedAtRef.current) / 1000))
-    activePlaybackSecondsRef.current += delta
-    playStartedAtRef.current = Date.now()
-  }, [])
-
-  const getActivePlaybackSeconds = useCallback(() => {
-    if (!playingRef.current || !playStartedAtRef.current) return activePlaybackSecondsRef.current
-    const running = Math.max(0, Math.floor((Date.now() - playStartedAtRef.current) / 1000))
-    return activePlaybackSecondsRef.current + running
-  }, [])
-
-  const stopProgressTicker = useCallback(() => {
-    if (progressTickerRef.current != null) {
-      window.clearInterval(progressTickerRef.current)
-      progressTickerRef.current = null
-    }
-  }, [])
-
-  const toMetrics = useCallback((position: number, completion: number): SessionMetrics => {
-    const next: SessionMetrics = {
-      ...metricsRef.current,
-      active_playback_time: getActivePlaybackSeconds(),
-      playback_position: Math.max(0, position),
-      completion_percentage: clampCompletion(completion),
-    }
-    metricsRef.current = next
-    return next
-  }, [getActivePlaybackSeconds])
-
-  const sendProgressSnapshot = useCallback(async (position: number, completion: number) => {
-    if (!sessionIdRef.current || endedRef.current) return
-
-    const monotonicCompletion = Math.max(latestCompletionRef.current, clampCompletion(completion))
-    const payload = toMetrics(position, monotonicCompletion)
-    latestPositionRef.current = payload.playback_position
-    trackDisplayedCompletion(payload.completion_percentage)
-    persistSessionSnapshot()
-
-    try {
-      await sendSessionProgress(sessionIdRef.current, payload)
-    } catch (err) {
-      if (isAbortError(err)) return
-
-      // Transient network errors are silently ignored — progress is fire-and-forget.
-      // Only policy violations (401 / 403) are surfaced to the user, and only once
-      // per session to avoid toast spam on every tick/pause/seek.
-      const e = err as { status?: number; data?: { message?: string } }
-      if ((e?.status === 401 || e?.status === 403) && !progressErrorShownRef.current) {
-        progressErrorShownRef.current = true
-        const msg =
-          e.status === 401
-            ? "Your session expired. Please log in again."
-            : "Progress update rejected — this session belongs to a different user."
-        onRealError?.(msg, e.status)
-      }
-    }
-  }, [onRealError, persistSessionSnapshot, toMetrics, trackDisplayedCompletion])
-
-  const startProgressTicker = useCallback(() => {
-    if (progressTickerRef.current != null) return
-    progressTickerRef.current = window.setInterval(() => {
-      const snapshot = getVideoProgressSnapshot(latestPositionRef.current)
-      void sendProgressSnapshot(snapshot.position, snapshot.completion)
-    }, 120000)
-  }, [getVideoProgressSnapshot, sendProgressSnapshot])
-
-  const startPlaybackClock = useCallback(() => {
-    if (playingRef.current) return
-    playingRef.current = true
-    playStartedAtRef.current = Date.now()
-    startProgressTicker()
-  }, [startProgressTicker])
-
-  const stopPlaybackClock = useCallback(() => {
-    addPlaybackSlice()
-    playingRef.current = false
-    playStartedAtRef.current = null
-    stopProgressTicker()
-  }, [addPlaybackSlice, stopProgressTicker])
-
-  const resetSessionState = useCallback((resumePos: number, completion: number, pages: number | null) => {
-    sessionIdRef.current = null
-    startPromiseRef.current = null
-    endingPromiseRef.current = null
-
-    startedAtRef.current = null
-    endedRef.current = false
-    closedByPagehideRef.current = false
-
-    metricsRef.current = { ...EMPTY_METRICS }
-    eventsRef.current = []
-    milestonesRef.current = new Set()
-
-    latestPositionRef.current = Math.max(0, resumePos)
-    latestCompletionRef.current = clampCompletion(completion)
-    latestContentTypeRef.current = contentType
-  latestVideoDurationRef.current = 0
-
-    activePlaybackSecondsRef.current = 0
-    playingRef.current = false
-    playStartedAtRef.current = null
-    stopProgressTicker()
-
-    fullscreenCountRef.current = 0
-    skipNextUnmountFlushRef.current = false
-    progressErrorShownRef.current = false
-    viewedPagesRef.current = new Set()
-    pdfCurrentPageRef.current = Math.max(1, Math.floor(resumePos || 1))
-    pdfTotalPagesRef.current = pages
-
-    setResumePosition(Math.max(0, resumePos))
-    setDisplayedCompletion(clampCompletion(completion))
-    setResumeHint(null)
-    setSessionSummary(null)
-  }, [contentType, stopProgressTicker])
-
-  useEffect(() => {
-    resetSessionState(initialResumePosition, initialCompletion, totalPdfPages)
-  }, [contentId, courseId, contentType, initialResumePosition, initialCompletion, resetSessionState, totalPdfPages])
-
-  useEffect(() => {
-    if (sessionIdRef.current || endedRef.current) return
-    latestPositionRef.current = Math.max(0, initialResumePosition)
-    latestCompletionRef.current = Math.max(latestCompletionRef.current, clampCompletion(initialCompletion))
-    setResumePosition(Math.max(0, initialResumePosition))
-    setDisplayedCompletion((prev) => Math.max(prev, clampCompletion(initialCompletion)))
-    pdfTotalPagesRef.current = totalPdfPages
-  }, [initialCompletion, initialResumePosition, totalPdfPages])
-
-  const ensureSessionStarted = useCallback(async (forceType?: ContentType) => {
-    const effectiveType = forceType ?? latestContentTypeRef.current
-    if (!courseId || !contentId || !effectiveType) return null
-    if (sessionIdRef.current) return latestPositionRef.current
-    if (startPromiseRef.current) return startPromiseRef.current
-
-    const startPromise = (async () => {
-      try {
-        const started = await startLearningSession({
-          course_online_id: courseId,
-          content_id: contentId,
-          content_type: effectiveType,
-        })
-
-        const persisted = readPersistedSnapshot(courseId, contentId)
-        const shouldRestoreSnapshot = persisted?.sessionId === started.session_id
-
-        sessionIdRef.current = started.session_id
-        endedRef.current = false
-        closedByPagehideRef.current = false
-        skipNextUnmountFlushRef.current = false
-
-        const nextResume = Math.max(0, started.resume_position)
-        const nextCompletion = shouldRestoreSnapshot
-          ? Math.max(latestCompletionRef.current, clampCompletion(persisted.latestCompletion))
-          : latestCompletionRef.current
-        const nextPosition = shouldRestoreSnapshot
-          ? Math.max(nextResume, Math.max(0, persisted.latestPosition))
-          : nextResume
-
-        if (shouldRestoreSnapshot && persisted) {
-          startedAtRef.current = persisted.startedAt ?? Date.now()
-          metricsRef.current = {
-            ...EMPTY_METRICS,
-            ...persisted.metrics,
-            playback_position: nextPosition,
-            completion_percentage: nextCompletion,
-          }
-          eventsRef.current = persisted.events.slice(-50)
-          milestonesRef.current = new Set(persisted.milestones)
-          activePlaybackSecondsRef.current = Math.max(0, persisted.activePlaybackSeconds)
-          fullscreenCountRef.current = Math.max(0, persisted.fullscreenCount)
-          viewedPagesRef.current = new Set(persisted.viewedPages)
-          pdfCurrentPageRef.current = Math.max(1, Math.floor(persisted.pdfCurrentPage || 1))
-          pdfTotalPagesRef.current = persisted.pdfTotalPages ?? totalPdfPages
-        } else {
-          startedAtRef.current = Date.now()
-          clearPersistedSnapshot()
-        }
-
-        setResumePosition(nextPosition)
-        setDisplayedCompletion(nextCompletion)
-        latestPositionRef.current = nextPosition
-        latestCompletionRef.current = nextCompletion
-        metricsRef.current.playback_position = nextPosition
-        metricsRef.current.completion_percentage = nextCompletion
-
-        if (effectiveType === "video") {
-          setResumeHint(nextPosition > 0 ? `Resume from ${formatClock(nextPosition)}` : null)
-        } else {
-          const page = Math.max(1, Math.floor(nextPosition || 1))
-          viewedPagesRef.current.add(page)
-          pdfCurrentPageRef.current = page
-          setResumeHint(nextPosition > 0 ? `Resume from page ${page}` : null)
-        }
-
-        persistSessionSnapshot()
-
-        return nextPosition
-      } catch (err) {
-        if (isAbortError(err)) return null
-
-        const e = err as { message?: string; status?: number; data?: { message?: string } }
-
-        if (onRealError && (e?.status === 401 || e?.status === 403 || e?.status === 422 || e?.status === 0)) {
-          const backendMsg = e?.data?.message?.toLowerCase() ?? ""
-          let userMessage: string
-
-          if (e.status === 403) {
-            // Distinguish "already completed" from "not assigned / module locked"
-            if (backendMsg.includes("complet")) {
-              userMessage = "This content has already been completed — no new session needed."
-            } else {
-              userMessage = "Access denied — this course is not assigned to you or the module is still locked."
-            }
-          } else if (e.status === 401) {
-            userMessage = "Your session expired. Please log in again."
-          } else if (e.status === 422) {
-            userMessage = e?.data?.message ?? "Invalid request. Please try again."
-          } else {
-            // status 0 — network failure
-            userMessage = "No internet connection. Please check your network and try again."
-          }
-
-          onRealError(userMessage, e?.status)
-        }
-        if (e?.status === 401 || e?.status === 403 || e?.status === 422) {
-          clearPersistedSnapshot()
-        }
-        return null
-      } finally {
-        startPromiseRef.current = null
-      }
-    })()
-
-    startPromiseRef.current = startPromise
-    return startPromise
-  }, [clearPersistedSnapshot, contentId, courseId, onRealError, persistSessionSnapshot, totalPdfPages])
-
-  const flushProgressSnapshot = useCallback(async (opts: FlushProgressOptions = {}) => {
-    const { useKeepAlive = false, markUnmountHandled = false } = opts
-    if (!sessionIdRef.current || endedRef.current) return
-
-    if (markUnmountHandled) {
-      skipNextUnmountFlushRef.current = true
-    }
-
-    addPlaybackSlice()
-
-    const position = latestContentTypeRef.current === "pdf"
-      ? pdfCurrentPageRef.current
-      : latestPositionRef.current
-    const completion = latestContentTypeRef.current === "video"
-      ? getVideoProgressSnapshot(position).completion
-      : latestCompletionRef.current
-
-    if (!useKeepAlive) {
-      await sendProgressSnapshot(position, completion)
-      return
-    }
-
-    const payload = toMetrics(position, completion)
-    latestPositionRef.current = payload.playback_position
-    trackDisplayedCompletion(payload.completion_percentage)
-    persistSessionSnapshot()
-
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api"
-      const token = localStorage.getItem("auth_token")
-
-      await fetch(`${baseUrl}/user/online-courses/sessions/${sessionIdRef.current}/progress`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-        keepalive: true,
-      })
+      sessionIdRef.current = res.data.session_id
+      startedAtRef.current = Date.now()
+      lastSentRef.current = Date.now()
+      setSessionId(res.data.session_id)
     } catch {
-      // Best-effort flush on pagehide: local snapshot is already persisted for resume.
+      // 403 = already completed / not assigned → silently fall back to review mode
+    } finally {
+      startingRef.current = false
     }
-  }, [addPlaybackSlice, getVideoProgressSnapshot, persistSessionSnapshot, sendProgressSnapshot, toMetrics, trackDisplayedCompletion])
+  }, [])
 
-  const endSession = useCallback(async (opts: EndSessionOptions = {}) => {
-    const { useKeepAlive = false, completionOverride, reason } = opts
+  // ── Semantic handlers (wired to the <video> element) ────────────────────────
 
-    if (!sessionIdRef.current || endedRef.current) {
-      return endingPromiseRef.current ?? null
-    }
-    if (endingPromiseRef.current) return endingPromiseRef.current
+  const handlePlay = useCallback(() => {
+    playingRef.current = true
+    segmentStartRef.current = Date.now()
+    void ensureStarted()
+  }, [ensureStarted])
 
-    const promise = (async () => {
-      const sessionId = sessionIdRef.current
-      if (!sessionId) return null
+  const handlePause = useCallback(() => {
+    if (!playingRef.current) return
+    foldSegment()
+    playingRef.current = false
+    counters.current.pause += 1
+    sendProgress()
+  }, [foldSegment, sendProgress])
 
-      endedRef.current = true
-      if (reason) {
-        pushEvent({ type: reason, at: latestPositionRef.current })
-      }
+  const handleSeek = useCallback((fromPos: number, toPos: number) => {
+    foldSegment()
+    counters.current.seek += 1
+    if (toPos > fromPos + SEEK_EPSILON) counters.current.skip += 1
+    else if (toPos < fromPos - SEEK_EPSILON) counters.current.replay += 1
+    pushEvent({ type: "seek", at: Math.round(wallSeconds()), from: Math.round(fromPos), to: Math.round(toPos) })
+    sendProgress()
+  }, [foldSegment, pushEvent, sendProgress])
 
-      stopPlaybackClock()
-
-      const finalMetrics = toMetrics(
-        latestPositionRef.current,
-        completionOverride ?? latestCompletionRef.current,
-      )
-
-      const payload: SessionEndPayload = {
-        ...finalMetrics,
-        wall_clock_time: elapsedSinceStart(),
-        fullscreen_count: fullscreenCountRef.current,
-        events_log: eventsRef.current.slice(-50),
-      }
-
-      try {
-        let result: SessionEndResponse["data"] | null = null
-
-        if (useKeepAlive) {
-          const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api"
-          const token = localStorage.getItem("auth_token")
-          const url = `${baseUrl}/user/online-courses/sessions/${sessionId}/end`
-
-          if (!token && typeof navigator.sendBeacon === "function") {
-            const body = new Blob([JSON.stringify(payload)], { type: "application/json" })
-            navigator.sendBeacon(url, body)
-          } else {
-            await fetch(url, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify(payload),
-              keepalive: true,
-            })
-          }
-        } else {
-          result = await endLearningSession(sessionId, payload)
-        }
-
-        trackDisplayedCompletion(payload.completion_percentage)
-
-        if (result) {
-          setSessionSummary(result)
-          if (result.content_completed) {
-            trackDisplayedCompletion(100)
-          }
-          clearPersistedSnapshot()
-          // Notify the consumer so it can react (e.g. show a completion toast).
-          // Only fires for interactive ends — beacon path never sets result.
-          if (!useKeepAlive) {
-            onSessionEnded?.(result)
-          }
-        }
-
-        return result
-      } catch (err) {
-        if (isAbortError(err)) return null
-
-        if (!useKeepAlive && onRealError) {
-          const e = err as { message?: string; status?: number; data?: { message?: string } }
-          if (e?.status === 401 || e?.status === 403 || e?.status === 422 || e?.status === 0) {
-            let userMessage: string
-            if (e.status === 401) {
-              userMessage = "Your session expired. Please log in again."
-            } else if (e.status === 422) {
-              userMessage = e?.data?.message ?? "Session data was invalid. Please try again."
-            } else if (e.status === 0) {
-              userMessage = "Progress could not be saved \u2014 no internet connection."
-            } else {
-              // 403 or any other unexpected status
-              userMessage = "Unable to finalize your session. Please try again."
-            }
-            onRealError(userMessage, e?.status)
-          }
-        }
-
-        // Allow a retry for non-pagehide paths.
-        if (!useKeepAlive) {
-          endedRef.current = false
-        }
-        return null
-      }
-    })()
-
-    endingPromiseRef.current = promise
-    return promise
-  }, [clearPersistedSnapshot, elapsedSinceStart, onRealError, onSessionEnded, pushEvent, stopPlaybackClock, toMetrics, trackDisplayedCompletion])
-
-  const onVideoPlay = useCallback(() => {
-    void ensureSessionStarted("video")
-    startPlaybackClock()
-  }, [ensureSessionStarted, startPlaybackClock])
-
-  const onVideoProgress = useCallback((position: number, duration: number) => {
-    const snapshot = captureVideoProgress(position, duration)
-
-    if (snapshot.crossedMilestone) {
-      void sendProgressSnapshot(snapshot.position, snapshot.completion)
-    }
-  }, [captureVideoProgress, sendProgressSnapshot])
-
-  const onVideoPause = useCallback((position: number, duration: number) => {
-    metricsRef.current.pause_count += 1
-    pushEvent({ type: "pause", at: position })
-    stopPlaybackClock()
-    const snapshot = captureVideoProgress(position, duration)
-    void sendProgressSnapshot(snapshot.position, snapshot.completion)
-  }, [captureVideoProgress, pushEvent, sendProgressSnapshot, stopPlaybackClock])
-
-  const onVideoSeek = useCallback((from: number, to: number, duration: number) => {
-    metricsRef.current.seek_count += 1
-    if (to < from) metricsRef.current.replay_count += 1
-    if (to - from >= 10) metricsRef.current.skip_count += 1
-    pushEvent({ type: "seek", at: to, from, to })
-    const snapshot = captureVideoProgress(to, duration)
-    void sendProgressSnapshot(snapshot.position, snapshot.completion)
-  }, [captureVideoProgress, pushEvent, sendProgressSnapshot])
-
-  const onVideoRateChange = useCallback(() => {
-    metricsRef.current.speed_changes += 1
-    pushEvent({ type: "speed_change", at: latestPositionRef.current })
-  }, [pushEvent])
-
-  const onVideoEnd = useCallback((position: number, duration: number) => {
-    pushEvent({ type: "ended", at: position, pct: 100 })
-    stopPlaybackClock()
-    captureVideoProgress(position, duration)
-    void sendProgressSnapshot(position, 100)
-    void endSession({ completionOverride: 100, reason: "ended" })
-  }, [captureVideoProgress, endSession, pushEvent, sendProgressSnapshot, stopPlaybackClock])
-
-  const onPdfOpen = useCallback(() => {
-    void (async () => {
-      const startedResume = await ensureSessionStarted("pdf")
-      // Use the ref — NOT the resumePosition state — to avoid this callback being
-      // recreated every time the session-start state update triggers a re-render,
-      // which would cause PdfViewer's onOpenSession effect to fire in a loop.
-      const page = Math.max(1, Math.floor(startedResume ?? latestPositionRef.current ?? 1))
-      pdfCurrentPageRef.current = page
-      viewedPagesRef.current.add(page)
-      latestPositionRef.current = page
-      if (pdfTotalPagesRef.current) {
-        const completion = (viewedPagesRef.current.size / pdfTotalPagesRef.current) * 100
-        trackDisplayedCompletion(completion)
-      }
-      pushEvent({ type: "pdf_open", at: page })
-      void sendProgressSnapshot(page, latestCompletionRef.current)
-      void syncPdfProgress()
-    })()
-  }, [ensureSessionStarted, pushEvent, sendProgressSnapshot, syncPdfProgress, trackDisplayedCompletion])
-
-  const onPdfPageChange = useCallback((page: number, pages: number | null) => {
-    if (!sessionIdRef.current || endedRef.current) return
-
-    const nextPage = Math.max(1, page)
-    pdfCurrentPageRef.current = nextPage
-    latestPositionRef.current = nextPage
-
-    pdfTotalPagesRef.current = pages
-    viewedPagesRef.current.add(nextPage)
-
-    if (pages && pages > 0) {
-      const completion = (viewedPagesRef.current.size / pages) * 100
-      trackDisplayedCompletion(completion)
-    }
-
-    pushEvent({ type: "pdf_page_change", at: nextPage, pct: latestCompletionRef.current })
-    void sendProgressSnapshot(nextPage, latestCompletionRef.current)
-    void syncPdfProgress()
-  }, [pushEvent, sendProgressSnapshot, syncPdfProgress, trackDisplayedCompletion])
-
-  const handleVisibility = useCallback(() => {
-    if (!sessionIdRef.current || endedRef.current) return
-
-    if (document.visibilityState === "hidden") {
-      addPlaybackSlice()
-      pushEvent({ type: "visibility_hidden", at: latestPositionRef.current })
-    } else {
-      pushEvent({ type: "visibility_visible", at: latestPositionRef.current })
-    }
-
-    const position = latestContentTypeRef.current === "pdf"
-      ? pdfCurrentPageRef.current
-      : latestPositionRef.current
-
-    const completion = latestContentTypeRef.current === "video"
-      ? getVideoProgressSnapshot(position).completion
-      : latestCompletionRef.current
-
-    void sendProgressSnapshot(position, completion)
-  }, [addPlaybackSlice, getVideoProgressSnapshot, pushEvent, sendProgressSnapshot])
+  const handleSpeedChange = useCallback(() => {
+    counters.current.speed += 1
+  }, [])
 
   const handleFullscreen = useCallback(() => {
-    if (!sessionIdRef.current || endedRef.current) return
-    fullscreenCountRef.current += 1
-    pushEvent({
-      type: document.fullscreenElement ? "fullscreen_enter" : "fullscreen_exit",
-      at: latestPositionRef.current,
-    })
-  }, [pushEvent])
+    counters.current.fullscreen += 1
+  }, [])
 
-  const handlePageHide = useCallback(() => {
-    if (closedByPagehideRef.current) return
-    closedByPagehideRef.current = true
-    if (latestContentTypeRef.current === "video") {
-      void flushProgressSnapshot({ useKeepAlive: true })
+  const handleTimeUpdate = useCallback((position: number, duration: number) => {
+    if (duration > 0) durationRef.current = duration
+    lastPositionRef.current = position
+    const pct = duration > 0 ? Math.min(100, (position / duration) * 100) : 0
+    if (pct > maxCompletionRef.current) maxCompletionRef.current = pct
+
+    // Live UI progress — only re-render when the integer percentage changes.
+    const rounded = Math.min(100, Math.round(pct))
+    if (rounded !== lastRenderedPctRef.current) {
+      lastRenderedPctRef.current = rounded
+      setLiveContentPct(rounded)
+    }
+
+    // Fire any newly-crossed milestones (each once) with an immediate ping.
+    let crossed = false
+    for (const m of MILESTONES) {
+      if (pct >= m && !milestonesRef.current.has(m)) {
+        milestonesRef.current.add(m)
+        pushEvent({ type: "milestone", at: Math.round(wallSeconds()), pct: m })
+        crossed = true
+      }
+    }
+    if (crossed) {
+      sendProgress()
       return
     }
-    void endSession({ useKeepAlive: true, reason: "pagehide" })
-  }, [endSession, flushProgressSnapshot])
+    // Otherwise throttle to the periodic cadence while actively playing.
+    if (playingRef.current && Date.now() - lastSentRef.current >= PROGRESS_INTERVAL_MS) {
+      sendProgress()
+    }
+  }, [pushEvent, sendProgress])
+
+  // ── End the session (normal path: natural end / SPA navigation) ─────────────
+
+  const finalize = useCallback(async () => {
+    const id = sessionIdRef.current
+    if (id == null || endedRef.current) return
+    endedRef.current = true
+    foldSegment()
+    playingRef.current = false
+    setIsEnding(true)
+    try {
+      const res = await endSession(id, {
+        ...buildProgressBody(),
+        wall_clock_time: Math.round(wallSeconds()),
+        fullscreen_count: counters.current.fullscreen,
+        events_log: eventsRef.current.slice(0, MAX_EVENTS),
+      })
+      setResult(res.data)
+    } catch {
+      // best-effort — the row may still be written; ignore UI-side
+    } finally {
+      setIsEnding(false)
+    }
+  }, [buildProgressBody, foldSegment])
+
+  const handleEnded = useCallback(() => {
+    void finalize()
+  }, [finalize])
+
+  // ── Unload handling: progress on tab-hide, keepalive end on page-hide ───────
 
   useEffect(() => {
-    document.addEventListener("visibilitychange", handleVisibility)
-    document.addEventListener("fullscreenchange", handleFullscreen)
-    window.addEventListener("pagehide", handlePageHide)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility)
-      document.removeEventListener("fullscreenchange", handleFullscreen)
-      window.removeEventListener("pagehide", handlePageHide)
-
-      if (closedByPagehideRef.current) return
-      if (skipNextUnmountFlushRef.current) {
-        skipNextUnmountFlushRef.current = false
-        return
+    function onVisibility() {
+      if (document.visibilityState === "hidden") {
+        foldSegment()
+        sendProgress()
       }
-
-      if (latestContentTypeRef.current === "video") {
-        void flushProgressSnapshot()
-        return
-      }
-
-      void endSession({ reason: "unmount" })
     }
-  }, [endSession, flushProgressSnapshot, handleFullscreen, handlePageHide, handleVisibility])
+    function onPageHide() {
+      const id = sessionIdRef.current
+      if (id == null || endedRef.current) return
+      endedRef.current = true
+      foldSegment()
+      endSessionBeacon(id, {
+        ...buildProgressBody(),
+        wall_clock_time: Math.round(wallSeconds()),
+        fullscreen_count: counters.current.fullscreen,
+        events_log: eventsRef.current.slice(0, MAX_EVENTS),
+      })
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    window.addEventListener("pagehide", onPageHide)
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("pagehide", onPageHide)
+    }
+  }, [foldSegment, sendProgress, buildProgressBody])
+
+  // End the session when the component unmounts (e.g. navigating to next item).
+  useEffect(() => {
+    return () => {
+      void finalize()
+    }
+  }, [finalize])
 
   return {
-    displayedCompletion,
-    resumePosition,
-    resumeHint,
-    sessionSummary,
-    ensureSessionStarted,
-    flushProgressSnapshot,
-    onVideoPlay,
-    onVideoProgress,
-    onVideoPause,
-    onVideoSeek,
-    onVideoRateChange,
-    onVideoEnd,
-    onPdfOpen,
-    onPdfPageChange,
-    endSession,
+    sessionId,
+    isEnding,
+    result,
+    liveContentPct,
+    handlePlay,
+    handlePause,
+    handleSeek,
+    handleSpeedChange,
+    handleFullscreen,
+    handleTimeUpdate,
+    handleEnded,
   }
 }

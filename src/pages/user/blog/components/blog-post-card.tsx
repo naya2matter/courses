@@ -56,8 +56,9 @@ interface BlogEditorialCardProps {
 export function BlogEditorialCard({ post }: BlogEditorialCardProps) {
   const gradient = THUMB_GRADIENTS[post.id % THUMB_GRADIENTS.length]
   const avatarColor = AVATAR_COLORS[post.author.id % AVATAR_COLORS.length]
-  const visibleTags = post.tags.slice(0, 3)
-  const extraTags = post.tags.length - 3
+  const tags = Array.isArray(post.tags) ? post.tags : []
+  const visibleTags = tags.slice(0, 3)
+  const extraTags = tags.length - 3
 
   return (
     <article

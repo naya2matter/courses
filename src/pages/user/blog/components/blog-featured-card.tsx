@@ -58,8 +58,9 @@ interface BlogHeroFeatureProps {
 export function BlogHeroFeature({ post }: BlogHeroFeatureProps) {
   const gradient = HERO_GRADIENTS[post.id % HERO_GRADIENTS.length]
   const avatarColor = AVATAR_COLORS[post.author.id % AVATAR_COLORS.length]
-  const visibleTags = post.tags.slice(0, 4)
-  const extraTags = post.tags.length - 4
+  const tags = Array.isArray(post.tags) ? post.tags : []
+  const visibleTags = tags.slice(0, 4)
+  const extraTags = tags.length - 4
 
   return (
     <article

@@ -9,7 +9,6 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   SlidersHorizontalIcon,
-  VideoIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -184,16 +183,11 @@ export default function ReportLiveCoursesPage() {
   return (
     <div className="space-y-5">
       {/* ── Header ── */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/15">
-          <VideoIcon className="size-5 text-sky-400" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Live Courses Report</h1>
-          <p className="mt-0.5 text-sm text-white/40">
-            Registrations, attendance records, and completions for traditional live courses.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Live Courses Report</h1>
+        <p className="mt-0.5 text-sm text-white/40">
+          Registrations, attendance records, and completions for traditional live courses.
+        </p>
       </div>
 
       {/* ── Tabs ── */}

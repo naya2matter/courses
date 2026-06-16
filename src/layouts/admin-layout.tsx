@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
+import { BreadcrumbProvider } from "@/context/breadcrumb"
 
 export function AdminLayout() {
   return (
@@ -18,14 +19,16 @@ export function AdminLayout() {
       <div className="min-h-svh bg-[#080713]">
         <SidebarProvider className="bg-transparent">
           <AppSidebar />
-          <div className="flex min-h-svh w-full flex-col">
-            <SiteHeader showAdminCalendar />
-            <main className="flex-1 p-5 md:p-6">
-              <div className="mx-auto w-full max-w-350 pb-8">
-                <Outlet />
-              </div>
-            </main>
-          </div>
+          <BreadcrumbProvider>
+            <div className="flex min-h-svh w-full flex-col">
+              <SiteHeader showAdminCalendar />
+              <main className="flex-1 p-5 md:p-6">
+                <div className="mx-auto w-full max-w-350 pb-8">
+                  <Outlet />
+                </div>
+              </main>
+            </div>
+          </BreadcrumbProvider>
         </SidebarProvider>
       </div>
     </TooltipProvider>

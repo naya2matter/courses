@@ -1,907 +1,462 @@
-// ─── Online Content Viewer Page ───────────────────────────────────────────────
+// ─── User Online Course — Content Viewer ──────────────────────────────────────
 // Route: /user/online-courses/:courseId/content/:contentId
-//
-// Flow:
-//   1. Call resume endpoint to get last playback_position.
-//   2. Call content endpoint to get signed media_url (valid 4 h).
-//   3. Render HTML5 <video> or PDF viewer using media_url directly.
-//   4. Seek video to playback_position when metadata loads.
-//   5. If media fails / 403 → show expiry notice with Refresh Media button.
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import {
-  AlertCircleIcon,
   ArrowLeftIcon,
+  AlertCircleIcon,
+  Loader2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ExternalLinkIcon,
-  FileTextIcon,
-  LockIcon,
   PlayCircleIcon,
-  RefreshCwIcon,
+  FileTextIcon,
   CheckCircle2Icon,
-  BookOpenIcon,
-  ListIcon,
+  GaugeIcon,
   TrophyIcon,
-  XIcon,
+  BookOpenIcon,
+  DownloadIcon,
+  PaperclipIcon,
 } from "lucide-react"
-
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { isApiError } from "@/lib/api"
+import { useDynamicBreadcrumb } from "@/context/breadcrumb"
 
-import {
-  getContentResumePosition,
-  openCourseContent,
-  getMyOnlineCourseById,
-} from "@/services/userOnlineCourse.service"
+import { openContent, formatDuration, downloadAttachment } from "./service/user-online-courses.service"
+import type { ContentViewerData } from "./types/user-online-courses.types"
 import { useLearningSession } from "./hooks/use-learning-session"
-import { SessionSummaryCard } from "./components/session-summary-card"
-import type {
-  ResumeProgressResponse,
-  UserCourseMediaResponse,
-  UserOnlineCourseDetail,
-} from "@/types/user-online-course"
+import { VideoPlayer } from "./components/video-player"
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const PdfViewer = lazy(() =>
+  import("./components/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
+)
 
-function formatDuration(s: number): string {
-  if (s <= 0) return ""
-  const m = Math.floor(s / 60)
-  const h = Math.floor(m / 60)
-  const rem = m % 60
-  if (h > 0) return `${h}h ${rem > 0 ? `${rem}m` : ""}`
-  return `${m}m`
-}
+// ── Circular progress ring ────────────────────────────────────────────────────
 
-function getQuizStatusMeta(status: string | null): { label: string; className: string } {
-  switch (status) {
-    case "passed":
-      return {
-        label: "Passed",
-        className: "text-emerald-400",
-      }
-    case "failed":
-      return {
-        label: "Retry available",
-        className: "text-rose-300",
-      }
-    default:
-      return {
-        label: "Not attempted",
-        className: "text-amber-400",
-      }
-  }
-}
+const RING_R = 42
+const RING_CIRC = 2 * Math.PI * RING_R
 
-// ── Video player ──────────────────────────────────────────────────────────────
-
-function VideoPlayer({
-  src,
-  resumePosition,
-  onExpired,
-  onStartSession,
-  onProgress,
-  onPause,
-  onSeek,
-  onRateChange,
-  onPlay,
-  onEnd,
-}: {
-  src: string
-  resumePosition: number
-  onExpired: () => void
-  onStartSession: () => Promise<number | null>
-  onProgress: (position: number, duration: number) => void
-  onPause: (position: number, duration: number) => void
-  onSeek: (from: number, to: number, duration: number) => void
-  onRateChange: () => void
-  onPlay: () => void
-  onEnd: (position: number, duration: number) => void
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [mediaError, setMediaError] = useState(false)
-  const lastKnownTimeRef = useRef(0)
-  const hasSyncedInitialResumeRef = useRef(false)
-
-  useEffect(() => {
-    hasSyncedInitialResumeRef.current = false
-    lastKnownTimeRef.current = 0
-  }, [src])
-
-  // Seek to resume position once metadata is available
-  function handleMetadata() {
-    if (videoRef.current && resumePosition > 0 && !hasSyncedInitialResumeRef.current) {
-      videoRef.current.currentTime = resumePosition
-      hasSyncedInitialResumeRef.current = true
-      lastKnownTimeRef.current = resumePosition
-    }
-  }
-
-  function handleError() {
-    setMediaError(true)
-    onExpired()
-  }
-
-  async function handlePlay() {
-    const resume = await onStartSession()
-    if (!videoRef.current || resume == null) return
-    onPlay()
-    // Apply backend resume only on the initial play, not every pause/resume.
-    if (!hasSyncedInitialResumeRef.current && resume > 0 && Math.abs(videoRef.current.currentTime - resume) > 1) {
-      videoRef.current.currentTime = resume
-      hasSyncedInitialResumeRef.current = true
-      lastKnownTimeRef.current = resume
-    }
-  }
-
-  function handleTimeUpdate() {
-    if (!videoRef.current) return
-    lastKnownTimeRef.current = videoRef.current.currentTime
-    onProgress(videoRef.current.currentTime, videoRef.current.duration)
-  }
-
-  function handlePause() {
-    if (!videoRef.current) return
-    onPause(videoRef.current.currentTime, videoRef.current.duration)
-  }
-
-  function handleSeeked() {
-    if (!videoRef.current) return
-    const to = videoRef.current.currentTime
-    const from = lastKnownTimeRef.current
-    onSeek(from, to, videoRef.current.duration)
-    lastKnownTimeRef.current = to
-  }
-
-  function handleRateChange() {
-    onRateChange()
-  }
-
-  function handleEnded() {
-    if (!videoRef.current) return
-    onEnd(videoRef.current.currentTime, videoRef.current.duration)
-  }
-
-  if (mediaError) return null
-
+function ProgressRing({ pct, done, label }: { pct: number; done: boolean; label: string }) {
+  const clamped = Math.min(100, Math.max(0, pct))
+  const offset = RING_CIRC * (1 - clamped / 100)
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      controls
-      onLoadedMetadata={handleMetadata}
-      onError={handleError}
-      onPlay={handlePlay}
-      onTimeUpdate={handleTimeUpdate}
-      onPause={handlePause}
-      onSeeked={handleSeeked}
-      onRateChange={handleRateChange}
-      onEnded={handleEnded}
-      className="h-full w-full rounded-2xl bg-black object-contain"
-      playsInline
-    />
+    <div className="relative size-[116px]">
+      <svg viewBox="0 0 108 108" className="size-full -rotate-90">
+        <circle cx="54" cy="54" r={RING_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" strokeLinecap="round" />
+        <circle
+          cx="54" cy="54" r={RING_R}
+          fill="none"
+          stroke={done ? "#10b981" : "#6366f1"}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={RING_CIRC}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.55s ease, stroke 0.3s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+        <span className={`text-[26px] font-black tabular-nums leading-none ${done ? "text-emerald-400" : "text-white"}`}>
+          {clamped}%
+        </span>
+        <span className="text-[9px] uppercase tracking-widest text-white/30">{label}</span>
+      </div>
+    </div>
   )
 }
 
-// ── PDF viewer ────────────────────────────────────────────────────────────────
+// ── Attention score helpers ───────────────────────────────────────────────────
 
-function PdfViewer({
-  src,
-  resumePage,
-  totalPages,
-  onExpired,
-  onOpenSession,
-  onPageChange,
-}: {
-  src: string
-  resumePage: number
-  totalPages: number | null
-  onExpired: () => void
-  onOpenSession: () => void
-  onPageChange: (page: number, totalPages: number | null) => void
-}) {
-  const [currentPage, setCurrentPage] = useState(Math.max(1, resumePage))
-  const [iframeKey, setIframeKey] = useState(0)
-  // Prevents onPageChange from firing on the initial mount — that's handled by
-  // onOpenSession (onPdfOpen). Firing both causes duplicate syncPdfProgress calls.
-  const hasMountedRef = useRef(false)
+function attentionMeta(score: number) {
+  if (score >= 90) return { label: "Excellent", barCls: "bg-emerald-500", textCls: "text-emerald-400" }
+  if (score >= 70) return { label: "Good",      barCls: "bg-indigo-500",  textCls: "text-indigo-300"  }
+  if (score >= 50) return { label: "Average",   barCls: "bg-amber-500",   textCls: "text-amber-400"   }
+  return              { label: "Low focus",   barCls: "bg-red-500",     textCls: "text-red-400"     }
+}
+
+// ── Inner viewer (remounted per content item) ─────────────────────────────────
+
+function Viewer({ courseId, contentId }: { courseId: number; contentId: number }) {
+  const navigate = useNavigate()
+  const [data, setData] = useState<ContentViewerData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pdfCompletion, setPdfCompletion] = useState<{ pct: number; done: boolean } | null>(null)
+  const hasToastedRef = useRef(false)
 
   useEffect(() => {
-    const next = Math.max(1, resumePage)
-    setCurrentPage(next)
-  }, [resumePage])
-
-  useEffect(() => {
-    onOpenSession()
-  }, [onOpenSession])
-
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true
-      return
+    let cancelled = false
+    async function run() {
+      setIsLoading(true)
+      setError(null)
+      hasToastedRef.current = false
+      try {
+        const res = await openContent(courseId, contentId)
+        if (!cancelled) setData(res.data)
+      } catch (err) {
+        if (cancelled) return
+        if (isApiError(err)) {
+          setError(
+            err.status === 403
+              ? "This content is locked — finish the previous module first."
+              : err.status === 404
+                ? "Content not found."
+                : err.message || "Failed to open this content.",
+          )
+        } else if (err instanceof Error) setError(err.message)
+        else setError("Failed to open this content.")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
-    onPageChange(currentPage, totalPages)
-  }, [currentPage, onPageChange, totalPages])
+    void run()
+    return () => { cancelled = true }
+  }, [courseId, contentId])
 
-  function movePage(step: number) {
-    const maxPage = totalPages ?? Number.MAX_SAFE_INTEGER
-    setCurrentPage((prev) => {
-      const next = Math.max(1, Math.min(maxPage, prev + step))
-      // Force iframe remount to navigate the browser's PDF viewer to the new page.
-      // The PDF binary is in the browser cache so the remount is near-instant.
-      if (next !== prev) setIframeKey((k) => k + 1)
-      return next
-    })
+  useDynamicBreadcrumb(data?.title)
+
+  const isVideo = data?.content_type === "video"
+  const alreadyCompleted = data?.progress?.is_completed ?? false
+  const session = useLearningSession({ courseId, contentId, alreadyCompleted })
+
+  // Toast on video content completion
+  useEffect(() => {
+    if (session.result?.content_completed && !hasToastedRef.current) {
+      hasToastedRef.current = true
+      toast.success("Video completed!", { description: "Great work! Your progress has been saved." })
+    }
+  }, [session.result?.content_completed])
+
+  // Toast on PDF completion
+  useEffect(() => {
+    if (pdfCompletion?.done && !hasToastedRef.current) {
+      hasToastedRef.current = true
+      toast.success("Document completed!", { description: "You've read all the pages. Well done!" })
+    }
+  }, [pdfCompletion?.done])
+
+  const goTo = useCallback(
+    (id: number) => navigate(`/user/online-courses/${courseId}/content/${id}`),
+    [navigate, courseId],
+  )
+
+  const [isDownloading, setIsDownloading] = useState(false)
+  const handleAttachmentDownload = useCallback(async () => {
+    if (!data?.attachment_path) return
+    setIsDownloading(true)
+    try {
+      const blob = await downloadAttachment(courseId, contentId)
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = data.attachment_name ?? "attachment"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      toast.error("Download failed", {
+        description: "Could not fetch the attachment. Please try again.",
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [courseId, contentId, data?.attachment_path, data?.attachment_name])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-32 text-sm text-white/40">
+        <Loader2Icon className="size-5 animate-spin" /> Loading content…
+      </div>
+    )
   }
 
-  // Build PDF URL with page anchor so Chrome/Firefox/Edge PDF viewers jump to
-  // the right page on load without requiring the user to scroll manually.
-  const pdfSrc = currentPage > 1 ? `${src}#page=${currentPage}` : src
+  if (error || !data) {
+    return (
+      <Alert variant="destructive" className="border-red-500/20 bg-red-500/10 text-red-400">
+        <AlertCircleIcon className="size-4" />
+        <AlertTitle>Unable to open content</AlertTitle>
+        <AlertDescription className="flex items-center justify-between gap-4">
+          <span>{error ?? "Something went wrong."}</span>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/user/online-courses/${courseId}`)}
+            className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300">
+            Back to course
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  const savedPct = Math.round(data.progress?.completion_percentage ?? 0)
+
+  // Ring: live content-item completion — updates every 1% while watching/reading
+  const contentPct = isVideo
+    ? Math.max(session.liveContentPct, savedPct)
+    : (pdfCompletion ? Math.round(pdfCompletion.pct) : savedPct)
+
+  // Linear bar: course-wide progress — updated by the session-end result
+  const coursePct = session.result
+    ? Math.round(session.result.course_progress_percentage)
+    : savedPct
+
+  const contentDone = isVideo
+    ? (session.result?.content_completed ?? alreadyCompleted)
+    : (pdfCompletion?.done ?? alreadyCompleted)
+
+  const attn = session.result ? attentionMeta(session.result.attention_score) : null
 
   return (
-    <div className="flex flex-col bg-[#05050A]">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2">
-        <span className="text-xs font-medium text-white/40">
-          Page <span className="text-white/70 tabular-nums">{currentPage}</span>
-          {totalPages ? <span className="text-white/30"> / {totalPages}</span> : ""}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1 border-white/10 bg-white/5 px-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"
-            onClick={() => movePage(-1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeftIcon className="size-3.5" />
-            Prev
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1 border-white/10 bg-white/5 px-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"
-            onClick={() => movePage(1)}
-            disabled={totalPages != null && currentPage >= totalPages}
-          >
-            Next
-            <ChevronRightIcon className="size-3.5" />
-          </Button>
-          <a
-            href={src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-1 flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
-          >
-            <ExternalLinkIcon className="size-3" />
-            Open in new tab
-          </a>
+    <div className="grid gap-6 lg:grid-cols-[1fr_296px]">
+
+      {/* ── Main column ─────────────────────────────────────────────────── */}
+      <div className="min-w-0 space-y-5">
+
+        {/* Content header */}
+        <div className="flex items-center gap-3">
+          <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+            isVideo ? "bg-sky-500/15 text-sky-400" : "bg-amber-500/15 text-amber-400"
+          }`}>
+            {isVideo ? <PlayCircleIcon className="size-5" /> : <FileTextIcon className="size-5" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold tracking-tight text-white">{data.title}</h1>
+            <p className="mt-0.5 text-xs text-white/40">
+              <span className="capitalize">{data.content_type}</span>
+              {isVideo && data.duration_seconds > 0 && ` · ${formatDuration(data.duration_seconds)}`}
+              {!isVideo && data.pdf_total_pages != null && ` · ${data.pdf_total_pages} pages`}
+            </p>
+          </div>
+          {contentDone && (
+            <Badge variant="outline"
+              className="shrink-0 gap-1 rounded-full border-emerald-500/25 bg-emerald-500/15 text-[11px] text-emerald-400">
+              <CheckCircle2Icon className="size-3" />Done
+            </Badge>
+          )}
+        </div>
+
+        {/* Player / viewer */}
+        {isVideo ? (
+          <VideoPlayer
+            src={data.media_url}
+            resumePosition={data.progress?.playback_position ?? 0}
+            onPlay={session.handlePlay}
+            onPause={session.handlePause}
+            onSeek={session.handleSeek}
+            onSpeedChange={session.handleSpeedChange}
+            onFullscreen={session.handleFullscreen}
+            onTimeUpdate={session.handleTimeUpdate}
+            onEnded={session.handleEnded}
+          />
+        ) : (
+          <Suspense fallback={
+            <div className="flex min-h-[60vh] items-center justify-center gap-2 rounded-2xl border border-white/8 bg-[#0c0c14] text-sm text-white/40">
+              <Loader2Icon className="size-5 animate-spin" /> Loading PDF viewer…
+            </div>
+          }>
+            <PdfViewer
+              src={data.media_url}
+              courseId={courseId}
+              contentId={contentId}
+              totalPages={data.pdf_total_pages}
+              resumePage={data.progress?.playback_position ?? 0}
+              onProgress={(pct, done) => setPdfCompletion({ pct, done })}
+            />
+          </Suspense>
+        )}
+
+        {/* Prev / Next navigation */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          {data.prev_content ? (
+            <button type="button" onClick={() => goTo(data.prev_content!.id)}
+              className="group flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-white/14 hover:bg-white/[0.06]">
+              <ChevronLeftIcon className="size-4 shrink-0 text-white/35 transition-transform group-hover:-translate-x-0.5" />
+              <div className="min-w-0">
+                <p className="mb-0.5 text-[10px] uppercase tracking-wider text-white/30">Previous</p>
+                <p className="truncate text-sm font-medium text-white/75">{data.prev_content.title}</p>
+              </div>
+            </button>
+          ) : <span />}
+
+          {data.next_content ? (
+            <button type="button" onClick={() => goTo(data.next_content!.id)}
+              className="group flex items-center justify-end gap-3 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.07] px-4 py-3 text-right transition-colors hover:border-indigo-500/35 hover:bg-indigo-500/[0.12]">
+              <div className="min-w-0">
+                <p className="mb-0.5 text-[10px] uppercase tracking-wider text-indigo-400/60">Up next</p>
+                <p className="truncate text-sm font-medium text-indigo-200">{data.next_content.title}</p>
+              </div>
+              <ChevronRightIcon className="size-4 shrink-0 text-indigo-400 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          ) : (
+            <button type="button" onClick={() => navigate(`/user/online-courses/${courseId}`)}
+              className="group flex items-center justify-end gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] px-4 py-3 text-right transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/[0.12]">
+              <div className="min-w-0">
+                <p className="mb-0.5 text-[10px] uppercase tracking-wider text-emerald-400/60">Finished</p>
+                <p className="truncate text-sm font-medium text-emerald-200">Back to course</p>
+              </div>
+              <BookOpenIcon className="size-4 shrink-0 text-emerald-400 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── PDF iframe ─────────────────────────────────────────────────────────
-          <object> no longer works for inline PDFs in modern Chrome/Edge/Firefox.
-          <iframe> triggers the browser's built-in PDF viewer correctly.
-      ── */}
-      <iframe
-        key={iframeKey}
-        src={pdfSrc}
-        title={`PDF — page ${currentPage}${totalPages ? ` of ${totalPages}` : ""}`}
-        className="h-[75vh] w-full border-none bg-white"
-        allow="fullscreen"
-        onError={() => onExpired()}
-      />
+      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
+      <aside className="space-y-4">
+
+        {/* Progress card */}
+        <div className="rounded-2xl border border-white/8 bg-card p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white/80">Your progress</h2>
+            {session.isEnding && (
+              <span className="flex items-center gap-1.5 text-[11px] text-white/35">
+                <Loader2Icon className="size-3 animate-spin" />Saving…
+              </span>
+            )}
+          </div>
+
+          {/* Circular ring — live content completion */}
+          <div className="my-5 flex flex-col items-center gap-3">
+            <ProgressRing pct={contentPct} done={contentDone} label={isVideo ? "watched" : "read"} />
+            {contentDone ? (
+              <Badge variant="outline"
+                className="gap-1.5 rounded-full border-emerald-500/25 bg-emerald-500/15 px-3 py-1 text-xs text-emerald-400">
+                <CheckCircle2Icon className="size-3.5" />Completed
+              </Badge>
+            ) : (
+              <p className="max-w-[180px] text-center text-[11px] leading-relaxed text-white/35">
+                {isVideo
+                  ? "Watch to 95% to mark this video complete."
+                  : "Turn through every page to complete this document."}
+              </p>
+            )}
+          </div>
+
+          {/* Course-wide progress linear bar */}
+          <div className="space-y-1.5 border-t border-white/6 pt-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/40">Course overall</span>
+              <span className={`font-semibold tabular-nums ${contentDone ? "text-emerald-400" : "text-indigo-300"}`}>
+                {coursePct}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${
+                  contentDone ? "bg-emerald-500" : "bg-gradient-to-r from-indigo-600 to-indigo-400"
+                }`}
+                style={{ width: `${coursePct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Attachment download */}
+        {data.attachment_path && (
+          <div className="rounded-2xl border border-white/8 bg-card p-4">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/80">
+              <PaperclipIcon className="size-4 text-white/40" />Attachment
+            </h2>
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={handleAttachmentDownload}
+              className="group flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3.5 py-3 text-left transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 transition-colors group-hover:bg-indigo-500/25">
+                {isDownloading
+                  ? <Loader2Icon className="size-4 animate-spin" />
+                  : <FileTextIcon className="size-4" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-white/80 group-hover:text-white">
+                  {data.attachment_name ?? "Download attachment"}
+                </span>
+                <span className="text-[11px] text-white/35">
+                  {isDownloading ? "Downloading…" : "Click to download"}
+                </span>
+              </span>
+              <DownloadIcon className="size-4 shrink-0 text-white/30 transition-colors group-hover:text-indigo-400" />
+            </button>
+          </div>
+        )}
+
+        {/* Session summary — appears after video session ends */}
+        {isVideo && session.result && attn && (
+          <div className="rounded-2xl border border-white/8 bg-card p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white/80">
+              <GaugeIcon className="size-4 text-indigo-400" />Session results
+            </h2>
+
+            <div className="flex items-center gap-4">
+              <div className={`flex size-[60px] shrink-0 flex-col items-center justify-center rounded-2xl border-2 ${
+                session.result.attention_score >= 70
+                  ? "border-indigo-500/30 bg-indigo-500/10"
+                  : "border-white/10 bg-white/5"
+              }`}>
+                <span className={`text-[22px] font-black tabular-nums leading-none ${attn.textCls}`}>
+                  {session.result.attention_score}
+                </span>
+                <span className="text-[8px] uppercase tracking-wider text-white/25">/ 100</span>
+              </div>
+              <div className="space-y-1">
+                <p className={`flex items-center gap-1.5 text-sm font-semibold ${attn.textCls}`}>
+                  <TrophyIcon className="size-3.5 text-amber-400" />{attn.label}
+                </p>
+                <p className="text-xs text-white/40">
+                  {session.result.content_completed
+                    ? "Content marked complete ✓"
+                    : "Keep watching to complete"}
+                </p>
+              </div>
+            </div>
+
+            {/* Attention score bar */}
+            <div className="mt-4 space-y-1.5">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${attn.barCls}`}
+                  style={{ width: `${session.result.attention_score}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[9px] text-white/20">
+                <span>Low</span>
+                <span>Excellent</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </aside>
     </div>
   )
 }
 
-// ── Media expired notice ──────────────────────────────────────────────────────
-
-function MediaExpiredNotice({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefreshing: boolean }) {
-  return (
-    <Alert className="border-amber-500/25 bg-amber-500/8">
-      <AlertCircleIcon className="size-4 text-amber-400" />
-      <AlertTitle className="text-amber-300">Secure media link expired</AlertTitle>
-      <AlertDescription className="flex flex-col gap-3 text-amber-200/70">
-        <span>This secure media link has expired (links are valid for 4 hours). Refresh to get a new link.</span>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="w-fit border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
-        >
-          <RefreshCwIcon className={`mr-1.5 size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          Refresh Media
-        </Button>
-      </AlertDescription>
-    </Alert>
-  )
-}
-
-// ── Viewer skeleton ───────────────────────────────────────────────────────────
-
-function ViewerSkeleton({ type }: { type?: "video" | "pdf" }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <Skeleton className="h-6 w-48 bg-white/8" />
-      <Skeleton
-        className={`w-full rounded-2xl bg-white/5 ${type === "pdf" ? "h-[70vh]" : "h-64 sm:h-80 lg:h-[50vh]"}`}
-      />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-1/3 bg-white/5" />
-        <Skeleton className="h-3 w-1/4 bg-white/5" />
-      </div>
-    </div>
-  )
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Route component ────────────────────────────────────────────────────────────
 
 export function OnlineContentViewerPage() {
   const navigate = useNavigate()
-  const { courseId, contentId } = useParams<{
-    courseId: string
-    contentId: string
-  }>()
-
-  const cId = Number(courseId)
-  const ctId = Number(contentId)
-
-  const [course, setCourse] = useState<UserOnlineCourseDetail | null>(null)
-  const [media, setMedia] = useState<UserCourseMediaResponse | null>(null)
-  const [resume, setResume] = useState<ResumeProgressResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<{ message: string; status?: number } | null>(null)
-  const [mediaExpired, setMediaExpired] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  // When the user navigates away manually we still finalize the session, but we
-  // must not fire the "moving to next content" toast / auto-advance for it.
-  const suppressAutoAdvanceRef = useRef(false)
-
-  // ── Fetch ─────────────────────────────────────────────────────────────────
-
-  const fetchContent = useCallback(
-    async (showFullLoader = true) => {
-      if (!cId || !ctId) return
-      if (showFullLoader) setIsLoading(true)
-      else setIsRefreshing(true)
-      setError(null)
-      setMediaExpired(false)
-
-      try {
-        // Fetch resume position + media URL in parallel
-        const [courseData, resumeData, mediaData] = await Promise.all([
-          getMyOnlineCourseById(cId).catch(() => null),
-          getContentResumePosition(ctId).catch(() => null),
-          openCourseContent(cId, ctId),
-        ])
-        setCourse(courseData)
-        setResume(resumeData)
-        setMedia(mediaData)
-      } catch (err: unknown) {
-        const e = err as { message?: string; status?: number }
-        setError({ message: e?.message ?? "Failed to load content.", status: e?.status })
-      } finally {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    },
-    [cId, ctId],
-  )
-
-  useEffect(() => {
-    fetchContent(true)
-  }, [fetchContent])
-
-  // Stable callbacks — must not be recreated on every render so that the hook's
-  // internal useCallbacks (ensureSessionStarted, onPdfOpen, …) stay referentially
-  // stable. Inline functions cause the whole chain to cascade every render and
-  // fire PdfViewer's onOpenSession effect in a loop, triggering 422 spam.
-  const handleSessionError = useCallback((message: string, status?: number) => {
-    if (status === 403 && message.includes("already been completed")) {
-      toast.warning(message, { duration: 6000 })
-    } else if (status === 401) {
-      toast.error(message, { duration: 8000 })
-    } else {
-      toast.error(message, { duration: 6000 })
-    }
-  }, [])
-
-  const handleSessionEnded = useCallback(
-    (result: { session_id: number; attention_score: number; content_completed: boolean; course_progress_percentage: number }) => {
-      if (result.content_completed) {
-        setCourse((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            modules: prev.modules.map((mod) => ({
-              ...mod,
-              content: mod.content.map((c) =>
-                c.id === ctId
-                  ? {
-                      ...c,
-                      progress: {
-                        ...(c.progress ?? { playback_position: 0 }),
-                        is_completed: true,
-                        completion_percentage: 100,
-                      },
-                    }
-                  : c
-              ),
-            })),
-          }
-        })
-
-        if (suppressAutoAdvanceRef.current) {
-          suppressAutoAdvanceRef.current = false
-          return
-        }
-
-        toast.success(
-          media?.next_content
-            ? "Content completed! Review your summary, then continue."
-            : "Content completed! Your progress has been saved.",
-          { duration: 6000 },
-        )
-      }
-    },
-    [ctId, media],
-  )
-
-  const {
-    displayedCompletion,
-    resumePosition: trackedResumePosition,
-    resumeHint,
-    sessionSummary,
-    ensureSessionStarted,
-    flushProgressSnapshot,
-    onVideoPlay,
-    onVideoProgress,
-    onVideoPause,
-    onVideoSeek,
-    onVideoRateChange,
-    onVideoEnd,
-    onPdfOpen,
-    onPdfPageChange,
-    endSession,
-  } = useLearningSession({
-    courseId: cId,
-    contentId: ctId,
-    contentType: media?.content_type ?? null,
-    initialResumePosition:
-      resume?.playback_position
-      ?? media?.progress?.playback_position
-      ?? 0,
-    initialCompletion:
-      media?.progress?.completion_percentage
-      ?? resume?.completion_percentage
-      ?? 0,
-    totalPdfPages: media?.pdf_total_pages ?? null,
-    onRealError: handleSessionError,
-    onSessionEnded: handleSessionEnded,
-  })
-
-  // ── Navigation helpers ────────────────────────────────────────────────────
-
-  async function persistBeforeLeave() {
-    if (media?.content_type === "video") {
-      // A video watched past the completion threshold (>= 95%) is finalized so
-      // the backend marks it complete + writes the fact row (per the API guide).
-      // Below the threshold we only flush progress and leave the session open
-      // so a return visit resumes the same session.
-      if (displayedCompletion >= 95) {
-        suppressAutoAdvanceRef.current = true
-        await endSession({
-          reason: "route_change",
-          completionOverride: Math.max(displayedCompletion, 95),
-        })
-      } else {
-        await flushProgressSnapshot({ markUnmountHandled: true })
-      }
-      return
-    }
-
-    await endSession({ reason: "route_change" })
-  }
-
-  async function goToContent(id: number) {
-    await persistBeforeLeave()
-    navigate(`/user/online-courses/${cId}/content/${id}`)
-  }
-
-  async function goToQuiz(quizId: number) {
-    await persistBeforeLeave()
-    navigate(`/user/quizzes/${quizId}`)
-  }
-
-  async function goBack() {
-    await persistBeforeLeave()
-    navigate(`/user/online-courses/${cId}`)
-  }
-
-  const resumePos = trackedResumePosition
-  const pct = displayedCompletion
-
-  // ── Render ────────────────────────────────────────────────────────────────
+  const { courseId: courseIdParam, contentId: contentIdParam } = useParams<{ courseId: string; contentId: string }>()
+  const courseId = Number(courseIdParam)
+  const contentId = Number(contentIdParam)
+  const valid = Number.isInteger(courseId) && courseId > 0 && Number.isInteger(contentId) && contentId > 0
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full flex-col lg:flex-row bg-[#020205] text-white overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mt-[-1.5rem]">
+    <div className="flex flex-col gap-5 text-white">
+      <Button variant="ghost" size="sm" onClick={() => navigate(`/user/online-courses/${courseId}`)}
+        className="-ml-2 w-fit gap-2 rounded-full text-white/50 hover:text-white">
+        <ArrowLeftIcon className="size-4" />Back to course
+      </Button>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 pt-6">
-        
-        {/* Header / Mobile Toggle */}
-        <div className="flex items-center justify-between mb-6 shrink-0 z-10 px-2 lg:px-6">
-          <button
-            type="button"
-            onClick={goBack}
-            className="group flex w-fit items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm font-medium text-white/60 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white/90 hover:border-white/20 shadow-sm"
-          >
-            <ArrowLeftIcon className="size-4 transition-transform group-hover:-translate-x-1" />
-            Back to Course
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
-          >
-            {sidebarOpen ? <XIcon className="size-5" /> : <ListIcon className="size-5" />}
-          </button>
-        </div>
-
-        <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-2 lg:px-6 pb-20">
-          {/* ── Loading ── */}
-          {isLoading && (
-            <ViewerSkeleton type={media?.content_type} />
-          )}
-
-          {/* ── Error ── */}
-          {!isLoading && error && (
-            <div className="flex flex-col items-center gap-5 py-24">
-              <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
-                {error.status === 403 ? (
-                  <LockIcon className="size-10 text-white/30" />
-                ) : (
-                  <AlertCircleIcon className="size-10 text-red-500/70" />
-                )}
-              </div>
-              <div className="space-y-2 text-center max-w-sm">
-                <p className="text-xl font-bold tracking-tight text-white/90">
-                  {error.status === 403
-                    ? "Content locked"
-                    : "Failed to load media"}
-                </p>
-                <p className="text-sm text-white/50 leading-relaxed">
-                  {error.status === 403
-                    ? "This module is locked or this course is not assigned to your account."
-                    : error.message}
-                </p>
-              </div>
-              {error.status !== 403 && (
-                <Button
-                  variant="outline"
-                  onClick={() => fetchContent(true)}
-                  className="rounded-full border-white/10 bg-white/5 px-6 text-white hover:bg-white/10 hover:text-white"
-                >
-                  <RefreshCwIcon className="mr-2 size-4" />
-                  Try Again
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* ── Media ── */}
-          {!isLoading && media && (
-            <div className="flex flex-col gap-6 animate-in fade-in duration-700 w-full relative">
-              <div className="absolute inset-0 bg-indigo-500/5 blur-[120px] rounded-full -z-10" />
-              {/* Title + badges */}
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 flex-1 flex-col gap-3">
-                  <div className="flex items-start gap-4">
-                    <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl">
-                      {media.content_type === "video" ? (
-                        <PlayCircleIcon className="size-6 text-indigo-400" />
-                      ) : (
-                        <FileTextIcon className="size-6 text-violet-400" />
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1.5 min-w-0">
-                      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-md leading-tight">
-                        {media.title}
-                      </h1>
-                      {resumeHint && pct < 100 && !media.progress?.is_completed && (
-                        <p className="text-xs uppercase font-medium tracking-widest text-indigo-300/70">
-                          {resumeHint}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="rounded-full border-white/10 bg-white/5 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-white/70"
-                  >
-                    {media.content_type}
-                  </Badge>
-                  {media.duration_seconds > 0 && (
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-white/10 bg-white/5 backdrop-blur-md px-3.5 py-1.5 text-xs text-white/60"
-                    >
-                      {formatDuration(media.duration_seconds)}
-                    </Badge>
-                  )}
-                  {(media.progress?.is_completed || sessionSummary?.content_completed || pct >= 100) && (
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.15)]"
-                    >
-                      <CheckCircle2Icon className="mr-1.5 size-3.5 inline" />
-                      Completed
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {sessionSummary && (
-                <SessionSummaryCard
-                  summary={sessionSummary}
-                  continueLabel={media.next_content?.title ?? null}
-                  onContinue={
-                    media.next_content
-                      ? () => goToContent(media.next_content!.id)
-                      : undefined
-                  }
-                />
-              )}
-
-              {/* Expired notice */}
-              {mediaExpired && (
-                <MediaExpiredNotice
-                  onRefresh={() => fetchContent(false)}
-                  isRefreshing={isRefreshing}
-                />
-              )}
-
-              {/* ── Video player ── */}
-              {media.content_type === "video" && !mediaExpired && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-[2rem] bg-[#000] ring-1 ring-white/10 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.9)]">
-                  <VideoPlayer
-                    src={media.media_url}
-                    resumePosition={resumePos}
-                    onExpired={() => setMediaExpired(true)}
-                    onStartSession={() => ensureSessionStarted("video")}
-                    onProgress={onVideoProgress}
-                    onPause={onVideoPause}
-                    onSeek={onVideoSeek}
-                    onRateChange={onVideoRateChange}
-                    onPlay={onVideoPlay}
-                    onEnd={onVideoEnd}
-                  />
-                </div>
-              )}
-
-              {/* ── PDF viewer ── */}
-              {media.content_type === "pdf" && !mediaExpired && (
-                <div className="rounded-[2rem] overflow-hidden border border-white/10 ring-1 ring-black/5 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.8)]">
-                  <PdfViewer
-                    src={media.media_url}
-                    resumePage={Math.max(1, Math.floor(resumePos))}
-                    totalPages={media.pdf_total_pages}
-                    onExpired={() => setMediaExpired(true)}
-                    onOpenSession={onPdfOpen}
-                    onPageChange={onPdfPageChange}
-                  />
-                </div>
-              )}
-
-              {/* Progress bar */}
-              {pct > 0 && (
-                <div className="space-y-3 mt-4 px-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">
-                    <span>Current progress</span>
-                    <span className={`tabular-nums ${(pct >= 100 || media.progress?.is_completed) ? "text-emerald-400" : "text-white/80"}`}>{pct.toFixed(0)}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 ring-1 ring-inset ring-white/5">
-                    <div
-                      className={`h-full rounded-full transition-[width] duration-1000 ease-out ${
-                        (pct >= 100 || media.progress?.is_completed)
-                          ? "bg-emerald-500 shadow-[0_0_20px_rgba(52,211,153,0.6)]"
-                          : "bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500 shadow-[0_0_20px_rgba(139,92,246,0.5)]"
-                      }`}
-                      style={{ width: `${Math.min(100, pct)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Prev / Next navigation */}
-              {(media.prev_content || media.next_content) && (
-                <div className="flex items-center gap-4 border-t border-white/10 pt-6 mt-6">
-                  {media.prev_content ? (
-                    <button
-                      type="button"
-                      onClick={() => goToContent(media.prev_content!.id)}
-                      className="group flex flex-1 items-center gap-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 text-left transition-all hover:border-white/20 hover:bg-white/10 hover:shadow-lg"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/80 transition-colors">
-                        <ChevronLeftIcon className="size-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-white/40 mb-1">Previous Module</p>
-                        <p className="truncate text-base font-semibold text-white/90 group-hover:text-white">
-                          {media.prev_content.title}
-                        </p>
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="flex-1" />
-                  )}
-
-                  {media.next_content ? (
-                    <button
-                      type="button"
-                      onClick={() => goToContent(media.next_content!.id)}
-                      className="group flex flex-1 items-center justify-end gap-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 text-right transition-all hover:border-white/20 hover:bg-white/10 hover:shadow-lg"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-white/40 mb-1">Next Module</p>
-                        <p className="truncate text-base font-semibold text-white/90 group-hover:text-white">
-                          {media.next_content.title}
-                        </p>
-                      </div>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/80 transition-colors">
-                        <ChevronRightIcon className="size-5" />
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="flex-1" />
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Sidebar (Modules) ── */}
-      <div 
-        className={`fixed inset-y-0 right-0 z-50 w-80 transform border-l border-white/10 bg-[#06060c]/95 backdrop-blur-3xl transition-transform duration-300 lg:static lg:translate-x-0 lg:flex flex-col ${sidebarOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-white/80 flex items-center gap-2">
-            <BookOpenIcon className="size-4 text-indigo-400" />
-            Curriculum
-          </h2>
-          <button 
-            type="button"
-            className="lg:hidden text-white/50 hover:text-white"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <XIcon className="size-5" />
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 p-4 space-y-6">
-          {!course ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full bg-white/5" />
-              <Skeleton className="h-10 w-full bg-white/5" />
-            </div>
-          ) : (
-            course.modules.map((mod) => (
-              <div key={mod.id} className="flex flex-col gap-2">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest px-2">
-                  Module {mod.order_number}
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {mod.content.map((c) => {
-                    const isActive = c.id === ctId
-                    const isLocked = !c.is_unlocked
-                    const isCompleted = c.progress?.is_completed
-
-                    return (
-                      <button
-                        type="button"
-                        key={c.id}
-                        disabled={isLocked}
-                        onClick={() => {
-                          if (!isLocked && !isActive) {
-                            void goToContent(c.id)
-                          }
-                          setSidebarOpen(false)
-                        }}
-                        className={`group flex items-center gap-3 rounded-xl p-3 text-left transition-all ${
-                          isActive
-                            ? "border border-indigo-500/30 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                            : isLocked
-                              ? "cursor-not-allowed opacity-40"
-                              : "border border-transparent hover:bg-white/5"
-                        }`}
-                      >
-                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-indigo-500/20 text-indigo-400" : isCompleted ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/50"}`}>
-                          {isLocked ? <LockIcon className="size-3.5" /> : isCompleted ? <CheckCircle2Icon className="size-4" /> : c.content_type === "video" ? <PlayCircleIcon className="size-3.5" /> : <FileTextIcon className="size-3.5" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`truncate text-sm font-medium ${isActive ? "text-indigo-100" : "text-white/80"} ${!isLocked && !isActive ? "group-hover:text-white" : ""}`}>{c.title}</p>
-                          <p className="mt-0.5 text-[10px] font-medium text-white/40">{formatDuration(c.duration_seconds)}</p>
-                        </div>
-                      </button>
-                    )
-                  })}
-                  {mod.quiz && (() => {
-                    const quiz = mod.quiz
-                    const isLocked = !mod.is_unlocked
-                    const isPassed = mod.quiz_status === "passed"
-                    const statusMeta = getQuizStatusMeta(mod.quiz_status)
-
-                    return (
-                      <button
-                        type="button"
-                        key={`quiz-${quiz.id}`}
-                        disabled={isLocked}
-                        onClick={() => {
-                          if (!isLocked) {
-                            void goToQuiz(quiz.id)
-                          }
-                          setSidebarOpen(false)
-                        }}
-                        className={`group flex items-center gap-3 rounded-xl p-3 text-left transition-all ${
-                          isLocked
-                            ? "cursor-not-allowed opacity-40"
-                            : "border border-transparent hover:bg-white/5"
-                        }`}
-                      >
-                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${isLocked ? "bg-white/5 text-white/30" : isPassed ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
-                          {isLocked ? <LockIcon className="size-3.5" /> : isPassed ? <CheckCircle2Icon className="size-4" /> : <TrophyIcon className="size-3.5" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className={`truncate text-sm font-medium ${isLocked ? "text-white/35" : "text-white/80 group-hover:text-white"}`}>{quiz.title}</p>
-                            {quiz.required_to_proceed && !isLocked && (
-                              <Badge
-                                variant="outline"
-                                className="rounded-full border-amber-500/25 px-1.5 py-0 text-[9px] font-semibold text-amber-400"
-                              >
-                                Required
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mt-0.5 text-[10px] font-medium text-white/40">
-                            Quiz
-                            {!isLocked ? <span className={`ml-2 ${statusMeta.className}`}>{statusMeta.label}</span> : null}
-                          </p>
-                        </div>
-                      </button>
-                    )
-                  })()}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-      
-      {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+      {valid ? (
+        <Viewer key={contentId} courseId={courseId} contentId={contentId} />
+      ) : (
+        <Alert variant="destructive" className="border-red-500/20 bg-red-500/10 text-red-400">
+          <AlertCircleIcon className="size-4" />
+          <AlertTitle>Invalid content</AlertTitle>
+          <AlertDescription>This content link is not valid.</AlertDescription>
+        </Alert>
       )}
-
     </div>
   )
 }
-

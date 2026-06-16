@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Link, useLocation } from "react-router-dom"
 import { CalendarDaysIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -10,6 +11,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { getBreadcrumbs, homeCrumb } from "@/config/breadcrumbs"
+import { useBreadcrumbContext } from "@/context/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -42,6 +45,20 @@ export function SiteHeader({ showAdminCalendar = false }: SiteHeaderProps) {
     () => new Date(),
   )
 
+  const { pathname } = useLocation()
+  const { override } = useBreadcrumbContext()
+
+  // Build the trail: leading "Home" crumb + the route trail. A detail page may
+  // override the leaf label with a live entity name.
+  const crumbs = React.useMemo(() => {
+    const home = homeCrumb(pathname)
+    const trail = getBreadcrumbs(pathname)
+    if (override && trail.length > 0) {
+      trail[trail.length - 1] = { label: override }
+    }
+    return [home, ...trail]
+  }, [pathname, override])
+
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
@@ -64,16 +81,37 @@ export function SiteHeader({ showAdminCalendar = false }: SiteHeaderProps) {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
 
-        {/* Breadcrumb */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="#">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Dashboard</BreadcrumbPage>
-            </BreadcrumbItem>
+        {/* Breadcrumb — dynamic, driven by the current route */}
+        <Breadcrumb className="min-w-0">
+          <BreadcrumbList className="flex-nowrap">
+            {crumbs.map((crumb, i) => {
+              const isLast = i === crumbs.length - 1
+              return (
+                <React.Fragment key={`${crumb.label}-${i}`}>
+                  <BreadcrumbItem className="min-w-0">
+                    {isLast ? (
+                      <BreadcrumbPage className="max-w-[12rem] truncate font-medium text-white sm:max-w-[20rem]">
+                        {crumb.label}
+                      </BreadcrumbPage>
+                    ) : crumb.to ? (
+                      <BreadcrumbLink asChild>
+                        <Link
+                          to={crumb.to}
+                          className="max-w-[10rem] truncate text-white/45 transition-colors hover:text-white sm:max-w-none"
+                        >
+                          {crumb.label}
+                        </Link>
+                      </BreadcrumbLink>
+                    ) : (
+                      <span className="max-w-[10rem] truncate text-white/30 sm:max-w-none">
+                        {crumb.label}
+                      </span>
+                    )}
+                  </BreadcrumbItem>
+                  {!isLast && <BreadcrumbSeparator className="text-white/25" />}
+                </React.Fragment>
+              )
+            })}
           </BreadcrumbList>
         </Breadcrumb>
 

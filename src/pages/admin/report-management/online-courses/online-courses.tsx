@@ -4,7 +4,6 @@ import { useState } from "react"
 import {
   ActivityIcon,
   AwardIcon,
-  BookOpenIcon,
   Building2Icon,
   DownloadIcon,
   ListChecksIcon,
@@ -199,16 +198,11 @@ export default function ReportOnlineCoursesPage() {
   return (
     <div className="space-y-5">
       {/* ── Header ── */}
-      <div className="flex items-start gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15">
-          <BookOpenIcon className="size-5 text-indigo-400" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Online Courses Report</h1>
-          <p className="mt-0.5 text-sm text-white/40">
-            Aggregated datasets, user performance, compliance, and evaluation metrics.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Online Courses Report</h1>
+        <p className="mt-0.5 text-sm text-white/40">
+          Aggregated datasets, user performance, compliance, and evaluation metrics.
+        </p>
       </div>
 
       {/* ── Tabs ── */}

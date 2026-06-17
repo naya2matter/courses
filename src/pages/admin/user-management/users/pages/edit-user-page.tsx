@@ -41,6 +41,7 @@ import { isApiError } from "@/lib/api"
 import { getUserById, updateUser } from "../service/user.service"
 import type { UpdateUserPayload } from "../types/user.types"
 import { useDepartmentOptions } from "../hook/use-department-options"
+import { useUserLevelTierOptions } from "../hook/use-user-level-tier-options"
 
 // Radix Select item values cannot be empty strings.
 const NONE_VALUE = "__none__"
@@ -75,6 +76,7 @@ export function EditUserPage() {
   const [role, setRole] = useState<"admin" | "user">("user")
   const [departmentId, setDepartmentId] = useState("")
   const [reportTo, setReportTo] = useState("")
+  const [selectedLevelId, setSelectedLevelId] = useState("")
   const [userLevelTierId, setUserLevelTierId] = useState("")
 
   const [showPassword, setShowPassword] = useState(false)
@@ -84,8 +86,19 @@ export function EditUserPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Linked options from departments data.
-  const { departments, allUsers, allTiers, isLoadingOptions } =
+  const { departments, allUsers, isLoadingOptions } =
     useDepartmentOptions()
+  const { levels, isLoadingTierOptions } =
+    useUserLevelTierOptions()
+
+  const visibleTiers = selectedLevelId
+    ? (levels.find((l) => String(l.id) === selectedLevelId)?.tiers ?? [])
+    : []
+
+  function handleLevelChange(value: string) {
+    setSelectedLevelId(value === NONE_VALUE ? "" : value)
+    setUserLevelTierId("")
+  }
 
   // Canonical load from GET /admin/users/getById/{id}.
   useEffect(() => {
@@ -107,7 +120,10 @@ export function EditUserPage() {
         setRole((user.role as "admin" | "user") ?? "user")
         setDepartmentId(user.department?.id ? String(user.department.id) : "")
         setReportTo(user.manager?.id ? String(user.manager.id) : "")
-        setUserLevelTierId(user.tier?.id ? String(user.tier.id) : "")
+        if (user.tier) {
+          setUserLevelTierId(String(user.tier.id))
+          setSelectedLevelId(user.tier.level?.id ? String(user.tier.level.id) : "")
+        }
       })
       .catch((err) => {
         if (cancelled) return
@@ -447,26 +463,51 @@ export function EditUserPage() {
                   </div>
 
                   <div className="grid gap-1.5">
-                    <Label htmlFor="user-tier">User Level Tier</Label>
+                    <Label htmlFor="user-level">Level</Label>
+                    <Select
+                      value={selectedLevelId || NONE_VALUE}
+                      onValueChange={handleLevelChange}
+                      disabled={submitting || isLoadingUser || isLoadingTierOptions}
+                    >
+                      <SelectTrigger id="user-level" className="h-9 w-full">
+                        <SelectValue placeholder={isLoadingTierOptions ? "Loading..." : "Select level"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value={NONE_VALUE}>No level</SelectItem>
+                          {levels.map((level) => (
+                            <SelectItem key={level.id} value={String(level.id)}>
+                              {level.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="user-tier">Tier</Label>
                     <Select
                       value={userLevelTierId || NONE_VALUE}
                       onValueChange={(value) =>
                         setUserLevelTierId(value === NONE_VALUE ? "" : value)
                       }
-                      disabled={submitting || isLoadingUser || isLoadingOptions}
+                      disabled={submitting || isLoadingUser || isLoadingTierOptions || !selectedLevelId}
                     >
                       <SelectTrigger id="user-tier" className="h-9 w-full">
-                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select tier"} />
+                        <SelectValue placeholder={!selectedLevelId ? "Select a level first" : "Select tier"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
                           <SelectItem value={NONE_VALUE}>No tier</SelectItem>
-                          {allTiers.map((tier) => (
-                            <SelectItem key={tier.id} value={String(tier.id)}>
-                              {tier.tier_name}
-                              {tier.level?.name ? ` / ${tier.level.name}` : ""}
-                            </SelectItem>
-                          ))}
+                          {visibleTiers
+                            .slice()
+                            .sort((a, b) => a.tier_order - b.tier_order)
+                            .map((tier) => (
+                              <SelectItem key={tier.id} value={String(tier.id)}>
+                                {tier.tier_name}
+                              </SelectItem>
+                            ))}
                         </SelectGroup>
                       </SelectContent>
                     </Select>

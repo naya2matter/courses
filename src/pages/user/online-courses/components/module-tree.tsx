@@ -65,7 +65,7 @@ function ContentRow({ content, locked, onOpen }: { content: ModuleContent; locke
   )
 }
 
-function ModuleBlock({ module, index, onOpenContent }: { module: CourseModule; index: number; onOpenContent: (id: number) => void }) {
+function ModuleBlock({ module, index, onOpenContent, onOpenQuiz }: { module: CourseModule; index: number; onOpenContent: (id: number) => void; onOpenQuiz: (quizId: number) => void }) {
   const [open, setOpen] = useState(module.is_unlocked && !module.is_completed)
   const locked = !module.is_unlocked
   const doneCount = module.content.filter((c) => c.progress?.is_completed).length
@@ -93,11 +93,26 @@ function ModuleBlock({ module, index, onOpenContent }: { module: CourseModule; i
           </p>
         </div>
 
-        {module.has_quiz && (
-          <Badge variant="outline" className="hidden shrink-0 gap-1 rounded-full border-purple-500/25 bg-purple-500/10 text-[10px] text-purple-300 sm:flex">
+        {module.has_quiz && module.quiz_id != null && !locked ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); onOpenQuiz(module.quiz_id!) }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onOpenQuiz(module.quiz_id!) } }}
+            className={`hidden shrink-0 cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors sm:inline-flex ${
+              module.quiz_status === "passed"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                : "border-purple-500/30 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20"
+            }`}
+          >
+            <HelpCircleIcon className="size-3" />
+            {module.quiz_status === "passed" ? "Quiz · Passed" : "Take Quiz"}
+          </span>
+        ) : module.has_quiz ? (
+          <Badge variant="outline" className="hidden shrink-0 gap-1 rounded-full border-white/15 bg-white/5 text-[10px] text-white/40 sm:flex">
             <HelpCircleIcon className="size-3" />Quiz
           </Badge>
-        )}
+        ) : null}
 
         {!locked && <ChevronDownIcon className={`size-4 shrink-0 text-white/40 transition-transform ${open ? "rotate-180" : ""}`} />}
       </button>
@@ -116,11 +131,11 @@ function ModuleBlock({ module, index, onOpenContent }: { module: CourseModule; i
   )
 }
 
-export function ModuleTree({ modules, onOpenContent }: { modules: CourseModule[]; onOpenContent: (id: number) => void }) {
+export function ModuleTree({ modules, onOpenContent, onOpenQuiz }: { modules: CourseModule[]; onOpenContent: (id: number) => void; onOpenQuiz: (quizId: number) => void }) {
   return (
     <div className="space-y-3">
       {modules.map((m, i) => (
-        <ModuleBlock key={m.id} module={m} index={i} onOpenContent={onOpenContent} />
+        <ModuleBlock key={m.id} module={m} index={i} onOpenContent={onOpenContent} onOpenQuiz={onOpenQuiz} />
       ))}
     </div>
   )

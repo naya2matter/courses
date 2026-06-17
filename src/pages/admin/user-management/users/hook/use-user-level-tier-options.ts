@@ -78,6 +78,7 @@ export function useUserLevelTierOptions() {
   const tiers = useMemo(() => flattenLevelTiers(levels), [levels])
 
   return {
+    levels,
     tiers,
     isLoadingTierOptions: isLoading,
     tierOptionsError: error,

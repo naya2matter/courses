@@ -7,7 +7,6 @@ import {
   AlertCircleIcon,
   BookOpenIcon,
   CheckCircle2Icon,
-  Loader2Icon,
   PlayCircleIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -19,6 +18,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
+
+import { PageHeader } from "@/components/user/page-header"
 
 import { getAssignedOnlineCourses } from "./service/user-online-courses.service"
 import type { OnlineCourseCard as CardType, LearningStatus } from "./types/user-online-courses.types"
@@ -100,22 +101,12 @@ export function UserOnlineCoursesPage() {
   return (
     <div className="flex flex-col gap-6 text-white">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15">
-            <BookOpenIcon className="size-5 text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">My Online Courses</h1>
-            <p className="mt-0.5 text-sm text-white/40">Self-paced video & document courses assigned to you.</p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={fetchCourses} disabled={isLoading}
-          className="self-start border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white">
-          {isLoading ? <Loader2Icon className="mr-1.5 size-3.5 animate-spin" /> : <RefreshCwIcon className="mr-1.5 size-3.5" />}
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="My Online Courses"
+        description="Self-paced video & document courses assigned to you."
+        onRefresh={fetchCourses}
+        refreshing={isLoading}
+      />
 
       {/* Stats */}
       {!error && (

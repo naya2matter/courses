@@ -123,6 +123,7 @@ const USER: RouteEntry[] = [
 
   { pattern: "/user/online-courses", trail: [{ label: "My Online Courses" }] },
   { pattern: "/user/online-courses/:courseId/content/:contentId", trail: [{ label: "My Online Courses", to: "/user/online-courses" }, { label: "Course Details", to: "/user/online-courses/:courseId" }, { label: "Content" }] },
+  { pattern: "/user/online-courses/:courseId/quiz/:quizId", trail: [{ label: "My Online Courses", to: "/user/online-courses" }, { label: "Course Details", to: "/user/online-courses/:courseId" }, { label: "Quiz" }] },
   { pattern: "/user/online-courses/:id", trail: [{ label: "My Online Courses", to: "/user/online-courses" }, { label: "Course Details" }] },
 ]
 

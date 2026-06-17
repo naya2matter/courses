@@ -3,7 +3,6 @@ import {
   AlertCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  RefreshCwIcon,
 } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -16,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { isApiError } from "@/lib/api"
+
+import { PageHeader } from "@/components/user/page-header"
 
 import { UserEvaluationDetailSheet } from "./components/user-evaluation-detail-sheet"
 import { UserEvaluationFiltersToolbar } from "./components/user-evaluation-filters-toolbar"
@@ -169,26 +170,12 @@ export function UserEvaluationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">My Evaluations</h1>
-          <p className="text-sm text-white/50">
-            Review your course evaluation scores, performance levels, and score history.
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={fetchList}
-          disabled={isLoading}
-          aria-label="Refresh evaluations"
-        >
-          <RefreshCwIcon className={isLoading ? "size-4 animate-spin" : "size-4"} />
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="My Evaluations"
+        description="Review your course evaluation scores, performance levels, and score history."
+        onRefresh={fetchList}
+        refreshing={isLoading}
+      />
 
       {error && (
         <Alert variant="destructive">

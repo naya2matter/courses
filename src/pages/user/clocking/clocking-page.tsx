@@ -9,7 +9,6 @@ import {
   ClockIcon,
   LogInIcon,
   LogOutIcon,
-  RefreshCwIcon,
   StarIcon,
   BriefcaseIcon,
   
@@ -22,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 
+import { PageHeader } from "@/components/user/page-header"
 import { getActiveSession, getClockingHistory } from "./service/clocking.service"
 import { ClockInDialog } from "./components/clock-in-dialog"
 import { ClockOutDialog } from "./components/clock-out-dialog"
@@ -72,28 +72,19 @@ function AttendanceHeader({ onRefresh }: { onRefresh: () => void }) {
   const displayTime = now.toLocaleTimeString(undefined, { timeStyle: 'short' })
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border/40 pb-6 mb-6">
-      <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          Attendance
-        </h1>
-        <p className="text-muted-foreground text-sm max-w-lg">
-          Track your learning sessions and monitor your productivity over time.
-        </p>
-      </div>
-      
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/40 border border-border/50 text-sm font-medium text-secondary-foreground">
-          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+    <PageHeader
+      title="Attendance"
+      description="Track your learning sessions and monitor your productivity over time."
+      onRefresh={onRefresh}
+      actions={
+        <div className="hidden items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/60 sm:flex">
+          <CalendarIcon className="h-4 w-4 text-white/40" />
           <span>{displayDate}</span>
-          <span className="text-border mx-1">|</span>
+          <span className="mx-1 text-white/20">|</span>
           <span className="tabular-nums">{displayTime}</span>
         </div>
-        <Button variant="outline" size="icon" onClick={onRefresh} title="Refresh Data" className="h-9 w-9">
-          <RefreshCwIcon className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </div>
-    </div>
+      }
+    />
   )
 }
 
@@ -467,8 +458,8 @@ export function UserClockingPage() {
   }
 
   return (
-    <div className="w-full  px-4 md:px-6 lg:px-8 py-8 md:py-10 space-y-8 animate-in fade-in duration-500 text-foreground bg-background min-h-screen">
-      
+    <div className="flex flex-col gap-8 animate-in fade-in duration-500 text-white">
+
       <AttendanceHeader onRefresh={() => { fetchActiveSession(); fetchHistory(page); }} />
 
       {sessionError && (

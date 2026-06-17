@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
   AlertCircleIcon,
@@ -280,6 +280,9 @@ function QuizTimer({ minutes }: { minutes: number }) {
 export function QuizTakePage() {
   const { id, attemptId } = useParams<{ id: string; attemptId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const course = searchParams.get("course")
+  const courseSuffix = course ? `?course=${course}` : ""
   const quizId = Number(id)
   const parsedAttemptId = Number(attemptId)
 
@@ -344,7 +347,7 @@ export function QuizTakePage() {
         .filter(Boolean) as { quiz_question_id: number; answer: string }[]
 
       const attempt = await submitQuizAnswers(quiz.id, parsedAttemptId, { answers })
-      navigate(`/user/quizzes/${quiz.id}/result/${attempt.id}`)
+      navigate(`/user/quizzes/${quiz.id}/result/${attempt.id}${courseSuffix}`)
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return
       if (isApiError(err)) {
@@ -370,7 +373,7 @@ export function QuizTakePage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/user/quizzes/${quizId}`)}
+            onClick={() => navigate(course ? `/user/online-courses/${course}/quiz/${quizId}` : `/user/quizzes/${quizId}`)}
             className="flex items-center gap-1.5 text-white/50 hover:text-white -ml-2"
           >
             <ArrowLeftIcon className="size-4" />

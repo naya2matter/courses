@@ -71,6 +71,10 @@ export function OnlineCourseDetailPage() {
     navigate(`/user/online-courses/${courseId}/content/${contentId}`)
   }
 
+  function openQuiz(quizId: number) {
+    navigate(`/user/online-courses/${courseId}/quiz/${quizId}`)
+  }
+
   useDynamicBreadcrumb(course?.title)
 
   const resumeTarget = course ? findResumeContent(course) : null
@@ -170,7 +174,7 @@ export function OnlineCourseDetailPage() {
           {/* Modules */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">Course content</h2>
-            <ModuleTree modules={course.modules} onOpenContent={openContent} />
+            <ModuleTree modules={course.modules} onOpenContent={openContent} onOpenQuiz={openQuiz} />
           </div>
         </>
       )}

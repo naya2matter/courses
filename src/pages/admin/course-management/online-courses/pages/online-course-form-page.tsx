@@ -297,15 +297,32 @@ function VideoSearchSelect({
   const [options, setOptions] = useState<VideoOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
 
+  // Fetch categories once when picker first opens
   useEffect(() => {
-    if (!open) return
+    if (!open || categories.length > 0) return
+    apiClient
+      .get<{ data: { id: number; name: string }[] }>("/admin/video-categories/getAll")
+      .then((res) => setCategories(res.data ?? []))
+      .catch(() => {})
+  }, [open, categories.length])
+
+  // Fetch videos — includes category filter; resets category when picker closes
+  useEffect(() => {
+    if (!open) {
+      if (selectedCategoryId !== null) setSelectedCategoryId(null)
+      return
+    }
     let cancelled = false
     setLoading(true)
     const t = setTimeout(async () => {
       try {
         const qs = new URLSearchParams({ per_page: "50" })
         if (query.trim()) qs.set("search", query.trim())
+        if (selectedCategoryId != null)
+          qs.set("video_category_id", String(selectedCategoryId))
         const res = await apiClient.get<{ data: VideoOption[] }>(
           `/admin/videos/getAll?${qs}`,
         )
@@ -320,7 +337,7 @@ function VideoSearchSelect({
       cancelled = true
       clearTimeout(t)
     }
-  }, [query, open])
+  }, [query, open, selectedCategoryId])
 
   const displayValue = open
     ? query
@@ -365,7 +382,46 @@ function VideoSearchSelect({
       </div>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-full rounded-xl border border-white/10 bg-popover shadow-2xl overflow-hidden">
+        <div
+          className="absolute z-30 mt-1 w-full rounded-xl border border-white/10 bg-popover shadow-2xl overflow-hidden"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {/* Category filter — shown once categories have loaded */}
+          {categories.length > 0 && (
+            <div className="flex items-center gap-2 border-b border-white/10 bg-white/3 px-3.5 py-2">
+              <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted-foreground/50">
+                Category
+              </span>
+              <select
+                value={selectedCategoryId ?? ""}
+                onChange={(e) =>
+                  setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)
+                }
+                className="flex-1 bg-transparent text-xs text-muted-foreground outline-none cursor-pointer"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              {selectedCategoryId != null && (
+                <button
+                  type="button"
+                  className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setSelectedCategoryId(null)
+                  }}
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Video results */}
           <div className="max-h-52 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-5">

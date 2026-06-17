@@ -72,6 +72,7 @@ export function CreateUserPage() {
   const [role, setRole] = useState<"user" | "admin">("user")
   const [departmentId, setDepartmentId] = useState("")
   const [reportTo, setReportTo] = useState("")
+  const [selectedLevelId, setSelectedLevelId] = useState("")
   const [userLevelTierId, setUserLevelTierId] = useState("")
 
   const [showPassword, setShowPassword] = useState(false)
@@ -82,8 +83,17 @@ export function CreateUserPage() {
   // Linked options from departments page data.
   const { departments, allUsers, isLoadingOptions } =
     useDepartmentOptions()
-  const { tiers, isLoadingTierOptions, tierOptionsError } =
+  const { levels, isLoadingTierOptions, tierOptionsError } =
     useUserLevelTierOptions()
+
+  const visibleTiers = selectedLevelId
+    ? (levels.find((l) => String(l.id) === selectedLevelId)?.tiers ?? [])
+    : []
+
+  function handleLevelChange(value: string) {
+    setSelectedLevelId(value === NONE_VALUE ? "" : value)
+    setUserLevelTierId("")
+  }
 
   function validate(): string | null {
     if (!name.trim()) return "Name is required."
@@ -383,24 +393,21 @@ export function CreateUserPage() {
                   </div>
 
                   <div className="grid gap-1.5">
-                    <Label htmlFor="user-tier">User Level Tier</Label>
+                    <Label htmlFor="user-level">Level</Label>
                     <Select
-                      value={userLevelTierId || NONE_VALUE}
-                      onValueChange={(value) =>
-                        setUserLevelTierId(value === NONE_VALUE ? "" : value)
-                      }
+                      value={selectedLevelId || NONE_VALUE}
+                      onValueChange={handleLevelChange}
                       disabled={submitting || isLoadingTierOptions}
                     >
-                      <SelectTrigger id="user-tier" className="h-9 w-full">
-                        <SelectValue placeholder={isLoadingTierOptions ? "Loading..." : "Select tier"} />
+                      <SelectTrigger id="user-level" className="h-9 w-full">
+                        <SelectValue placeholder={isLoadingTierOptions ? "Loading..." : "Select level"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem value={NONE_VALUE}>No tier</SelectItem>
-                          {tiers.map((tier) => (
-                            <SelectItem key={tier.id} value={String(tier.id)}>
-                              {tier.tier_name}
-                              {tier.level.name ? ` / ${tier.level.name}` : ""}
+                          <SelectItem value={NONE_VALUE}>No level</SelectItem>
+                          {levels.map((level) => (
+                            <SelectItem key={level.id} value={String(level.id)}>
+                              {level.name}
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -409,6 +416,34 @@ export function CreateUserPage() {
                     {tierOptionsError && (
                       <p className="text-xs text-destructive">{tierOptionsError}</p>
                     )}
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="user-tier">Tier</Label>
+                    <Select
+                      value={userLevelTierId || NONE_VALUE}
+                      onValueChange={(value) =>
+                        setUserLevelTierId(value === NONE_VALUE ? "" : value)
+                      }
+                      disabled={submitting || isLoadingTierOptions || !selectedLevelId}
+                    >
+                      <SelectTrigger id="user-tier" className="h-9 w-full">
+                        <SelectValue placeholder={!selectedLevelId ? "Select a level first" : "Select tier"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value={NONE_VALUE}>No tier</SelectItem>
+                          {visibleTiers
+                            .slice()
+                            .sort((a, b) => a.tier_order - b.tier_order)
+                            .map((tier) => (
+                              <SelectItem key={tier.id} value={String(tier.id)}>
+                                {tier.tier_name}
+                              </SelectItem>
+                            ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

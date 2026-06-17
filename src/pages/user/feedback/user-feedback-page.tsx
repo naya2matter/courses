@@ -3,10 +3,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { PlusIcon, Loader2Icon, AlertCircleIcon, XIcon } from "lucide-react"
+import { PlusIcon, AlertCircleIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { isApiError } from "@/lib/api"
+import { PageHeader } from "@/components/user/page-header"
 import { getMyFeedback } from "./service/user-feedback.service"
 import type { PaginationMeta, UserFeedback, UserFeedbackFilters } from "./types/user-feedback.types"
 import { UserFeedbackSummaryCards } from "./components/user-feedback-summary-cards"
@@ -76,29 +77,18 @@ export function UserFeedbackPage() {
   return (
     <div className="space-y-6">
       {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Feedback</h1>
-          <p className="mt-1 text-muted-foreground">
-            Submit ideas, suggestions, or feature requests. Track admin responses here.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        title="My Feedback"
+        description="Submit ideas, suggestions, or feature requests. Track admin responses here."
+        onRefresh={() => fetchFeedback()}
+        refreshing={isLoading}
+        actions={
           <Button onClick={() => setSubmitOpen(true)} className="w-fit">
             <PlusIcon className="mr-2 h-4 w-4" />
             Submit Feedback
           </Button>
-          <Button
-            variant="outline"
-            className="w-fit"
-            disabled={isLoading}
-            onClick={() => fetchFeedback()}
-          >
-            {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-            Refresh
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Summary cards ───────────────────────────────────────────────────── */}
       <UserFeedbackSummaryCards items={items} total={meta?.total} />

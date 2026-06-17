@@ -121,19 +121,29 @@ export interface UserAudioPlayerResponse {
 
 /**
  * One listened-time chunk to send to the server.
- * current_time : playback position at moment of recording (seconds)
+ * current_time : playback position at moment of recording (seconds, ≥ 0)
  * listened_time: integer seconds actually listened in this chunk (0–3600)
- * batch_key    : optional idempotency key (max 120 chars)
+ *
+ * NOTE: the idempotency key is NOT per-chunk — see `batch_key` on
+ * UpdateProgressBody. The backend validation only accepts
+ * `chunks.*.current_time` and `chunks.*.listened_time`.
  */
 export interface ProgressChunk {
   current_time: number
   listened_time: number  // integer, 0-3600
-  batch_key?: string
 }
 
-/** Request body for POST /user/audio/progress/update/{audioId} */
+/**
+ * Request body for POST /user/audio/progress/update/{audioId}.
+ *
+ * `batch_key` is a TOP-LEVEL idempotency key (max 120 chars). The server
+ * caches it per (user, audio, batch_key); replaying the same key returns the
+ * existing progress WITHOUT re-applying the chunks, so a lost-response retry
+ * never double-counts listened time. Always resend the same key on retry.
+ */
 export interface UpdateProgressBody {
   chunks: ProgressChunk[]  // 1–300 chunks per request
+  batch_key?: string       // ≤ 120 chars, top-level idempotency key
 }
 
 /** Response envelope from POST /user/audio/progress/update/{audioId} */

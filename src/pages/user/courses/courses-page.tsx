@@ -9,7 +9,6 @@ import {
   CalendarIcon,
   ClockIcon,
   GlobeIcon,
-  Loader2Icon,
   LockIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -23,6 +22,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
+
+import { PageHeader } from "@/components/user/page-header"
 
 import { getAllCourses, getMyEnrollments } from "./service/courses.service"
 import type { Course, CoursePaginationMeta, CourseRegistration } from "./types/courses.types"
@@ -361,26 +362,12 @@ export function UserCoursesPage() {
   return (
     <div className="flex flex-col gap-6 text-white">
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Courses</h1>
-          <p className="text-sm text-white/50">Browse all courses accessible to you.</p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchCourses(currentPage)}
-          disabled={isLoading}
-          className="border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white self-start"
-        >
-          {isLoading ? (
-            <Loader2Icon className="size-3.5 mr-1.5 animate-spin" />
-          ) : (
-            <RefreshCwIcon className="size-3.5 mr-1.5" />
-          )}
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="Courses"
+        description="Browse all courses accessible to you."
+        onRefresh={() => fetchCourses(currentPage)}
+        refreshing={isLoading}
+      />
 
       {/* ── Stats strip ──────────────────────────────────────────────────────── */}
       {/* {!isLoading && !error && courses.length > 0 && (

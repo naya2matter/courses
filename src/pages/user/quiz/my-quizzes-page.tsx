@@ -4,7 +4,6 @@ import {
   BookOpenCheckIcon,
   ClockIcon,
   AlertCircleIcon,
-  RefreshCwIcon,
   ChevronRightIcon,
   TrophyIcon,
   CalendarIcon,
@@ -27,6 +26,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { isApiError } from "@/lib/api"
+
+import { PageHeader } from "@/components/user/page-header"
 
 import { getUserQuizList } from "./service/user-quiz.service"
 import type { UserQuizListItem } from "./types/user-quiz.types"
@@ -417,29 +418,12 @@ export function MyQuizzesPage() {
   return (
     <div className="space-y-7">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/8">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center size-10 rounded-xl bg-indigo-600/20 border border-indigo-500/25 shadow-md shadow-indigo-500/10">
-            <BookOpenCheckIcon className="size-5 text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">My Quizzes</h1>
-            <p className="text-[13px] text-white/40 mt-0.5">
-              Track your progress and scores
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchQuizzes}
-          disabled={isLoading}
-          className="flex items-center gap-2 shrink-0 border-white/12 text-white/60 hover:text-white hover:border-white/25 bg-transparent rounded-xl"
-        >
-          <RefreshCwIcon className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="My Quizzes"
+        description="Track your progress and scores."
+        onRefresh={fetchQuizzes}
+        refreshing={isLoading}
+      />
 
       {/* Error state */}
       {error && (

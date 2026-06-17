@@ -98,6 +98,7 @@ import { UserBlogDetailPage } from "@/pages/user/blog/blog-detail-page"
 import { UserOnlineCoursesPage } from "@/pages/user/online-courses/online-courses-page"
 import { OnlineCourseDetailPage } from "@/pages/user/online-courses/online-course-detail-page"
 import { OnlineContentViewerPage } from "@/pages/user/online-courses/online-content-viewer-page"
+import { CourseQuizPage } from "@/pages/user/online-courses/course-quiz-page"
 
 // User — Quiz pages
 import { MyQuizzesPage } from "@/pages/user/quiz/my-quizzes-page"
@@ -223,6 +224,7 @@ function App() {
               <Route path="/user/online-courses" element={<UserOnlineCoursesPage />} />
               <Route path="/user/online-courses/:id" element={<OnlineCourseDetailPage />} />
               <Route path="/user/online-courses/:courseId/content/:contentId" element={<OnlineContentViewerPage />} />
+              <Route path="/user/online-courses/:courseId/quiz/:quizId" element={<CourseQuizPage />} />
             </Route>
           </Route>
 

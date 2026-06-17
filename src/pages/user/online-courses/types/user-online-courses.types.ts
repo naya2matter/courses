@@ -62,6 +62,7 @@ export interface CourseModule {
   description: string | null
   order_number: number
   has_quiz: boolean
+  quiz_id: number | null
   is_required: boolean
   is_unlocked: boolean
   is_completed: boolean

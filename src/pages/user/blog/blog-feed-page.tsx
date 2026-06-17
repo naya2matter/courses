@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
 
+import { PageHeader } from "@/components/user/page-header"
+
 import { getPublicBlogPosts } from "./service/user-blog.service"
 import type { PaginationMeta, PublicBlogPost } from "./types/user-blog.types"
 
@@ -231,41 +233,19 @@ export function UserBlogFeedPage() {
   return (
     <div className="space-y-5">
       {/* ── Page header ───────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-4">
-        <div className="flex items-center gap-3.5">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-inset ring-primary/20">
-            <BookOpenIcon className="size-5 text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold tracking-tight text-white">
-                The Blog
-              </h1>
-              {!isLoading && meta.total > 0 && (
-                <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-px text-[11px] font-medium tabular-nums text-white/40">
-                  {meta.total}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-white/40">
-              Articles, videos, and audio from our team.
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 text-white/40 hover:text-white/80"
-          onClick={fetchFeed}
-          disabled={isLoading}
-          aria-label="Refresh feed"
-        >
-          <RefreshCwIcon
-            className={isLoading ? "size-3.5 animate-spin" : "size-3.5"}
-          />
-          Refresh
-        </Button>
-      </header>
+      <PageHeader
+        title="The Blog"
+        description="Articles, videos, and audio from our team."
+        badge={
+          !isLoading && meta.total > 0 ? (
+            <span className="rounded-md border border-white/10 bg-white/5 px-1.5 py-px text-[11px] font-medium tabular-nums text-white/40">
+              {meta.total}
+            </span>
+          ) : undefined
+        }
+        onRefresh={fetchFeed}
+        refreshing={isLoading}
+      />
 
       {/* ── Error state ───────────────────────────────────────────────────── */}
       {error && !isLoading && (

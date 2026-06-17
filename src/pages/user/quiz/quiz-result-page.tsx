@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
   AlertCircleIcon,
@@ -307,8 +307,14 @@ function ResultSkeleton() {
 export function QuizResultPage() {
   const { id, attemptId } = useParams<{ id: string; attemptId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const course = searchParams.get("course")
   const quizId = Number(id)
   const parsedAttemptId = Number(attemptId)
+
+  // When opened from inside a course, navigation returns into the course.
+  const quizIntroPath = course ? `/user/online-courses/${course}/quiz/${quizId}` : `/user/quizzes/${quizId}`
+  const quizListPath = course ? `/user/online-courses/${course}` : "/user/quizzes"
 
   const [attempt, setAttempt] = useState<UserQuizAttemptResource | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -356,7 +362,7 @@ export function QuizResultPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/user/quizzes/${quizId}`)}
+          onClick={() => navigate(quizIntroPath)}
           className="flex items-center gap-1.5 text-white/45 hover:text-white -ml-2 rounded-xl"
         >
           <ArrowLeftIcon className="size-4" />
@@ -530,15 +536,15 @@ export function QuizResultPage() {
           <div className="flex flex-wrap gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate("/user/quizzes")}
+              onClick={() => navigate(quizListPath)}
               className="flex items-center gap-2 border-white/15 text-white/60 hover:text-white bg-transparent"
             >
               <ArrowLeftIcon className="size-4" />
-              My Quizzes
+              {course ? "Back to course" : "My Quizzes"}
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(`/user/quizzes/${quizId}`)}
+              onClick={() => navigate(quizIntroPath)}
               className="flex items-center gap-2 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 bg-transparent"
             >
               <BookOpenCheckIcon className="size-4" />

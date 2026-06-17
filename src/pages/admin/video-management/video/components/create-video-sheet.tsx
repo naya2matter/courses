@@ -7,6 +7,7 @@ import {
   AlertCircleIcon,
   CheckCircleIcon,
   ChevronRightIcon,
+  FileTextIcon,
   FileVideoIcon,
   ImageIcon,
   Loader2Icon,
@@ -42,6 +43,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 
 import { useChunkUpload } from "../hooks/use-chunk-upload"
+import { uploadVideoSubtitle } from "../service/video.service"
 import type { CreateVideoPayload, VideoDetail } from "../types/video.types"
 import type { VideoCategory } from "../../categories/types/category.types"
 
@@ -93,7 +95,11 @@ export function CreateVideoPanel({
   const [durationSeconds, setDurationSeconds] = useState("")
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState("")
-  const [subtitleVttPath, setSubtitleVttPath] = useState("")
+  const subtitleInputRef = useRef<HTMLInputElement>(null)
+  const [subtitleFile, setSubtitleFile] = useState<File | null>(null)
+  const [subtitleError, setSubtitleError] = useState<string | null>(null)
+  const [isUploadingSubtitle, setIsUploadingSubtitle] = useState(false)
+  const [subtitleUploadProgress, setSubtitleUploadProgress] = useState(0)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -191,12 +197,30 @@ export function CreateVideoPanel({
       description: description.trim() || null,
       duration_seconds: durationSeconds !== "" ? Number(durationSeconds) : null,
       thumbnail: thumbnailFile,
-      subtitle_vtt_path: subtitleVttPath.trim() || null,
     }
 
     setIsSubmitting(true)
     try {
-      await onCreate(payload)
+      const createdVideo = await onCreate(payload)
+
+      // Upload subtitle file if one was selected
+      if (subtitleFile && createdVideo?.id) {
+        setIsUploadingSubtitle(true)
+        setSubtitleUploadProgress(0)
+        try {
+          await uploadVideoSubtitle(createdVideo.id, subtitleFile, (pct) => setSubtitleUploadProgress(pct))
+        } catch {
+          // Non-fatal: video was created, just warn about subtitle
+          setSubmitError("Video created but subtitle upload failed. Upload it from the video detail page.")
+          setIsSubmitting(false)
+          setIsUploadingSubtitle(false)
+          onSuccess()
+          return
+        } finally {
+          setIsUploadingSubtitle(false)
+        }
+      }
+
       onSuccess()
     } catch (err) {
       if (isApiError(err)) {
@@ -604,18 +628,88 @@ export function CreateVideoPanel({
                   </div>
                 </div>
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="cv-subtitle-inline">Subtitle VTT Path</Label>
-                  <Input
-                    id="cv-subtitle-inline"
-                    placeholder="subtitles/video.vtt"
-                    value={subtitleVttPath}
-                    onChange={(e) => setSubtitleVttPath(e.target.value)}
-                    disabled={isSubmitting}
-                  />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Subtitle (.vtt)</Label>
                   <p className="text-xs text-muted-foreground">
-                    Optional. Use this only when a subtitle file already exists server-side.
+                    Optional WebVTT subtitle file. Can also be uploaded later from the video detail page.
                   </p>
+
+                  {subtitleFile ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-background/60 px-4 py-3">
+                      <FileTextIcon className="h-4 w-4 shrink-0 text-violet-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{subtitleFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {subtitleFile.size < 1024 * 1024
+                            ? `${(subtitleFile.size / 1024).toFixed(1)} KB`
+                            : `${(subtitleFile.size / (1024 * 1024)).toFixed(1)} MB`}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setSubtitleFile(null)
+                          setSubtitleError(null)
+                          if (subtitleInputRef.current) subtitleInputRef.current.value = ""
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl border border-dashed px-4 py-3 text-left text-sm transition-colors",
+                        "border-white/15 bg-background/40 text-muted-foreground",
+                        "hover:border-violet-400/40 hover:bg-white/[0.03]",
+                        "disabled:pointer-events-none disabled:opacity-50"
+                      )}
+                      onClick={() => subtitleInputRef.current?.click()}
+                      disabled={isSubmitting}
+                    >
+                      <FileTextIcon className="h-4 w-4 shrink-0 text-violet-400/60" />
+                      Click to choose a .vtt subtitle file
+                    </button>
+                  )}
+
+                  <input
+                    ref={subtitleInputRef}
+                    type="file"
+                    accept=".vtt"
+                    className="hidden"
+                    disabled={isSubmitting}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null
+                      setSubtitleError(null)
+                      if (!file) { setSubtitleFile(null); return }
+                      const ext = file.name.split(".").pop()?.toLowerCase()
+                      if (ext !== "vtt") {
+                        setSubtitleError("Only .vtt files are accepted.")
+                        if (subtitleInputRef.current) subtitleInputRef.current.value = ""
+                        return
+                      }
+                      setSubtitleFile(file)
+                    }}
+                  />
+
+                  {subtitleError && (
+                    <p className="text-xs text-destructive">{subtitleError}</p>
+                  )}
+
+                  {isUploadingSubtitle && (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Uploading subtitle…</span>
+                        <span>{subtitleUploadProgress}%</span>
+                      </div>
+                      <Progress value={subtitleUploadProgress} className="h-1.5 bg-white/10" />
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

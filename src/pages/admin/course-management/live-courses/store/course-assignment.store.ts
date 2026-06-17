@@ -20,6 +20,7 @@ export const useCourseAssignmentStore = create<CourseAssignmentState>((set, get)
   // ── List state ─────────────────────────────────────────────────────────────
   items: [],
   meta: null,
+  summaryCards: [],
   isLoading: false,
   error: null,
   filters: { page: 1, per_page: DEFAULT_PER_PAGE },
@@ -43,7 +44,12 @@ export const useCourseAssignmentStore = create<CourseAssignmentState>((set, get)
 
     try {
       const response = await getAllCourseAssignments(mergedFilters)
-      set({ items: response.data, meta: response.meta, isLoading: false })
+      set({
+        items: response.data,
+        meta: response.meta,
+        summaryCards: response.cards ?? [],
+        isLoading: false,
+      })
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         set({ isLoading: false })

@@ -63,6 +63,7 @@ export interface OnlineCourseAssignmentListResponse {
 export interface OnlineCourseAssignmentFilters {
   page?: number
   per_page?: number
+  search?: string
   course_online_id?: number
   user_id?: number
   is_overdue?: boolean

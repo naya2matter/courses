@@ -8,7 +8,8 @@ import {
   FileTextIcon,
   Loader2Icon,
   Trash2Icon,
-  UploadIcon,
+  UploadCloudIcon,
+  XIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogClose,
@@ -35,8 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
   Tooltip,
@@ -91,6 +89,9 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // ── Drag state ─────────────────────────────────────────────────────────────
+  const [isDragging, setIsDragging] = useState(false)
 
   // ── Subtitle fetch ─────────────────────────────────────────────────────────
 
@@ -247,42 +248,54 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
     setDeleteOpen(open)
   }
 
+  // ── Drag-and-drop ──────────────────────────────────────────────────────────
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    const syntheticEvent = { target: { files: e.dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>
+    handleFileChange(syntheticEvent)
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
       {/* ─── Subtitle card ─── */}
-      <Card className="rounded-2xl border border-white/8 bg-white/4 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20">
-                <FileTextIcon className="h-3.5 w-3.5 text-violet-400" />
-              </div>
-              <CardTitle className="text-sm font-semibold">Subtitle</CardTitle>
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-card">
+        {/* Violet left accent stripe */}
+        <div className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-violet-500 via-violet-400 to-purple-600 rounded-l-2xl" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2 border-b border-white/8 px-5 py-4 pl-6">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-violet-500/25 bg-violet-500/12">
+              <FileTextIcon className="h-3.5 w-3.5 text-violet-400" />
             </div>
-
-            {/* Status badge */}
-            {isLoadingSubtitle ? (
-              <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
-            ) : (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-xs",
-                  subtitle
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/15"
-                    : "bg-muted/30 text-muted-foreground border-white/10",
-                )}
-              >
-                {subtitle ? "Subtitle Available" : "No Subtitle"}
-              </Badge>
-            )}
+            <p className="text-sm font-semibold">Subtitle / CC</p>
           </div>
-        </CardHeader>
+          {isLoadingSubtitle ? (
+            <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs",
+                subtitle
+                  ? "border-emerald-500/25 bg-emerald-500/12 text-emerald-400"
+                  : "border-white/10 bg-white/4 text-muted-foreground",
+              )}
+            >
+              <span className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", subtitle ? "bg-emerald-400" : "bg-muted-foreground/40")} />
+              {subtitle ? "Active" : "No Subtitle"}
+            </Badge>
+          )}
+        </div>
 
-        <CardContent className="space-y-3">
-          {/* Load error */}
+        {/* Body */}
+        <div className="p-5 pl-6 space-y-4">
           {loadError && (
             <Alert variant="destructive" className="py-2">
               <AlertCircleIcon className="h-4 w-4" />
@@ -290,89 +303,149 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
             </Alert>
           )}
 
-          {/* Subtitle path */}
-          {!isLoadingSubtitle && subtitle && (
-            <div className="rounded-lg bg-white/5 border border-white/8 px-3 py-2">
-              <p className="text-xs text-muted-foreground mb-0.5">Path</p>
-              <p className="text-xs font-mono text-foreground break-all">
-                {subtitle.subtitle_vtt_path}
-              </p>
+          {!isLoadingSubtitle && !subtitle && !loadError && (
+            /* Empty state — click zone */
+            <div
+              className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-white/10 px-5 py-8 text-center transition-all hover:border-violet-500/30 hover:bg-violet-500/5"
+              onClick={() => setUploadOpen(true)}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+                <FileTextIcon className="h-5 w-5 text-muted-foreground/40" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground/60">No subtitle file</p>
+                <p className="text-xs text-muted-foreground/40 mt-0.5">
+                  Upload a WebVTT <span className="font-mono">.vtt</span> file to enable captions
+                </p>
+              </div>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-400 transition-colors hover:bg-violet-500/20"
+              >
+                <UploadCloudIcon className="h-3.5 w-3.5" />
+                Upload .vtt Subtitle
+              </button>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs border-white/15 hover:bg-white/8 flex-1 sm:flex-none"
-              disabled={isLoadingSubtitle}
-              onClick={() => setUploadOpen(true)}
-            >
-              <UploadIcon className="mr-1.5 h-3.5 w-3.5" />
-              {subtitle ? "Replace Subtitle" : "Upload Subtitle"}
-            </Button>
+          {!isLoadingSubtitle && subtitle && (
+            <div className="space-y-3">
+              {/* Subtitle file path */}
+              <div className="flex items-start gap-3 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-3">
+                <FileTextIcon className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
+                <p className="flex-1 min-w-0 break-all font-mono text-xs text-foreground/70 leading-relaxed">
+                  {subtitle.subtitle_vtt_path}
+                </p>
+              </div>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* Span wrapper required — disabled buttons swallow mouse events */}
-                  <span className={cn(!subtitle && "cursor-not-allowed")}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:pointer-events-none"
-                      disabled={isLoadingSubtitle || !subtitle}
-                      onClick={() => setDeleteOpen(true)}
-                    >
-                      <Trash2Icon className="mr-1.5 h-3.5 w-3.5" />
-                      Delete
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {!subtitle && !isLoadingSubtitle && (
-                  <TooltipContent side="top" className="text-xs">
-                    No subtitle uploaded
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </CardContent>
-      </Card>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 gap-1.5 border-white/12 text-xs hover:bg-white/8"
+                  disabled={isLoadingSubtitle}
+                  onClick={() => setUploadOpen(true)}
+                >
+                  <UploadCloudIcon className="h-3.5 w-3.5" />
+                  Replace Subtitle
+                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={cn(!subtitle && "cursor-not-allowed")}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 border-red-500/20 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:pointer-events-none"
+                          disabled={isLoadingSubtitle || !subtitle}
+                          onClick={() => setDeleteOpen(true)}
+                        >
+                          <Trash2Icon className="h-3.5 w-3.5" />
+                          Delete
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!subtitle && !isLoadingSubtitle && (
+                      <TooltipContent side="top" className="text-xs">
+                        No subtitle uploaded
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ─── Upload dialog ─── */}
       <Dialog open={uploadOpen} onOpenChange={handleUploadDialogChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Subtitle</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UploadCloudIcon className="h-4 w-4 text-violet-400" />
+              {subtitle ? "Replace Subtitle" : "Upload Subtitle"}
+            </DialogTitle>
             <DialogDescription>
-              Only WebVTT (.vtt) files up to 10 MB are allowed. SRT and other
-              formats will be rejected.
+              WebVTT (.vtt) files only, up to 10 MB. SRT and other formats are not supported.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-1">
-            {/* File picker */}
-            <div className="space-y-1.5">
-              <Label htmlFor="subtitle-file-input">Subtitle file</Label>
-              <Input
-                id="subtitle-file-input"
-                ref={fileInputRef}
-                type="file"
-                accept=".vtt"
-                disabled={isUploading}
-                onChange={handleFileChange}
-                className="cursor-pointer file:cursor-pointer file:text-xs"
-              />
-            </div>
+            {/* Drop zone — click or drag */}
+            {!selectedFile && !fileError && (
+              <div
+                className={cn(
+                  "relative flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-8 text-center transition-all",
+                  isDragging
+                    ? "border-violet-500/60 bg-violet-500/10"
+                    : "border-white/12 bg-white/3 hover:border-violet-500/30 hover:bg-violet-500/5",
+                )}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className={cn(
+                  "flex h-12 w-12 items-center justify-center rounded-xl border transition-colors",
+                  isDragging ? "border-violet-500/40 bg-violet-500/15" : "border-white/10 bg-white/5",
+                )}>
+                  <UploadCloudIcon className={cn(
+                    "h-5 w-5 transition-colors",
+                    isDragging ? "text-violet-400" : "text-muted-foreground/50",
+                  )} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {isDragging ? "Drop to upload" : "Drop .vtt file here"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">or click to browse</p>
+                </div>
+                <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted-foreground">
+                  Max 10 MB
+                </span>
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".vtt"
+              className="hidden"
+              disabled={isUploading}
+              onChange={handleFileChange}
+            />
 
             {/* Selected file info */}
             {selectedFile && !fileError && (
-              <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                <FileTextIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium">{selectedFile.name}</p>
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-background/60 px-4 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-violet-500/25 bg-violet-500/12">
+                  <FileTextIcon className="h-4 w-4 text-violet-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium">{selectedFile.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {selectedFile.size < 1024
                       ? `${selectedFile.size} B`
@@ -381,6 +454,19 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
                         : `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
                   </p>
                 </div>
+                {!isUploading && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setSelectedFile(null)
+                      setUploadError(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ""
+                    }}
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             )}
 
@@ -394,12 +480,15 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
 
             {/* Upload progress */}
             {isUploading && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Uploading…</span>
-                  <span>{uploadProgress}%</span>
+                  <span className="flex items-center gap-1.5">
+                    <Loader2Icon className="h-3 w-3 animate-spin" />
+                    Uploading…
+                  </span>
+                  <span className="tabular-nums">{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} />
+                <Progress value={uploadProgress} className="h-1.5 bg-white/10" />
               </div>
             )}
 
@@ -421,16 +510,17 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
             <Button
               size="sm"
               disabled={!selectedFile || !!fileError || isUploading}
+              className="gap-1.5"
               onClick={handleUpload}
             >
               {isUploading ? (
                 <>
-                  <Loader2Icon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
                   Uploading…
                 </>
               ) : (
                 <>
-                  <UploadIcon className="mr-1.5 h-3.5 w-3.5" />
+                  <UploadCloudIcon className="h-3.5 w-3.5" />
                   Upload
                 </>
               )}
@@ -445,8 +535,7 @@ export function VideoSubtitleCard({ videoId, onSubtitleChange }: VideoSubtitleCa
           <AlertDialogHeader>
             <AlertDialogTitle>Delete subtitle?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the current subtitle file from this video. This
-              action cannot be undone.
+              This will remove the current subtitle file from this video. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
 

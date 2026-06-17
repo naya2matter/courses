@@ -25,6 +25,7 @@ export interface CourseResource {
   privacy: string | null // e.g., "public", "private"
   image_path?: string | null // URL for the course display image
   availabilities: string | Record<string, unknown> | null // JSON string, object, or comma-separated values
+  registrations_count?: number | null
   created_at?: string | null
   updated_at?: string | null
 }

@@ -28,6 +28,7 @@ function buildQuery(filters: OnlineCourseAssignmentFilters): string {
     params.set("course_online_id", String(filters.course_online_id))
   }
   if (filters.user_id != null) params.set("user_id", String(filters.user_id))
+  if (filters.search)    params.set("search", filters.search)
   if (filters.is_overdue != null) {
     params.set("is_overdue", filters.is_overdue ? "1" : "0")
   }

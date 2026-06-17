@@ -75,7 +75,22 @@ export default function VideoCategoriesPage() {
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Video Categories</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Video Categories</h1>
+            {displayCards.map((card) => {
+              const Icon = getSummaryIcon(card.key)
+              return (
+                <span
+                  key={card.key}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-muted/40 px-2.5 py-0.5 text-sm tabular-nums text-muted-foreground"
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-medium text-foreground">{card.value}</span>
+                  {card.title}
+                </span>
+              )
+            })}
+          </div>
           <p className="mt-1 text-muted-foreground">
             Manage all video categories used to organise video content.
           </p>
@@ -104,29 +119,6 @@ export default function VideoCategoriesPage() {
           </Button>
         </div>
       </div>
-
-      {/* ── Summary strip ────────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-        {displayCards.map((card) => {
-          const Icon = getSummaryIcon(card.key)
-          return (
-            <div
-              key={card.key}
-              className="flex flex-col items-center text-center rounded-3xl p-6 shadow-sm"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/5 border border-white/6 mb-2">
-                <Icon className="size-6 text-sky-400" />
-              </div>
-              <p className="text-4xl font-semibold tabular-nums text-foreground">
-                {card.value}
-              </p>
-              <p className="mt-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                {card.title}
-              </p>
-            </div>
-          )
-        })}
-      </section>
 
       {/* ── Top-level fetch error banner ──────────────────────────────────────── */}
       {error && (

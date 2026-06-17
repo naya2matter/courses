@@ -6,6 +6,7 @@ import type {
   CourseAssignmentListFilters,
   CourseAssignmentListResult,
   CourseAssignmentResource,
+  CourseAssignmentSummaryCard,
   CreateCourseAssignmentPayload,
   LaravelPaginated,
 } from "../types/course-assignment.types"
@@ -13,7 +14,12 @@ import type {
 type ListApiResponse =
   | CourseAssignmentListResult
   | LaravelPaginated<CourseAssignmentResource>
-  | { data?: CourseAssignmentResource[]; meta?: LaravelPaginated<CourseAssignmentResource>["meta"]; links?: LaravelPaginated<CourseAssignmentResource>["links"] }
+  | {
+      data?: CourseAssignmentResource[]
+      meta?: LaravelPaginated<CourseAssignmentResource>["meta"]
+      links?: LaravelPaginated<CourseAssignmentResource>["links"]
+      cards?: CourseAssignmentSummaryCard[]
+    }
   | CourseAssignmentResource[]
 
 function buildQuery(filters: CourseAssignmentListFilters): string {
@@ -46,9 +52,10 @@ function normalizeListResponse(response: ListApiResponse): CourseAssignmentListR
     }
   }
 
+  const r = response as Exclude<typeof response, CourseAssignmentResource[]>
   return {
-    data: Array.isArray(response.data) ? response.data : [],
-    meta: response.meta ?? {
+    data: Array.isArray(r.data) ? r.data : [],
+    meta: r.meta ?? {
       current_page: 1,
       from: null,
       last_page: 1,
@@ -57,7 +64,10 @@ function normalizeListResponse(response: ListApiResponse): CourseAssignmentListR
       total: 0,
       path: "",
     },
-    links: response.links ?? { first: null, last: null, prev: null, next: null },
+    links: r.links ?? { first: null, last: null, prev: null, next: null },
+    cards: Array.isArray((r as { cards?: CourseAssignmentSummaryCard[] }).cards)
+      ? (r as { cards: CourseAssignmentSummaryCard[] }).cards
+      : undefined,
   }
 }
 

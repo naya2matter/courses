@@ -1,15 +1,21 @@
 // ─── Course Assignment Types ─────────────────────────────────────────────────
-// Central place for all course assignment-related TypeScript types.
 
 export interface AssignmentCourseRef {
   id: number
   name: string
+  description?: string | null
+  level?: string | null
+  status?: string | null
+  privacy?: string | null
+  duration?: number | null
+  image_path?: string | null
 }
 
 export interface AssignmentUserRef {
   id: number
   name: string
   email: string
+  link_expires_at?: string | null
 }
 
 export interface AssignmentAvailabilityRef {
@@ -18,18 +24,25 @@ export interface AssignmentAvailabilityRef {
   end_date?: string | null
 }
 
-/**
- * A single CourseAssignment returned by the API.
- */
 export interface CourseAssignmentResource {
   id: number
+  course_id?: number | null
+  user_id?: number | null
+  course_availability_id?: number | null
   course?: AssignmentCourseRef | null
   user?: AssignmentUserRef | null
   course_availability?: AssignmentAvailabilityRef | null
-  assigned_by?: { id: number; name: string; email: string } | null
+  assigned_by?: number | null
+  assigned_by_user?: { id: number; name: string } | null
   assigned_at?: string | null
   created_at?: string | null
   updated_at?: string | null
+}
+
+export interface CourseAssignmentSummaryCard {
+  key: string
+  title: string
+  value: number | string
 }
 
 // ── Pagination ────────────────────────────────────────────────────────────────
@@ -69,9 +82,6 @@ export interface CourseAssignmentListFilters {
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 
-/**
- * Body for POST /admin/course-assignments/create
- */
 export interface CreateCourseAssignmentPayload {
   course_id: number
   user_id: number
@@ -84,28 +94,26 @@ export interface CourseAssignmentListResult {
   data: CourseAssignmentResource[]
   links: PaginationLinks
   meta: PaginationMeta
+  cards?: CourseAssignmentSummaryCard[]
 }
 
 // ── Zustand store shape ───────────────────────────────────────────────────────
 
 export interface CourseAssignmentState {
-  // List state
   items: CourseAssignmentResource[]
   meta: PaginationMeta | null
+  summaryCards: CourseAssignmentSummaryCard[]
   isLoading: boolean
   error: string | null
   filters: CourseAssignmentListFilters
 
-  // Create state
   isCreating: boolean
   createError: string | null
   lastCreated: CourseAssignmentResource | null
 
-  // Delete state
   isDeleting: boolean
   deleteError: string | null
 
-  // Actions
   fetchAssignments: (filters?: CourseAssignmentListFilters) => Promise<void>
   setFilters: (filters: CourseAssignmentListFilters) => void
   createAssignment: (payload: CreateCourseAssignmentPayload) => Promise<CourseAssignmentResource>

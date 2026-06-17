@@ -59,7 +59,7 @@ export function OnlineCourseAssignmentFiltersToolbar({
           <SelectTrigger className="w-[240px]">
             <SelectValue placeholder="Filter by course" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-[420px]" position="popper" sideOffset={4}>
             <SelectItem value="all">All courses</SelectItem>
             {courses.map((c) => (
               <SelectItem key={c.id} value={String(c.id)}>
@@ -78,8 +78,8 @@ export function OnlineCourseAssignmentFiltersToolbar({
           <SelectTrigger className="w-[240px]">
             <SelectValue placeholder="Filter by user" />
           </SelectTrigger>
-          <SelectContent>
-            <div className="px-2 pt-2 pb-1">
+          <SelectContent className="max-h-[420px]" position="popper" sideOffset={4}>
+            <div className="px-2 pt-2 pb-1 sticky top-0 z-10 bg-popover">
               <div className="relative">
                 <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input

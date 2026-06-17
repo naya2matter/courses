@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
   AlertCircleIcon,
-  CalendarIcon,
   Loader2Icon,
   UserPlusIcon,
   XIcon,
@@ -56,7 +55,6 @@ export function AssignOnlineCourseDialog({
   const [courseId, setCourseId] = useState("")
   const [userId, setUserId] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<UserListResource[]>([])
-  const [deadline, setDeadline] = useState("")
   const [sendNotification, setSendNotification] = useState(true)
 
   useEffect(() => {
@@ -64,7 +62,6 @@ export function AssignOnlineCourseDialog({
       setCourseId("")
       setUserId("")
       setSelectedUsers([])
-      setDeadline("")
       setSendNotification(true)
       clearCreateError()
     }
@@ -95,7 +92,6 @@ export function AssignOnlineCourseDialog({
       const res = await createAssignments({
         course_online_id: Number(courseId),
         user_ids: selectedUsers.map((u) => u.id),
-        deadline: deadline ? new Date(deadline).toISOString() : null,
         send_notification: sendNotification,
       })
 
@@ -138,7 +134,7 @@ export function AssignOnlineCourseDialog({
               <SelectTrigger>
                 <SelectValue placeholder="Select online course" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[320px]" position="popper" sideOffset={4}>
                 {courses.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.name}
@@ -159,7 +155,7 @@ export function AssignOnlineCourseDialog({
               <SelectTrigger>
                 <SelectValue placeholder="Add user" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[320px]" position="popper" sideOffset={4}>
                 {users.map((u) => (
                   <SelectItem key={u.id} value={String(u.id)}>
                     {u.name} ({u.email})
@@ -183,19 +179,6 @@ export function AssignOnlineCourseDialog({
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="assign-deadline" className="flex items-center gap-1.5">
-              <CalendarIcon className="h-3.5 w-3.5" />
-              Deadline (optional)
-            </Label>
-            <Input
-              id="assign-deadline"
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-            />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/3 px-4 py-3">

@@ -32,27 +32,23 @@ import type { VideoCategory } from "../categories/types/category.types"
 
 const SUMMARY_CONFIG: Record<
   string,
-  { icon: React.ElementType; accent: string; iconClass: string }
+  { icon: React.ElementType; iconColor: string }
 > = {
   total_videos: {
     icon: VideoIcon,
-    accent: "border-sky-500/20 bg-sky-500/5",
-    iconClass: "text-sky-400 bg-sky-500/10 border-sky-500/20",
+    iconColor: "text-sky-400",
   },
   pending_transcode: {
     icon: ClockIcon,
-    accent: "border-amber-500/20 bg-amber-500/5",
-    iconClass: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    iconColor: "text-amber-400",
   },
   completed_transcode: {
     icon: CheckCircleIcon,
-    accent: "border-emerald-500/20 bg-emerald-500/5",
-    iconClass: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    iconColor: "text-emerald-400",
   },
   failed_transcode: {
     icon: XCircleIcon,
-    accent: "border-red-500/20 bg-red-500/5",
-    iconClass: "text-red-400 bg-red-500/10 border-red-500/20",
+    iconColor: "text-red-400",
   },
 }
 
@@ -71,22 +67,17 @@ function SummaryCard({
 }) {
   const cfg = SUMMARY_CONFIG[cardKey]
   const Icon = cfg?.icon ?? VideoIcon
-  // const accent = cfg?.accent ?? "border-white/10 bg-white/3"
-  const iconClass = cfg?.iconClass ?? "text-muted-foreground bg-white/5 border-white/10"
+  const iconColor = cfg?.iconColor ?? "text-muted-foreground"
 
   return (
-    <div
-      className={`flex flex-col items-center text-center rounded-2xl  p-6 backdrop-blur-sm `}
-    >
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl border mb-3 ${iconClass}`}
-      >
-        <Icon className="h-5 w-5" />
+    <div className="flex flex-col items-center text-center rounded-3xl p-2 shadow-sm">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/6 bg-white/5 mb-2">
+        <Icon className={`size-6 ${iconColor}`} />
       </div>
       {isLoading ? (
-        <Skeleton className="h-10 w-20 mb-2" />
+        <Skeleton className="h-10 w-20" />
       ) : (
-        <p className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">
+        <p className="text-4xl font-semibold tabular-nums text-foreground">
           {value}
         </p>
       )}
@@ -178,7 +169,7 @@ export default function VideoManagementPage() {
       </div>
 
       {/* ── Summary cards ───────────────────────────────────────────────── */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         {displayCards.map((card) => (
           <SummaryCard
             key={card.key}

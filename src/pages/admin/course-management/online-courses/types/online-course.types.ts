@@ -70,11 +70,13 @@ export interface OnlineCourse {
   name: string
   description: string | null
   image_path: string | null
-  level: OnlineCourseLevel | null
+  level: OnlineCourseLevel | string | null
   estimated_duration: number | null
   status: OnlineCourseStatus
   is_active: boolean
   deadline: string | null
+  enrollments_count?: number | null
+  modules_count?: number | null
   creator: UserRef | null
   created_at: string
   updated_at: string

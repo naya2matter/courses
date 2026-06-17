@@ -3,7 +3,7 @@
 // file_path is immutable — it is not shown or sent in the update payload.
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2Icon, AlertCircleIcon, ImageIcon, UploadIcon } from "lucide-react"
+import { Loader2Icon, AlertCircleIcon, ImageIcon, UploadIcon, FileTextIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select"
 
 import { isApiError } from "@/lib/api"
-import type { Video, UpdateVideoPayload, VideoDetail } from "../types/video.types"
+import type { Video, UpdateVideoPayload, VideoDetail, VideoQuality } from "../types/video.types"
 import type { VideoCategory } from "../../categories/types/category.types"
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -45,6 +45,12 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${String(s).padStart(2, "0")}`
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -95,6 +101,11 @@ export function EditVideoSheet({
       URL.revokeObjectURL(objectUrl)
     }
   }, [thumbnailFile])
+
+  // Safe cast — VideoDetail extends Video; list items won't have qualities/subtitle
+  const detail = video as VideoDetail | null
+  const qualities = detail?.qualities
+  const subtitleVttPath = detail?.subtitle_vtt_path
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -178,6 +189,33 @@ export function EditVideoSheet({
                 <AlertCircleIcon className="h-4 w-4" />
                 <AlertDescription>{submitError}</AlertDescription>
               </Alert>
+            )}
+
+            {/* Read-only reference info */}
+            {video && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    video.transcode_status === "completed" ? "bg-emerald-400" :
+                    video.transcode_status === "failed" ? "bg-red-400" :
+                    video.transcode_status === "processing" ? "bg-blue-400" : "bg-amber-400"
+                  }`} />
+                  {video.transcode_status === "completed" ? "Ready" :
+                   video.transcode_status === "failed" ? "Failed" :
+                   video.transcode_status === "processing" ? "Processing" : "Pending"}
+                </span>
+                {video.file_size != null && (
+                  <span>· {formatFileSize(video.file_size)}</span>
+                )}
+                {video.duration_seconds != null && (
+                  <span>· {formatDuration(video.duration_seconds)}</span>
+                )}
+                {subtitleVttPath && (
+                  <span className="flex items-center gap-1 ml-auto text-violet-400/80 font-mono truncate max-w-48" title={subtitleVttPath}>
+                    Subtitle: {subtitleVttPath.split("/").pop()}
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Name */}
@@ -346,6 +384,26 @@ export function EditVideoSheet({
                 className="h-10"
               />
             </div> */}
+
+            {/* Available qualities — only present on VideoDetail from getById */}
+            {qualities && qualities.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Available Qualities
+                </p>
+                <div className="space-y-2">
+                  {qualities.map((q) => (
+                    <div
+                      key={q.quality}
+                      className="flex items-center justify-between rounded-lg border border-white/8 bg-white/3 px-3 py-2"
+                    >
+                      <span className="text-xs font-mono font-semibold text-foreground/80">{q.quality}</span>
+                      <span className="text-xs text-muted-foreground">{formatFileSize(q.file_size)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <SheetFooter className="px-6 py-4 border-t border-white/10 mt-auto bg-background/50 backdrop-blur-sm">

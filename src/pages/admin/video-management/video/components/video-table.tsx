@@ -677,6 +677,38 @@ export function VideoTable(
               )}
             </TableBody>
           </Table>
+
+          {/* ── Desktop Pagination (inside table card) ───────────────── */}
+          {paginationMeta && lastPage > 1 && (
+            <div className="flex items-center justify-between border-t border-white/8 px-4 py-3 text-sm text-muted-foreground">
+              <span>
+                Page {currentPage} of {lastPage}
+                {paginationMeta.total != null && (
+                  <> &middot; {paginationMeta.total.toLocaleString()} total</>
+                )}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canPrev || isLoading}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canNext || isLoading}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Mobile Cards (< md) ───────────────────────────────────────── */}
@@ -705,39 +737,39 @@ export function VideoTable(
               />
             ))
           )}
-        </div>
 
-        {/* ── Pagination ────────────────────────────────────────────────── */}
-        {paginationMeta && lastPage > 1 && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {currentPage} of {lastPage}
-              {paginationMeta.total != null && (
-                <> &middot; {paginationMeta.total.toLocaleString()} total</>
-              )}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={!canPrev || isLoading}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={!canNext || isLoading}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </Button>
+          {/* ── Mobile Pagination ─────────────────────────────────────── */}
+          {paginationMeta && lastPage > 1 && (
+            <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
+              <span>
+                Page {currentPage} of {lastPage}
+                {paginationMeta.total != null && (
+                  <> &middot; {paginationMeta.total.toLocaleString()} total</>
+                )}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canPrev || isLoading}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canNext || isLoading}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* ── Edit Sheet ────────────────────────────────────────────────── */}
         <EditVideoSheet

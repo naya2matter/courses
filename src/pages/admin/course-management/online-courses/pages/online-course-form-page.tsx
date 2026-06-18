@@ -22,6 +22,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { pdfjs } from "react-pdf"
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -80,6 +81,7 @@ interface ContentRow {
   content_type: "video" | "pdf"
   description: string
   duration: string
+  durationAutoDetected: boolean
   is_required: boolean
   is_active: boolean
   // video
@@ -92,6 +94,7 @@ interface ContentRow {
   existingPdfPath: string | null
   existingPdfName: string | null
   pdf_page_count: string
+  pdfPageCountAutoDetected: boolean
 }
 
 interface ModuleRow {
@@ -122,6 +125,7 @@ function emptyContent(type: "video" | "pdf"): ContentRow {
     content_type: type,
     description: "",
     duration: "",
+    durationAutoDetected: false,
     is_required: true,
     is_active: true,
     video_id: "",
@@ -132,6 +136,7 @@ function emptyContent(type: "video" | "pdf"): ContentRow {
     existingPdfPath: null,
     existingPdfName: null,
     pdf_page_count: "",
+    pdfPageCountAutoDetected: false,
   }
 }
 
@@ -157,6 +162,7 @@ function contentFromApi(c: OnlineCourseContent): ContentRow {
     content_type: c.content_type,
     description: c.description ?? "",
     duration: c.duration != null ? String(c.duration) : "",
+    durationAutoDetected: false,
     is_required: c.is_required,
     is_active: c.is_active,
     video_id: c.video?.id != null ? String(c.video.id) : "",
@@ -170,6 +176,7 @@ function contentFromApi(c: OnlineCourseContent): ContentRow {
       : null,
     pdf_page_count:
       c.pdf?.pdf_page_count != null ? String(c.pdf.pdf_page_count) : "",
+    pdfPageCountAutoDetected: false,
   }
 }
 
@@ -277,11 +284,36 @@ function extractError(err: unknown): string {
   return "An unexpected error occurred."
 }
 
+// ── PDF page-count auto-detect ────────────────────────────────────────────────
+// Reads the page count from a PDF File locally (no upload). Uses pdfjs bundled
+// with react-pdf (already a project dependency). The worker is configured the
+// exact same way as the user-side PDF viewer (version-matched, avoids the
+// "API/Worker version mismatch" error). Fails silently → admin types it.
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString()
+
+async function readPdfPageCount(file: File): Promise<number | null> {
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
+    const count = pdf.numPages
+    await pdf.destroy()
+    return count > 0 ? count : null
+  } catch (err) {
+    console.warn("[online-course] PDF page-count detection failed:", err)
+    return null // password-protected / corrupt / unsupported — let admin type it
+  }
+}
+
 // ── VideoSearchSelect ─────────────────────────────────────────────────────────
 
 interface VideoOption {
   id: number
   name: string
+  duration_seconds?: number | null
 }
 
 function VideoSearchSelect({
@@ -291,7 +323,7 @@ function VideoSearchSelect({
 }: {
   videoId: string
   videoName: string
-  onChange: (id: string, name: string) => void
+  onChange: (id: string, name: string, durationSeconds?: number | null) => void
 }) {
   const [query, setQuery] = useState("")
   const [options, setOptions] = useState<VideoOption[]>([])
@@ -438,7 +470,7 @@ function VideoSearchSelect({
                   type="button"
                   className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                   onMouseDown={() => {
-                    onChange(String(v.id), v.name)
+                    onChange(String(v.id), v.name, v.duration_seconds ?? null)
                     setOpen(false)
                   }}
                 >
@@ -591,17 +623,35 @@ function ContentEditor({
               <VideoSearchSelect
                 videoId={content.video_id}
                 videoName={content.videoName}
-                onChange={(id, name) => onChange({ video_id: id, videoName: name })}
+                onChange={(id, name, durationSeconds) =>
+                  onChange({
+                    video_id: id,
+                    videoName: name,
+                    // Auto-fill duration from the selected video's metadata
+                    ...(durationSeconds != null && durationSeconds > 0
+                      ? { duration: String(durationSeconds), durationAutoDetected: true }
+                      : {}),
+                  })
+                }
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Duration (seconds)</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Duration (seconds)</Label>
+                {content.durationAutoDetected && (
+                  <span className="text-xs font-medium text-emerald-400">
+                    Auto-detected
+                  </span>
+                )}
+              </div>
               <Input
                 type="number"
                 min={0}
                 placeholder="e.g. 1800"
                 value={content.duration}
-                onChange={(e) => onChange({ duration: e.target.value })}
+                onChange={(e) =>
+                  onChange({ duration: e.target.value, durationAutoDetected: false })
+                }
               />
             </div>
 
@@ -693,8 +743,14 @@ function ContentEditor({
                       className="sr-only"
                       onChange={(e) => {
                         const file = e.target.files?.[0] ?? null
-                        onChange({ pdfFile: file })
+                        onChange({ pdfFile: file, pdf_page_count: "", pdfPageCountAutoDetected: false })
                         e.target.value = ""
+                        if (file) {
+                          readPdfPageCount(file).then((count) => {
+                            if (count !== null)
+                              onChange({ pdf_page_count: String(count), pdfPageCountAutoDetected: true })
+                          })
+                        }
                       }}
                     />
                   </label>
@@ -713,7 +769,9 @@ function ContentEditor({
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 shrink-0"
-                    onClick={() => onChange({ pdfFile: null })}
+                    onClick={() =>
+                      onChange({ pdfFile: null, pdf_page_count: "", pdfPageCountAutoDetected: false })
+                    }
                   >
                     <XIcon className="h-3.5 w-3.5" />
                   </Button>
@@ -731,22 +789,37 @@ function ContentEditor({
                     className="sr-only"
                     onChange={(e) => {
                       const file = e.target.files?.[0] ?? null
-                      onChange({ pdfFile: file })
+                      onChange({ pdfFile: file, pdf_page_count: "", pdfPageCountAutoDetected: false })
                       e.target.value = ""
+                      if (file) {
+                        readPdfPageCount(file).then((count) => {
+                          if (count !== null)
+                            onChange({ pdf_page_count: String(count), pdfPageCountAutoDetected: true })
+                        })
+                      }
                     }}
                   />
                 </label>
               )}
             </div>
 
-            <div className="w-40">
-              <Label className="text-xs">Page Count</Label>
+            <div className="w-52">
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs">Page Count</Label>
+                {content.pdfPageCountAutoDetected && (
+                  <span className="text-xs font-medium text-emerald-400">
+                    Auto-detected
+                  </span>
+                )}
+              </div>
               <Input
                 type="number"
                 min={1}
                 placeholder="e.g. 12"
                 value={content.pdf_page_count}
-                onChange={(e) => onChange({ pdf_page_count: e.target.value })}
+                onChange={(e) =>
+                  onChange({ pdf_page_count: e.target.value, pdfPageCountAutoDetected: false })
+                }
               />
             </div>
           </div>

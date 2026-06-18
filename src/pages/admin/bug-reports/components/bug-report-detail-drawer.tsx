@@ -1,7 +1,17 @@
 // ─── BugReportDetailDrawer ────────────────────────────────────────────────────
 // Sheet drawer displaying all details of a single bug report.
 
-import { ExternalLinkIcon } from "lucide-react"
+import {
+  BugIcon,
+  CalendarIcon,
+  CheckCircle2Icon,
+  ExternalLinkIcon,
+  FileTextIcon,
+  LinkIcon,
+  ListChecksIcon,
+  UserIcon,
+  UserCheckIcon,
+} from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -9,7 +19,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { PriorityBadge } from "./shared/priority-badge"
 import { StatusBadge } from "./shared/status-badge"
 import type { BugReport } from "../types/bug-report.types"
@@ -27,12 +36,45 @@ function formatDate(iso: string | null | undefined): string {
   })
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+// A labelled person/date stat tile.
+function StatTile({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex items-start gap-3 text-sm">
-      <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-foreground break-words min-w-0 flex-1">{children}</span>
+    <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1.5 text-sm text-foreground break-words">{children}</div>
     </div>
+  )
+}
+
+// A titled content block (description, steps, …).
+function Section({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        {icon}
+        {title}
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -57,102 +99,104 @@ export function BugReportDetailDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[680px] lg:max-w-[760px] p-0"
+        className="w-full gap-0 p-0 sm:max-w-[680px] lg:max-w-[760px]"
       >
         <div className="flex h-full min-h-0 flex-col">
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-white/10">
-            <SheetTitle className="text-lg leading-snug pr-6">{report.title}</SheetTitle>
-            <SheetDescription>Bug report details</SheetDescription>
+          {/* ── Hero header ──────────────────────────────────────────────── */}
+          <SheetHeader className="shrink-0 space-y-0 border-b border-white/10 bg-gradient-to-b from-red-500/8 to-transparent px-6 pb-5 pt-6">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10">
+                <BugIcon className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="text-lg leading-snug">{report.title}</SheetTitle>
+                <SheetDescription className="mt-0.5">
+                  Bug report #{report.id}
+                </SheetDescription>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <PriorityBadge priority={report.priority} />
+                  <StatusBadge status={report.status} />
+                </div>
+              </div>
+            </div>
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-5">
-            {/* ── Overview ─────────────────────────────────────────────────── */}
-            <section className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Overview
-              </p>
-              <div className="space-y-2.5">
-                <Row label="Priority">
-                  <PriorityBadge priority={report.priority} />
-                </Row>
-                <Row label="Status">
-                  <StatusBadge status={report.status} />
-                </Row>
-                <Row label="Reported By">
-                  {report.reported_by ? (
-                    <span className="break-all">
-                      {report.reported_by.name}
-                      <span className="ml-1.5 text-muted-foreground text-xs">
-                        ({report.reported_by.email})
-                      </span>
+          {/* ── Body ─────────────────────────────────────────────────────── */}
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            {/* People + dates */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <StatTile icon={<UserIcon className="h-3.5 w-3.5" />} label="Reported By">
+                {report.reported_by ? (
+                  <>
+                    <span className="font-medium">{report.reported_by.name}</span>
+                    <span className="block text-xs text-muted-foreground break-all">
+                      {report.reported_by.email}
                     </span>
-                  ) : (
-                    <span className="italic text-muted-foreground/50">—</span>
-                  )}
-                </Row>
-                <Row label="Assigned To">
-                  {report.assigned_to ? (
-                    <span className="break-all">
-                      {report.assigned_to.name}
-                      <span className="ml-1.5 text-muted-foreground text-xs">
-                        ({report.assigned_to.email})
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="italic text-muted-foreground/50">Unassigned</span>
-                  )}
-                </Row>
-                <Row label="Created">{formatDate(report.created_at)}</Row>
-                {report.resolved_at && (
-                  <Row label="Resolved">{formatDate(report.resolved_at)}</Row>
+                  </>
+                ) : (
+                  <span className="italic text-muted-foreground/50">—</span>
                 )}
-              </div>
-            </section>
+              </StatTile>
 
-            {/* ── Description ──────────────────────────────────────────────── */}
-            <section className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Description
-              </p>
-              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+              <StatTile icon={<UserCheckIcon className="h-3.5 w-3.5" />} label="Assigned To">
+                {report.assigned_to ? (
+                  <>
+                    <span className="font-medium">{report.assigned_to.name}</span>
+                    <span className="block text-xs text-muted-foreground break-all">
+                      {report.assigned_to.email}
+                    </span>
+                  </>
+                ) : (
+                  <span className="italic text-muted-foreground/50">Unassigned</span>
+                )}
+              </StatTile>
+
+              <StatTile icon={<CalendarIcon className="h-3.5 w-3.5" />} label="Created">
+                {formatDate(report.created_at)}
+              </StatTile>
+
+              {report.resolved_at && (
+                <StatTile
+                  icon={<CheckCircle2Icon className="h-3.5 w-3.5 text-emerald-400" />}
+                  label="Resolved"
+                >
+                  {formatDate(report.resolved_at)}
+                </StatTile>
+              )}
+            </div>
+
+            {/* Description */}
+            <Section icon={<FileTextIcon className="h-3.5 w-3.5" />} title="Description">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                 {report.description}
               </div>
-            </section>
+            </Section>
 
-            {/* ── Steps to reproduce ───────────────────────────────────────── */}
+            {/* Steps to reproduce */}
             {report.steps_to_reproduce && (
-              <>
-                <Separator className="opacity-20" />
-                <section className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Steps to Reproduce
-                  </p>
-                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                    {report.steps_to_reproduce}
-                  </div>
-                </section>
-              </>
+              <Section
+                icon={<ListChecksIcon className="h-3.5 w-3.5" />}
+                title="Steps to Reproduce"
+              >
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {report.steps_to_reproduce}
+                </div>
+              </Section>
             )}
 
-            {/* ── Page URL ────────────────────────────────────────────────── */}
+            {/* Page URL */}
             {report.page_url && (
-              <>
-                <Separator className="opacity-20" />
-                <section className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Page URL
-                  </p>
-                  <a
-                    href={report.page_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
-                  >
-                    {report.page_url}
-                    <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
-                  </a>
-                </section>
-              </>
+              <Section icon={<LinkIcon className="h-3.5 w-3.5" />} title="Page URL">
+                <a
+                  href={report.page_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors break-all"
+                >
+                  <span className="truncate">{report.page_url}</span>
+                  <ExternalLinkIcon className="h-3.5 w-3.5 shrink-0" />
+                </a>
+              </Section>
             )}
           </div>
         </div>

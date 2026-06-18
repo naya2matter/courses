@@ -2,13 +2,19 @@
 // Sheet drawer displaying all details of a single feedback entry.
 
 import {
+  CalendarIcon,
+  FileTextIcon,
+  MessageSquareIcon,
+  MessagesSquareIcon,
+  UserIcon,
+} from "lucide-react"
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { FeedbackStatusBadge } from "./shared/feedback-status-badge"
 import { FeedbackTypeBadge } from "./shared/feedback-type-badge"
 import type { Feedback } from "../types/feedback.types"
@@ -26,12 +32,43 @@ function formatDate(iso: string | null | undefined): string {
   })
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function StatTile({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex items-start gap-3 text-sm">
-      <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-foreground break-words min-w-0 flex-1">{children}</span>
+    <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1.5 text-sm text-foreground break-words">{children}</div>
     </div>
+  )
+}
+
+function Section({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        {icon}
+        {title}
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -56,64 +93,63 @@ export function FeedbackDetailDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[680px] lg:max-w-[760px] p-0"
+        className="w-full gap-0 p-0 sm:max-w-[680px] lg:max-w-[760px]"
       >
         <div className="flex h-full min-h-0 flex-col">
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-white/10">
-            <SheetTitle className="text-lg leading-snug pr-6">{feedback.title}</SheetTitle>
-            <SheetDescription>Feedback entry details</SheetDescription>
+          {/* ── Hero header ──────────────────────────────────────────────── */}
+          <SheetHeader className="shrink-0 space-y-0 border-b border-white/10 bg-gradient-to-b from-violet-500/8 to-transparent px-6 pb-5 pt-6">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-500/25 bg-violet-500/10">
+                <MessagesSquareIcon className="h-5 w-5 text-violet-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="text-lg leading-snug">{feedback.title}</SheetTitle>
+                <SheetDescription className="mt-0.5">
+                  Feedback #{feedback.id}
+                </SheetDescription>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <FeedbackTypeBadge type={feedback.type} />
+                  <FeedbackStatusBadge status={feedback.status} />
+                </div>
+              </div>
+            </div>
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-5">
-            {/* ── Overview ─────────────────────────────────────────────────── */}
-            <section className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Overview
-              </p>
-              <div className="space-y-2.5">
-                <Row label="Type">
-                  <FeedbackTypeBadge type={feedback.type} />
-                </Row>
-                <Row label="Status">
-                  <FeedbackStatusBadge status={feedback.status} />
-                </Row>
-                <Row label="Submitted By">
-                  <span>
-                    {feedback.user.name}
-                    {feedback.user.department && (
-                      <span className="ml-1.5 text-muted-foreground text-xs">
-                        — {feedback.user.department.name}
-                      </span>
-                    )}
+          {/* ── Body ─────────────────────────────────────────────────────── */}
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            {/* Submitter + date */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <StatTile icon={<UserIcon className="h-3.5 w-3.5" />} label="Submitted By">
+                <span className="font-medium">{feedback.user.name}</span>
+                {feedback.user.department && (
+                  <span className="block text-xs text-muted-foreground">
+                    {feedback.user.department.name}
                   </span>
-                </Row>
-                <Row label="Created">{formatDate(feedback.created_at)}</Row>
-              </div>
-            </section>
+                )}
+              </StatTile>
 
-            {/* ── Description ──────────────────────────────────────────────── */}
-            <section className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Description
-              </p>
-              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+              <StatTile icon={<CalendarIcon className="h-3.5 w-3.5" />} label="Created">
+                {formatDate(feedback.created_at)}
+              </StatTile>
+            </div>
+
+            {/* Description */}
+            <Section icon={<FileTextIcon className="h-3.5 w-3.5" />} title="Description">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                 {feedback.description}
               </div>
-            </section>
+            </Section>
 
-            {/* ── Admin Response ───────────────────────────────────────────── */}
+            {/* Admin response */}
             {feedback.admin_response && (
-              <>
-                <Separator className="opacity-20" />
-                <section className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Admin Response
-                  </p>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                    {feedback.admin_response}
-                  </div>
-                </section>
-              </>
+              <Section
+                icon={<MessageSquareIcon className="h-3.5 w-3.5 text-emerald-400" />}
+                title="Admin Response"
+              >
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {feedback.admin_response}
+                </div>
+              </Section>
             )}
           </div>
         </div>

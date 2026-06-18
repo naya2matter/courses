@@ -130,7 +130,7 @@ export function BugReportFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>New Bug Report</DialogTitle>
           <DialogDescription>
@@ -177,65 +177,66 @@ export function BugReportFormDialog({
             )}
           </div>
 
-          {/* Priority */}
-          <div className="space-y-1.5">
-            <Label htmlFor="brf-priority">Priority *</Label>
-            <Select
-              value={form.priority}
-              onValueChange={(v) =>
-                setForm((f) => ({ ...f, priority: v as BugReportPriority }))
-              }
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="brf-priority">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-            {fieldErrors.priority && (
-              <p className="text-xs text-destructive">{fieldErrors.priority}</p>
-            )}
-          </div>
+          {/* Priority + Assigned to */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="brf-priority">Priority *</Label>
+              <Select
+                value={form.priority}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, priority: v as BugReportPriority }))
+                }
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="brf-priority" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldErrors.priority && (
+                <p className="text-xs text-destructive">{fieldErrors.priority}</p>
+              )}
+            </div>
 
-          {/* Assigned to */}
-          <div className="space-y-1.5">
-            <Label htmlFor="brf-assigned-to">Assign to</Label>
-            <Select
-              value={form.assigned_to != null ? String(form.assigned_to) : undefined}
-              onValueChange={(v) =>
-                setForm((f) => ({
-                  ...f,
-                  assigned_to: v === "none" ? null : Number(v),
-                }))
-              }
-              disabled={loadingAdmins || isSubmitting}
-            >
-              <SelectTrigger id="brf-assigned-to">
-                <SelectValue
-                  placeholder={
-                    loadingAdmins
-                      ? "Loading admins..."
-                      : "Unassigned"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
-                {admins.map((admin) => (
-                  <SelectItem key={admin.id} value={String(admin.id)}>
-                    {admin.name} ({admin.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.assigned_to && (
-              <p className="text-xs text-destructive">{fieldErrors.assigned_to}</p>
-            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="brf-assigned-to">Assign to</Label>
+              <Select
+                value={form.assigned_to != null ? String(form.assigned_to) : undefined}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    assigned_to: v === "none" ? null : Number(v),
+                  }))
+                }
+                disabled={loadingAdmins || isSubmitting}
+              >
+                <SelectTrigger id="brf-assigned-to" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      loadingAdmins
+                        ? "Loading admins..."
+                        : "Unassigned"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {admins.map((admin) => (
+                    <SelectItem key={admin.id} value={String(admin.id)}>
+                      {admin.name} ({admin.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.assigned_to && (
+                <p className="text-xs text-destructive">{fieldErrors.assigned_to}</p>
+              )}
+            </div>
           </div>
 
           {/* Steps to reproduce */}

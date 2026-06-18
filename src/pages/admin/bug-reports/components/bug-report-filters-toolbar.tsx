@@ -1,7 +1,7 @@
 // ─── BugReportFiltersToolbar ──────────────────────────────────────────────────
 // Search + select filters + result count for the bug reports list.
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { SearchIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,12 +34,30 @@ export function BugReportFiltersToolbar({
   onAssignedFilterChange,
   onClearAll,
 }: BugReportFiltersToolbarProps) {
-  // Local draft so we only commit on Enter, not on every keystroke
+  // Local draft — live search committed (debounced) on every keystroke
   const [searchDraft, setSearchDraft] = useState(filters.search ?? "")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
 
   function commitSearch() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     onFilterChange({ search: searchDraft.trim() || undefined, page: 1 })
   }
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onFilterChange({ search: searchDraft.trim() || undefined, page: 1 })
+    }, 350)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft])
 
   const hasActive =
     !!filters.search || !!filters.status || !!filters.priority || assignedFilter !== "all"

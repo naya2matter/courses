@@ -1,7 +1,7 @@
 // ─── Assignment Table ────────────────────────────────────────────────────────
 // Shows assignments in a responsive table with search, pagination, and delete.
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   AlertCircleIcon,
   ChevronLeftIcon,
@@ -82,9 +82,24 @@ export function AssignmentTable({
   onDelete,
 }: AssignmentTableProps) {
   const [searchDraft, setSearchDraft] = useState(filters.search ?? "")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
+
   const [deleteTarget, setDeleteTarget] = useState<AudioAssignmentResource | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if ((filters.search ?? "") !== searchDraft) {
+        onFilterChange({ search: searchDraft, page: 1 })
+      }
+    }, 350)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft])
 
   function commitSearch() {
     onFilterChange({ search: searchDraft, page: 1 })

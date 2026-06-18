@@ -52,6 +52,7 @@ class ApiClient {
     method: string,
     path: string,
     body?: unknown,
+    signal?: AbortSignal,
   ): Promise<T> {
     const token = this.getToken()
     const headers: Record<string, string> = {
@@ -67,6 +68,7 @@ class ApiClient {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
     })
 
     if (!res.ok) {
@@ -128,20 +130,20 @@ class ApiClient {
 
   // ── Public methods (JSON) ──────────────────────────────────────────────────
 
-  get<T>(path: string): Promise<T> {
-    return this.request<T>("GET", path)
+  get<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return this.request<T>("GET", path, undefined, signal)
   }
 
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("POST", path, body)
+  post<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    return this.request<T>("POST", path, body, signal)
   }
 
-  put<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("PUT", path, body)
+  put<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    return this.request<T>("PUT", path, body, signal)
   }
 
-  delete<T>(path: string): Promise<T> {
-    return this.request<T>("DELETE", path)
+  delete<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return this.request<T>("DELETE", path, undefined, signal)
   }
 
   // ── Blob download (authenticated) ─────────────────────────────────────────

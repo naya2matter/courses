@@ -11,19 +11,14 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
-  CalendarIcon,
-  ClockIcon,
   FileIcon,
   FileTextIcon,
-  HardDriveIcon,
   ImageIcon,
   LayersIcon,
   Loader2Icon,
   PencilIcon,
   RefreshCwIcon,
   RotateCcwIcon,
-  TagIcon,
-  UserIcon,
   VideoIcon,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -149,42 +144,6 @@ function formatCueTime(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)
   return `${m}:${String(s).padStart(2, "0")}`
-}
-
-// ── Detail row ────────────────────────────────────────────────────────────────
-
-function DetailRow({
-  icon: Icon,
-  label,
-  value,
-  mono = false,
-  breakAll = false,
-}: {
-  icon: React.ElementType
-  label: string
-  value: React.ReactNode
-  mono?: boolean
-  breakAll?: boolean
-}) {
-  return (
-    <div className="flex gap-3 py-3 border-b border-white/6 last:border-0">
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/8 bg-white/5">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-        <p
-          className={cn(
-            "text-sm text-foreground",
-            mono && "font-mono text-xs",
-            breakAll && "break-all",
-          )}
-        >
-          {value ?? <span className="italic text-muted-foreground/50">—</span>}
-        </p>
-      </div>
-    </div>
-  )
 }
 
 // ── Video player panel ────────────────────────────────────────────────────────

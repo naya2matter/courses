@@ -1,11 +1,11 @@
-// ─── Category Form Sheet ───────────────────────────────────────────────────────
-// Slide-in Sheet used for both Creating and Editing an audio category.
+// ─── Category Form Dialog ──────────────────────────────────────────────────────
+// Centered Dialog used for both Creating and Editing an audio category.
 //
 // Props:
 //   • open          — controls visibility
-//   • onClose       — called when the sheet should close
+//   • onClose       — called when the dialog should close
 //   • onSuccess     — called after a successful save (triggers list refresh)
-//   • category      — if provided, the sheet is in "edit" mode; otherwise "create"
+//   • category      — if provided, the dialog is in "edit" mode; otherwise "create"
 //   • onSubmit      — async function that calls the store action (create or update)
 
 import { useEffect, useState } from "react"
@@ -16,13 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { isApiError } from "@/lib/api"
 
 import type { AudioCategoryResource, CreateCategoryPayload } from "../types/category.types"
@@ -136,15 +136,15 @@ export function CategoryFormSheet({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent className="sm:max-w-md flex flex-col gap-0 p-0 border-l border-white/10">
-        <SheetHeader className="px-6 py-5 border-b border-white/10">
-          <SheetTitle className="text-xl">{title}</SheetTitle>
-          <SheetDescription className="text-muted-foreground">{description}</SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="flex max-h-[85vh] w-full max-w-md flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-white/10 px-6 py-5">
+          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogDescription className="text-muted-foreground">{description}</DialogDescription>
+        </DialogHeader>
 
         {/* Form starts right after the header */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
 
             {/* ── Error alert ──────────────────────────────────────────────── */}
@@ -192,25 +192,23 @@ export function CategoryFormSheet({
           </div>
 
           {/* ── Actions ──────────────────────────────────────────────────── */}
-          <SheetFooter className="px-6 py-4 border-t border-white/10 mt-auto bg-background/50 backdrop-blur-sm">
-            <div className="flex w-full justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="min-w-[100px]"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
-                {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-                {submitLabel}
-              </Button>
-            </div>
-          </SheetFooter>
+          <DialogFooter className="mt-auto shrink-0 flex-row justify-end gap-3 border-t border-white/10 px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="min-w-[100px]"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
+              {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+              {submitLabel}
+            </Button>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

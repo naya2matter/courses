@@ -46,7 +46,15 @@ export const useQuizAssignmentStore = create<QuizAssignmentState>((set, get) => 
   },
 
   setFilters: (filters: QuizAssignmentListFilters) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    // Only reset to page 1 when an actual filter (not page itself) changes.
+    // This allows pagination buttons to call setFilters({ page: N }) without
+    // being overridden back to page 1.
+    const isPageOnlyChange = Object.keys(filters).length === 1 && "page" in filters
+    const next = {
+      ...get().filters,
+      ...filters,
+      ...(isPageOnlyChange ? {} : { page: 1 }),
+    }
     set({ filters: next })
     get().fetchAssignments(next)
   },

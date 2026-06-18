@@ -1,20 +1,23 @@
 // ─── Quiz Assignment Table ────────────────────────────────────────────────────
 // Shows quiz assignments in a responsive table with filters, pagination, delete.
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   AlertCircleIcon,
   BellIcon,
   BellOffIcon,
+  ChevronFirstIcon,
+  ChevronLastIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  FilterIcon,
+  FilterXIcon,
   Loader2Icon,
+  SearchIcon,
   Trash2Icon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -117,20 +120,25 @@ export function QuizAssignmentTable({
   const [quizOptions, setQuizOptions] = useState<QuizResource[]>([])
   const [userOptions, setUserOptions] = useState<UserListResource[]>([])
 
-  const [quizSearchDraft, setQuizSearchDraft] = useState(
-    filters.quiz_id != null ? String(filters.quiz_id) : "all",
-  )
-  const [userSearchDraft, setUserSearchDraft] = useState(
-    filters.user_id != null ? String(filters.user_id) : "all",
-  )
+  const [quizSearch, setQuizSearch] = useState("")
+  const [userSearch, setUserSearch] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<QuizAssignmentResource | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  useEffect(() => {
-    setQuizSearchDraft(filters.quiz_id != null ? String(filters.quiz_id) : "all")
-    setUserSearchDraft(filters.user_id != null ? String(filters.user_id) : "all")
-  }, [filters.quiz_id, filters.user_id])
+  const filteredQuizOptions = useMemo(() => {
+    const q = quizSearch.trim().toLowerCase()
+    if (!q) return quizOptions
+    return quizOptions.filter((quiz) => quiz.title.toLowerCase().includes(q))
+  }, [quizOptions, quizSearch])
+
+  const filteredUserOptions = useMemo(() => {
+    const q = userSearch.trim().toLowerCase()
+    if (!q) return userOptions
+    return userOptions.filter((u) =>
+      `${u.name} ${u.email}`.toLowerCase().includes(q),
+    )
+  }, [userOptions, userSearch])
 
   useEffect(() => {
     async function loadOptions() {
@@ -149,16 +157,6 @@ export function QuizAssignmentTable({
     loadOptions()
   }, [])
 
-  function applyFilters() {
-    onFilterChange({
-      quiz_id:
-        quizSearchDraft === "all" ? undefined : Number.parseInt(quizSearchDraft, 10),
-      user_id:
-        userSearchDraft === "all" ? undefined : Number.parseInt(userSearchDraft, 10),
-      page: 1,
-    })
-  }
-
   function handleNotificationFilterChange(value: string) {
     if (value === "all") {
       onFilterChange({ notification_sent: null, page: 1 })
@@ -168,8 +166,8 @@ export function QuizAssignmentTable({
   }
 
   function clearFilters() {
-    setQuizSearchDraft("all")
-    setUserSearchDraft("all")
+    setQuizSearch("")
+    setUserSearch("")
     onFilterChange({ quiz_id: undefined, user_id: undefined, notification_sent: null, page: 1 })
   }
 
@@ -205,115 +203,108 @@ export function QuizAssignmentTable({
 
   return (
     <div className="space-y-4">
-      {/* ── Filters bar ──────────────────────────────────────────────────── */}
-      <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FilterIcon className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Search & Filter</span>
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="text-xs">
-                Active
-              </Badge>
-            )}
-          </div>
+      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2">
+        {/* Count row */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {meta && (
-            <p className="text-xs text-muted-foreground">
+            <p className="shrink-0 text-sm text-muted-foreground">
               {total === 0
-                ? "No assignments"
-                : `${from}–${to} of ${total}`}
+                ? "No assignments found"
+                : `Showing ${from}–${to} of ${total} assignment${total !== 1 ? "s" : ""}`}
+              {isLoading && (
+                <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground/60">
+                  <Loader2Icon className="h-3 w-3 animate-spin" /> Refreshing…
+                </span>
+              )}
             </p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] items-end gap-4">
-          {/* Quiz name search as Select */}
-          <div className="space-y-1">
-            <Label htmlFor="quiz-search" className="text-xs font-medium text-muted-foreground">
-              Quiz
-            </Label>
-            <Select
-              value={quizSearchDraft}
-              onValueChange={setQuizSearchDraft}
-            >
-              <SelectTrigger id="quiz-search" className="h-8 text-sm">
-                <SelectValue placeholder="All Quizzes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Quizzes</SelectItem>
-                {quizOptions.map((q) => (
-                  <SelectItem key={q.id} value={String(q.id)}>
-                    {q.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={filters.quiz_id != null ? String(filters.quiz_id) : "all"}
+            onValueChange={(v) =>
+              onFilterChange({ quiz_id: v === "all" ? undefined : Number(v), page: 1 })
+            }
+          >
+            <SelectTrigger className="h-8 w-48 text-xs">
+              <SelectValue placeholder="All quizzes" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[420px]" position="popper" sideOffset={4}>
+              <div className="sticky top-0 z-10 bg-popover px-2 pt-2 pb-1">
+                <div className="relative">
+                  <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={quizSearch}
+                    onChange={(e) => setQuizSearch(e.target.value)}
+                    placeholder="Search quizzes..."
+                    className="h-9 pl-8"
+                  />
+                </div>
+              </div>
+              <SelectItem value="all">All quizzes</SelectItem>
+              {filteredQuizOptions.map((q) => (
+                <SelectItem key={q.id} value={String(q.id)}>
+                  {q.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          {/* User search as Select */}
-          <div className="space-y-1">
-            <Label htmlFor="user-search" className="text-xs font-medium text-muted-foreground">
-              User
-            </Label>
-            <Select
-              value={userSearchDraft}
-              onValueChange={setUserSearchDraft}
-            >
-              <SelectTrigger id="user-search" className="h-8 text-sm">
-                <SelectValue placeholder="All Users" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {userOptions.map((u) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
-                    {u.name} ({u.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={filters.user_id != null ? String(filters.user_id) : "all"}
+            onValueChange={(v) =>
+              onFilterChange({ user_id: v === "all" ? undefined : Number(v), page: 1 })
+            }
+          >
+            <SelectTrigger className="h-8 w-52 text-xs">
+              <SelectValue placeholder="All users" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[420px]" position="popper" sideOffset={4}>
+              <div className="sticky top-0 z-10 bg-popover px-2 pt-2 pb-1">
+                <div className="relative">
+                  <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Search users..."
+                    className="h-9 pl-8"
+                  />
+                </div>
+              </div>
+              <SelectItem value="all">All users</SelectItem>
+              {filteredUserOptions.map((u) => (
+                <SelectItem key={u.id} value={String(u.id)}>
+                  {u.name} ({u.email})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          {/* Notification filter */}
-          <div className="space-y-1">
-            <Label htmlFor="notification" className="text-xs font-medium text-muted-foreground">
-              Notification
-            </Label>
-            <Select
-              value={notificationValue}
-              onValueChange={handleNotificationFilterChange}
-            >
-              <SelectTrigger id="notification" className="h-8 text-sm">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="true">Sent</SelectItem>
-                <SelectItem value="false">Not Sent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={notificationValue} onValueChange={handleNotificationFilterChange}>
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue placeholder="All notifications" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All notifications</SelectItem>
+              <SelectItem value="true">Sent</SelectItem>
+              <SelectItem value="false">Not sent</SelectItem>
+            </SelectContent>
+          </Select>
 
-          {/* Actions */}
-          <div className="flex gap-2 w-full pt-1">
+          {hasActiveFilters && (
             <Button
+              variant="ghost"
               size="sm"
-              onClick={applyFilters}
-              disabled={isLoading}
-              className="px-6"
+              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              onClick={clearFilters}
             >
-              Apply
+              <FilterXIcon className="h-3.5 w-3.5" />
+              Clear filters
             </Button>
-            {hasActiveFilters && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={clearFilters}
-                disabled={isLoading}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -460,37 +451,57 @@ export function QuizAssignmentTable({
       </div>
 
       {/* ── Pagination ───────────────────────────────────────────────────── */}
-      {meta && lastPage > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 1 || isLoading}
-            onClick={() => onFilterChange({ page: currentPage - 1 })}
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-            Prev
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {currentPage} / {lastPage}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= lastPage || isLoading}
-            onClick={() => onFilterChange({ page: currentPage + 1 })}
-          >
-            Next
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* ── Loading indicator when refreshing ──────────────────────────── */}
-      {isLoading && items.length > 0 && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-          Refreshing…
+      {meta && (lastPage > 1 || total > 0) && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {total === 0
+              ? "No assignments"
+              : `Showing ${from}–${to} of ${total} assignment${total !== 1 ? "s" : ""}`}
+            {isLoading && (
+              <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground/60">
+                <Loader2Icon className="h-3 w-3 animate-spin" /> Refreshing…
+              </span>
+            )}
+          </p>
+          {lastPage > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline" size="sm"
+                disabled={currentPage <= 1 || isLoading}
+                onClick={() => onFilterChange({ page: 1 })}
+                aria-label="First page"
+              >
+                <ChevronFirstIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                disabled={currentPage <= 1 || isLoading}
+                onClick={() => onFilterChange({ page: currentPage - 1 })}
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                <span className="ml-1">Prev</span>
+              </Button>
+              <span className="px-3 text-sm font-medium text-muted-foreground">
+                {currentPage} / {lastPage}
+              </span>
+              <Button
+                variant="outline" size="sm"
+                disabled={currentPage >= lastPage || isLoading}
+                onClick={() => onFilterChange({ page: currentPage + 1 })}
+              >
+                <span className="mr-1">Next</span>
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline" size="sm"
+                disabled={currentPage >= lastPage || isLoading}
+                onClick={() => onFilterChange({ page: lastPage })}
+                aria-label="Last page"
+              >
+                <ChevronLastIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

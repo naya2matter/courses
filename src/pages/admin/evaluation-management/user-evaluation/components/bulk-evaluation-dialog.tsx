@@ -1,8 +1,8 @@
 // ─── BulkEvaluationDialog ────────────────────────────────────────────────────
-// Dialog with two modes: Form mode (add multiple evaluations) and JSON mode.
+// Dialog (not Sheet) for bulk-creating multiple evaluations using the form.
 
-import { useState, useEffect } from "react"
-import { PlusIcon, Trash2Icon, Loader2Icon } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { PlusIcon, Trash2Icon, Loader2Icon, Users2Icon, SearchIcon } from "lucide-react"
 import { toast } from "sonner"
 import {
   Sheet,
@@ -13,10 +13,10 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import {
   Select,
   SelectContent,
@@ -66,49 +66,112 @@ function nextKey() {
 
 function flattenDepartmentTree(nodes: Department[]): Department[] {
   const items: Department[] = []
-
   for (const node of nodes) {
     items.push(node)
     if (node.children?.length) {
       items.push(...flattenDepartmentTree(node.children))
     }
   }
-
   return items
 }
 
+// ── Searchable select (sticky search inside the dropdown) ─────────────────────
+
+interface Option {
+  value: string
+  label: string
+}
+
+function SearchableSelect({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  searchPlaceholder,
+  disabled,
+  loading,
+  loadingLabel = "Loading…",
+}: {
+  value: string
+  onValueChange: (v: string) => void
+  options: Option[]
+  placeholder: string
+  searchPlaceholder: string
+  disabled?: boolean
+  loading?: boolean
+  loadingLabel?: string
+}) {
+  const [search, setSearch] = useState("")
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return options
+    return options.filter((o) => o.label.toLowerCase().includes(q))
+  }, [options, search])
+
+  return (
+    <Select
+      value={value || "__none__"}
+      onValueChange={(v) => onValueChange(v === "__none__" ? "" : v)}
+      disabled={disabled}
+      onOpenChange={(o) => { if (!o) setSearch("") }}
+    >
+      <SelectTrigger className="h-9 text-sm">
+        {loading ? (
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> {loadingLabel}
+          </span>
+        ) : (
+          <SelectValue placeholder={placeholder} />
+        )}
+      </SelectTrigger>
+      <SelectContent className="max-h-[320px]" position="popper" sideOffset={4}>
+        <div className="sticky top-0 z-10 bg-popover px-2 pt-2 pb-1">
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder={searchPlaceholder}
+              className="h-9 pl-8"
+            />
+          </div>
+        </div>
+        <SelectItem value="__none__">{placeholder}</SelectItem>
+        {filtered.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+        {filtered.length === 0 && (
+          <p className="px-3 py-2 text-xs text-muted-foreground">No results found.</p>
+        )}
+      </SelectContent>
+    </Select>
+  )
+}
+
 export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuccess }: Props) {
-  const [tab, setTab] = useState<"form" | "json">("form")
   const [departments, setDepartments] = useState<Department[]>([])
   const [loadingDepartments, setLoadingDepartments] = useState(false)
-
-  // Form mode state
   const [entries, setEntries] = useState<FormEntry[]>([])
-
-  // JSON mode state
-  const [jsonText, setJsonText] = useState("")
-
   const [apiError, setApiError] = useState<string | null>(null)
   const [result, setResult] = useState<EvaluationBulkCreateResponse | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Reset on open
+  // Reset and load departments on open
   useEffect(() => {
     if (!open) {
-      setDepartments([])
       setEntries([])
-      setJsonText("")
       setApiError(null)
       setResult(null)
       return
     }
-
     setLoadingDepartments(true)
     getAllDepartments()
       .then(({ departments }) => setDepartments(flattenDepartmentTree(departments)))
-      .catch(() => {
-        setApiError("Failed to load departments.")
-      })
+      .catch(() => setApiError("Failed to load departments."))
       .finally(() => setLoadingDepartments(false))
   }, [open])
 
@@ -139,21 +202,8 @@ export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuc
   }
 
   async function handleDepartmentChange(key: number, departmentId: string) {
-    updateEntry(key, {
-      departmentId,
-      userId: "",
-      courseId: "",
-      users: [],
-      courses: [],
-      loadingUsers: !!departmentId,
-      loadingCourses: false,
-    })
-
-    if (!departmentId) {
-      updateEntry(key, { loadingUsers: false })
-      return
-    }
-
+    updateEntry(key, { departmentId, userId: "", courseId: "", users: [], courses: [], loadingUsers: !!departmentId })
+    if (!departmentId) { updateEntry(key, { loadingUsers: false }); return }
     try {
       const users = await getEvaluationUsers({ department_id: departmentId })
       updateEntry(key, { users, loadingUsers: false })
@@ -164,10 +214,7 @@ export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuc
 
   async function handleUserChange(key: number, userId: string, courseType: CourseType) {
     updateEntry(key, { userId, courseId: "", courses: [], loadingCourses: true })
-    if (!userId) {
-      updateEntry(key, { loadingCourses: false })
-      return
-    }
+    if (!userId) { updateEntry(key, { loadingCourses: false }); return }
     try {
       const res = await getUserAssignedCourses(Number(userId), courseType)
       const list = courseType === "regular" ? res.regular_courses : res.online_courses
@@ -190,50 +237,30 @@ export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuc
   }
 
   function buildFormPayload(): EvaluationCreatePayload[] {
-    return entries.map((entry) => {
-      return {
-        user_id: Number(entry.userId),
-        department_id: Number(entry.departmentId),
-        course_type: entry.courseType,
-        ...(entry.courseType === "regular"
-          ? { course_id: Number(entry.courseId) }
-          : { course_online_id: Number(entry.courseId) }),
-        scores: entry.scores,
-      }
-    })
+    return entries.map((entry) => ({
+      user_id: Number(entry.userId),
+      department_id: Number(entry.departmentId),
+      course_type: entry.courseType,
+      ...(entry.courseType === "regular"
+        ? { course_id: Number(entry.courseId) }
+        : { course_online_id: Number(entry.courseId) }),
+      scores: entry.scores,
+    }))
   }
 
   async function handleSubmit() {
     setApiError(null)
     setResult(null)
-
-    let evaluations: EvaluationCreatePayload[]
-
-    if (tab === "json") {
-      try {
-        const parsed = JSON.parse(jsonText)
-        evaluations = Array.isArray(parsed) ? parsed : [parsed]
-      } catch {
-        setApiError("Invalid JSON — please check your input.")
-        return
-      }
-    } else {
-      if (entries.length === 0) {
-        setApiError("Add at least one evaluation entry.")
-        return
-      }
-      if (entries.some((e) => !e.departmentId || !e.userId || !e.courseId)) {
-        setApiError("All entries must have a department, user, and course selected.")
-        return
-      }
-      evaluations = buildFormPayload()
+    if (entries.length === 0) { setApiError("Add at least one evaluation entry."); return }
+    if (entries.some((e) => !e.departmentId || !e.userId || !e.courseId)) {
+      setApiError("All entries must have a department, user, and course selected.")
+      return
     }
-
     setIsSubmitting(true)
     try {
-      const res = await bulkCreateEvaluations({ evaluations })
+      const res = await bulkCreateEvaluations({ evaluations: buildFormPayload() })
       setResult(res)
-      toast.success(`Bulk create done — ${res.created} created, ${res.updated} updated, ${res.failed} failed.`)
+      toast.success(`Done — ${res.created} created, ${res.updated} updated, ${res.failed} failed.`)
       onSuccess()
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return
@@ -247,221 +274,177 @@ export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuc
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full flex flex-col overflow-y-auto sm:max-w-3xl border-l border-white/10 bg-[oklch(0.18_0.02_260)] text-white">
-        <SheetHeader>
-          <SheetTitle>Bulk Create Evaluations</SheetTitle>
-          <SheetDescription>Import multiple evaluations using the form or JSON payload.</SheetDescription>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+      >
+        {/* Header */}
+        <SheetHeader className="shrink-0 border-b px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+              <Users2Icon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <SheetTitle className="text-base font-semibold">Bulk Create Evaluations</SheetTitle>
+              <SheetDescription className="text-xs">
+                Add multiple evaluation entries and submit them all at once.
+              </SheetDescription>
+            </div>
+          </div>
         </SheetHeader>
 
-        <div className="px-6 py-4">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "form" | "json")} className="mt-4">
-            <TabsList className="border border-white/10 bg-white/5">
-              <TabsTrigger value="form" className="data-[state=active]:bg-white/10 text-white">
-                Form Mode
-              </TabsTrigger>
-              <TabsTrigger value="json" className="data-[state=active]:bg-white/10 text-white">
-                JSON Mode
-              </TabsTrigger>
-            </TabsList>
+        {/* Scrollable body (native overflow — reliable height handling) */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <div className="space-y-4">
+            {entries.length === 0 && (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-10 text-center text-muted-foreground">
+                <Users2Icon className="mb-2 h-8 w-8 opacity-30" />
+                <p className="text-sm">No entries yet. Click "Add Entry" to begin.</p>
+              </div>
+            )}
 
-            <TabsContent value="form" className="mt-4 space-y-4">
-              {entries.map((entry) => (
-                <div key={entry.key} className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-white/60">Entry</p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-white/40 hover:text-red-400"
-                      onClick={() => removeEntry(entry.key)}
-                    >
-                      <Trash2Icon className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {entries.map((entry, idx) => (
+              <div key={entry.key} className="rounded-xl border bg-card/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Entry {idx + 1}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeEntry(entry.key)}
+                  >
+                    <Trash2Icon className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Department</Label>
+                <Separator />
+
+                {/* Department */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Department</Label>
+                  <SearchableSelect
+                    value={entry.departmentId}
+                    onValueChange={(v) => handleDepartmentChange(entry.key, v)}
+                    options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+                    placeholder="Select department…"
+                    searchPlaceholder="Search departments…"
+                    disabled={loadingDepartments}
+                    loading={loadingDepartments}
+                  />
+                </div>
+
+                {/* User */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">User</Label>
+                  <SearchableSelect
+                    value={entry.userId}
+                    onValueChange={(v) => handleUserChange(entry.key, v, entry.courseType)}
+                    options={entry.users.map((u) => ({
+                      value: String(u.id),
+                      label: u.email ? `${u.name} (${u.email})` : u.name,
+                    }))}
+                    placeholder={entry.departmentId ? "Select user…" : "Select a department first"}
+                    searchPlaceholder="Search users…"
+                    disabled={!entry.departmentId || entry.loadingUsers}
+                    loading={entry.loadingUsers}
+                    loadingLabel="Loading users…"
+                  />
+                  {entry.departmentId && !entry.loadingUsers && entry.users.length === 0 && (
+                    <p className="text-xs text-amber-500">No users found for this department.</p>
+                  )}
+                </div>
+
+                {/* Course type + Course */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Course Type</Label>
                     <Select
-                      value={entry.departmentId || "__none__"}
-                      onValueChange={(value) =>
-                        handleDepartmentChange(entry.key, value === "__none__" ? "" : value)
-                      }
-                      disabled={loadingDepartments}
-                    >
-                      <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                        {loadingDepartments ? (
-                          <span className="flex items-center gap-1 text-white/50">
-                            <Loader2Icon className="h-3 w-3 animate-spin" /> Loading departments…
-                          </span>
-                        ) : (
-                          <SelectValue placeholder="Select department…" />
-                        )}
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Select department —</SelectItem>
-                        {departments.map((department) => (
-                          <SelectItem key={department.id} value={String(department.id)}>
-                            {department.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">User</Label>
-                    <Select
-                      value={entry.userId || "__none__"}
+                      value={entry.courseType}
                       onValueChange={(v) =>
-                        handleUserChange(entry.key, v === "__none__" ? "" : v, entry.courseType)
+                        handleCourseTypeChange(entry.key, entry.userId, v as CourseType)
                       }
-                      disabled={!entry.departmentId || entry.loadingUsers}
                     >
-                      <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                        {!entry.departmentId ? (
-                          <span className="text-white/40">Select a department first…</span>
-                        ) : entry.loadingUsers ? (
-                          <span className="flex items-center gap-1 text-white/50">
-                            <Loader2Icon className="h-3 w-3 animate-spin" /> Loading users…
-                          </span>
-                        ) : (
-                          <SelectValue placeholder="Select user…" />
-                        )}
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">— Select user —</SelectItem>
-                        {entry.users.map((u) => (
-                          <SelectItem key={u.id} value={String(u.id)}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="regular">Regular</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
                       </SelectContent>
                     </Select>
-                    {entry.departmentId && !entry.loadingUsers && entry.users.length === 0 && (
-                      <p className="text-xs text-amber-400">No users found for this department.</p>
-                    )}
                   </div>
-
-                  <div className="flex gap-2">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">Course Type</Label>
-                      <Select
-                        value={entry.courseType}
-                        onValueChange={(v) =>
-                          handleCourseTypeChange(entry.key, entry.userId, v as CourseType)
-                        }
-                      >
-                        <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="regular">Regular</SelectItem>
-                          <SelectItem value="online">Online</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">Course</Label>
-                      <Select
-                        value={entry.courseId || "__none__"}
-                        onValueChange={(v) =>
-                          updateEntry(entry.key, { courseId: v === "__none__" ? "" : v })
-                        }
-                        disabled={!entry.userId || entry.loadingCourses}
-                      >
-                        <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                          {entry.loadingCourses ? (
-                            <span className="flex items-center gap-1 text-white/50">
-                              <Loader2Icon className="h-3 w-3 animate-spin" /> Loading…
-                            </span>
-                          ) : (
-                            <SelectValue placeholder="Select course…" />
-                          )}
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— Select course —</SelectItem>
-                          {entry.courses.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Scores</Label>
-                    <ScoreRowsEditor
-                      rows={entry.scores}
-                      availableTypes={availableTypes}
-                      onChange={(rows) => updateEntry(entry.key, { scores: rows })}
-                      disabled={isSubmitting}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Course</Label>
+                    <SearchableSelect
+                      value={entry.courseId}
+                      onValueChange={(v) => updateEntry(entry.key, { courseId: v })}
+                      options={entry.courses.map((c) => ({ value: String(c.id), label: c.name }))}
+                      placeholder={entry.userId ? "Select course…" : "Select a user first"}
+                      searchPlaceholder="Search courses…"
+                      disabled={!entry.userId || entry.loadingCourses}
+                      loading={entry.loadingCourses}
                     />
                   </div>
                 </div>
-              ))}
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addEntry}
-                className="gap-1 border-white/10 bg-white/5 text-white hover:bg-white/10"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Add Entry
-              </Button>
-            </TabsContent>
-
-            <TabsContent value="json" className="mt-4">
-              <div className="space-y-2">
-                <Label>Paste JSON array of evaluation objects</Label>
-                <Textarea
-                  rows={12}
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  placeholder={`[\n  {\n    "user_id": 1,\n    "department_id": 2,\n    "course_type": "regular",\n    "course_id": 3,\n    "scores": [{ "evaluation_type_id": 1, "score_given": 4 }]\n  }\n]`}
-                  className="border-white/10 bg-white/5 font-mono text-xs text-white placeholder:text-white/20"
-                />
+                {/* Scores */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Scores</Label>
+                  <ScoreRowsEditor
+                    rows={entry.scores}
+                    availableTypes={availableTypes}
+                    onChange={(rows) => updateEntry(entry.key, { scores: rows })}
+                    disabled={isSubmitting}
+                  />
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addEntry}
+              className="gap-1.5"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add Entry
+            </Button>
+
+            {/* Result */}
+            {result && (
+              <Alert className="border-emerald-500/30 bg-emerald-500/10">
+                <AlertDescription className="text-emerald-600 dark:text-emerald-300">
+                  Created: {result.created} · Updated: {result.updated} · Failed: {result.failed}
+                  {result.failed > 0 && result.errors && (
+                    <pre className="mt-1 text-xs text-red-500 whitespace-pre-wrap">
+                      {JSON.stringify(result.errors, null, 2)}
+                    </pre>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {apiError && (
+              <Alert variant="destructive">
+                <AlertDescription>{apiError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
         </div>
 
-        {result && (
-          <div className="px-6">
-            <Alert className="border-emerald-500/30 bg-emerald-500/10">
-              <AlertDescription className="text-emerald-300">
-                Created: {result.created} · Updated: {result.updated} · Failed: {result.failed}
-                {result.failed > 0 && result.errors && (
-                  <pre className="mt-1 text-xs text-red-300 whitespace-pre-wrap">
-                    {JSON.stringify(result.errors, null, 2)}
-                  </pre>
-                )}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {apiError && (
-          <div className="px-6 mt-4">
-            <Alert variant="destructive">
-              <AlertDescription>{apiError}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        <SheetFooter className="px-6 pb-6 flex justify-end gap-2">
+        {/* Footer */}
+        <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t px-6 py-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Close
+            Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}

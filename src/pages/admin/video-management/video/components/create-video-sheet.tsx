@@ -58,6 +58,24 @@ interface CreateVideoSheetProps extends CreateVideoPanelProps {
   open: boolean
 }
 
+function readVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video")
+    video.preload = "metadata"
+    const url = URL.createObjectURL(file)
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url)
+      const secs = Math.round(video.duration)
+      resolve(isFinite(secs) && secs > 0 ? secs : null)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    video.src = url
+  })
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -93,6 +111,7 @@ export function CreateVideoPanel({
   const [categoryId, setCategoryId] = useState("")
   const [description, setDescription] = useState("")
   const [durationSeconds, setDurationSeconds] = useState("")
+  const [durationAutoDetected, setDurationAutoDetected] = useState(false)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState("")
   const subtitleInputRef = useRef<HTMLInputElement>(null)
@@ -125,6 +144,8 @@ export function CreateVideoPanel({
     setSelectedFile(null)
     setUploadedFilePath(null)
     setUploadedFileSize(null)
+    setDurationSeconds("")
+    setDurationAutoDetected(false)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -145,9 +166,17 @@ export function CreateVideoPanel({
     setUploadedFilePath(null)
     setUploadedFileSize(null)
     setSubmitError(null)
+    setDurationSeconds("")
+    setDurationAutoDetected(false)
 
     if (file) {
       setName((current) => current || file.name.replace(/\.[^.]+$/, ""))
+      readVideoDuration(file).then((secs) => {
+        if (secs !== null) {
+          setDurationSeconds(String(secs))
+          setDurationAutoDetected(true)
+        }
+      })
     }
   }
 
@@ -538,14 +567,22 @@ export function CreateVideoPanel({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="cv-duration-inline">Duration (seconds)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="cv-duration-inline">Duration (seconds)</Label>
+                    {durationAutoDetected && (
+                      <span className="text-xs font-medium text-emerald-400">Auto-detected</span>
+                    )}
+                  </div>
                   <Input
                     id="cv-duration-inline"
                     type="number"
                     min={1}
                     placeholder="e.g. 300"
                     value={durationSeconds}
-                    onChange={(e) => setDurationSeconds(e.target.value)}
+                    onChange={(e) => {
+                      setDurationSeconds(e.target.value)
+                      setDurationAutoDetected(false)
+                    }}
                     disabled={isSubmitting}
                   />
                 </div>

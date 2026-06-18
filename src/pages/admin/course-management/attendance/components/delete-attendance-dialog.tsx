@@ -92,27 +92,27 @@ export function DeleteAttendanceDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <AlertDialogContent className="overflow-hidden border border-border/60 bg-background/95 shadow-2xl shadow-indigo-950/20 backdrop-blur-2xl">
-        <div className="absolute inset-x-0 top-0 h-24 bg-linear-to-b from-destructive/20 to-transparent" />
+      <AlertDialogContent className="w-full max-w-[calc(100%-1.5rem)] overflow-hidden border border-border/60 bg-background/95 shadow-2xl shadow-indigo-950/20 backdrop-blur-2xl sm:max-w-lg">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-destructive/20 to-transparent" />
 
-        <AlertDialogHeader className="relative pb-6 pt-8">
+        <AlertDialogHeader className="relative pb-5 pt-6 sm:pt-7">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-3xl border border-destructive/20 bg-destructive/10 text-destructive shadow-sm backdrop-blur-sm">
-              <Trash2Icon className="h-6 w-6" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10 text-destructive shadow-sm backdrop-blur-sm sm:h-14 sm:w-14">
+              <Trash2Icon className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <AlertDialogTitle className="text-lg font-semibold text-foreground">
+            <div className="min-w-0">
+              <AlertDialogTitle className="text-base font-semibold text-foreground sm:text-lg">
                 Delete attendance record
               </AlertDialogTitle>
-              <AlertDialogDescription className="mt-1 text-sm text-muted-foreground max-w-xl">
+              <AlertDialogDescription className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
                 This will permanently remove the record from the system. Please confirm that you want to delete the attendance entry below.
               </AlertDialogDescription>
             </div>
           </div>
         </AlertDialogHeader>
 
-        <div className="relative rounded-4xl border border-border/40 bg-card/80 p-5 shadow-sm ring-1 ring-white/5">
-          <div className="flex items-center gap-3 rounded-3xl bg-destructive/10 px-3 py-2 text-destructive">
+        <div className="relative rounded-2xl border border-border/40 bg-card/80 p-4 shadow-sm ring-1 ring-white/5 sm:p-5">
+          <div className="flex items-center gap-3 rounded-xl bg-destructive/10 px-3 py-2 text-destructive">
             <AlertTriangleIcon className="h-4 w-4 shrink-0" />
             <p className="text-sm font-medium leading-5">
               This action cannot be undone.
@@ -124,7 +124,7 @@ export function DeleteAttendanceDialog({
               <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Attendee
               </p>
-              <p className="mt-2 text-sm font-semibold text-foreground">
+              <p className="mt-2 truncate text-sm font-semibold text-foreground">
                 {userName}
               </p>
             </div>
@@ -145,11 +145,11 @@ export function DeleteAttendanceDialog({
           </Alert>
         )}
 
-        <AlertDialogFooter className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <AlertDialogFooter className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <AlertDialogCancel
             onClick={handleClose}
             disabled={isDeleting}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto sm:min-w-[100px]"
           >
             Cancel
           </AlertDialogCancel>
@@ -157,7 +157,7 @@ export function DeleteAttendanceDialog({
             variant="destructive"
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="w-full sm:w-auto gap-2"
+            className="w-full gap-2 sm:w-auto sm:min-w-[110px]"
           >
             {isDeleting ? (
               <>

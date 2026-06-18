@@ -26,9 +26,9 @@ export const authService = {
    * GET /admin/me  or  GET /user/me
    * Unwraps Laravel's `data` envelope and returns the user profile.
    */
-  async getMe(role: Role): Promise<UserResource> {
+  async getMe(role: Role, signal?: AbortSignal): Promise<UserResource> {
     const path = role === Role.admin ? "/admin/me" : "/user/me"
-    const res = await apiClient.get<LaravelResource<UserResource>>(path)
+    const res = await apiClient.get<LaravelResource<UserResource>>(path, signal)
     return res.data
   },
 

@@ -3,7 +3,6 @@
 
 import {
   AlertCircleIcon,
-  BellIcon,
   Loader2Icon,
   RefreshCwIcon,
 } from "lucide-react"
@@ -48,18 +47,13 @@ export default function EvaluationNotificationsPage() {
     <div className="space-y-6">
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-            <BellIcon className="size-5 text-white/70" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
-              Evaluation Notifications
-            </h1>
-            <p className="text-sm text-white/50">
-              Send evaluation report emails to managers and view delivery history.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            Evaluation Notifications
+          </h1>
+          <p className="text-sm text-white/50">
+            Send evaluation report emails to managers and view delivery history.
+          </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">

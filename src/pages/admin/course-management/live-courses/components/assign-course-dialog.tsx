@@ -279,12 +279,14 @@ export function AssignCourseDialog({
                 )}
 
                 {/* Assigned by */}
-                {firstResult.assigned_by && (
+                {(firstResult.assigned_by_user || firstResult.assigned_by) && (
                   <div className="flex items-start gap-3 py-4">
                     <HashIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Assigned By</p>
-                      <p className="mt-0.5 text-sm text-foreground">{firstResult.assigned_by.name}</p>
+                      <p className="mt-0.5 text-sm text-foreground">
+                        {firstResult.assigned_by_user?.name ?? `User #${firstResult.assigned_by}`}
+                      </p>
                     </div>
                   </div>
                 )}

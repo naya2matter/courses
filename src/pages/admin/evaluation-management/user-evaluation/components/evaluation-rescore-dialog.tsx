@@ -1,15 +1,15 @@
 // ─── EvaluationRescoreDialog ──────────────────────────────────────────────────
-// Dialog for updating scores on an existing evaluation.
-// User, department, course are read-only; only scores[] are editable.
+// Slide-in sheet for updating scores on an existing evaluation.
 
 import { useState, useEffect } from "react"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, RefreshCwIcon } from "lucide-react"
 import { toast } from "sonner"
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,6 @@ export function EvaluationRescoreDialog({
   const [apiError, setApiError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load full detail to pre-populate scores
   useEffect(() => {
     if (!open || !evaluation) {
       setScores([])
@@ -60,10 +59,7 @@ export function EvaluationRescoreDialog({
           })),
         )
       })
-      .catch(() => {
-        // Fallback to empty rows
-        setScores([])
-      })
+      .catch(() => setScores([]))
       .finally(() => setLoading(false))
   }, [open, evaluation])
 
@@ -90,11 +86,9 @@ export function EvaluationRescoreDialog({
         if (err.status === 422) {
           const data = err.data as { errors?: Record<string, string[]>; message?: string }
           const fieldErrors = data?.errors
-          if (fieldErrors) {
-            msg = Object.values(fieldErrors).flat().join(" ")
-          } else {
-            msg = data?.message ?? msg
-          }
+          msg = fieldErrors
+            ? Object.values(fieldErrors).flat().join(" ")
+            : (data?.message ?? msg)
         } else {
           msg = err.message ?? msg
         }
@@ -107,83 +101,96 @@ export function EvaluationRescoreDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-2xl border-l border-white/10 bg-[oklch(0.18_0.02_260)] text-white overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-        <SheetHeader className="mb-5">
-          <SheetTitle className="text-white text-lg font-semibold">Re-score Evaluation</SheetTitle>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
+      >
+        {/* Header */}
+        <SheetHeader className="shrink-0 border-b px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <RefreshCwIcon className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <SheetTitle className="text-base font-semibold">Re-score Evaluation</SheetTitle>
+              <SheetDescription className="text-xs">
+                Update scores for this evaluation record.
+              </SheetDescription>
+            </div>
+          </div>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Read-only user/course info */}
-          {evaluation && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">
-                    {evaluation.user?.name ?? `User #${evaluation.user_id}`}
-                  </p>
-                  {evaluation.user?.email && (
-                    <p className="text-xs text-white/40">{evaluation.user.email}</p>
-                  )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <form id="rescore-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Read-only context card */}
+            {evaluation && (
+              <div className="rounded-xl border bg-muted/40 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {evaluation.user?.name ?? `User #${evaluation.user_id}`}
+                    </p>
+                    {evaluation.user?.email && (
+                      <p className="truncate text-xs text-muted-foreground">{evaluation.user.email}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="capitalize shrink-0 text-xs">
+                    {evaluation.course_type}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="border-white/10 text-white/60 capitalize">
-                  {evaluation.course_type}
-                </Badge>
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                  {evaluation.department?.name && <span>{evaluation.department.name}</span>}
+                  {evaluation.course?.name && <span>· {evaluation.course.name}</span>}
+                </div>
+                <div className="flex items-center justify-between border-t pt-2">
+                  <span className="text-xs text-muted-foreground">Current total score</span>
+                  <span className="text-sm font-semibold tabular-nums">{evaluation.total_score ?? "—"}</span>
+                </div>
               </div>
-              <p className="text-sm text-white/50">
-                {evaluation.department?.name && (
-                  <span className="mr-2">{evaluation.department.name}</span>
-                )}
-                {evaluation.course?.name && (
-                  <span>· {evaluation.course.name}</span>
-                )}
-              </p>
-              <p className="text-xs text-white/30">
-                Current score: <span className="text-white/60">{evaluation.total_score}</span>
-              </p>
-            </div>
-          )}
-
-          {/* Scores editor */}
-          <div className="space-y-1.5">
-            <Label>Scores</Label>
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full rounded-lg bg-white/5" />
-                ))}
-              </div>
-            ) : (
-              <ScoreRowsEditor
-                rows={scores}
-                availableTypes={availableTypes}
-                onChange={setScores}
-                disabled={isSubmitting}
-              />
             )}
-          </div>
 
-          {apiError && (
-            <Alert variant="destructive">
-              <AlertDescription>{apiError}</AlertDescription>
-            </Alert>
-          )}
+            {/* Scores editor */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Scores</Label>
+              {loading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : (
+                <ScoreRowsEditor
+                  rows={scores}
+                  availableTypes={availableTypes}
+                  onChange={setScores}
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>
 
-          <SheetFooter className="mt-6 flex justify-end gap-2 px-0 pb-4">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-              className="text-white/60 hover:text-white"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || loading}>
-              {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-              Update Scores
-            </Button>
-          </SheetFooter>
-        </form>
+            {apiError && (
+              <Alert variant="destructive">
+                <AlertDescription>{apiError}</AlertDescription>
+              </Alert>
+            )}
+          </form>
+        </div>
+
+        {/* Footer */}
+        <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t px-6 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button form="rescore-form" type="submit" disabled={isSubmitting || loading}>
+            {isSubmitting && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+            Update Scores
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   )

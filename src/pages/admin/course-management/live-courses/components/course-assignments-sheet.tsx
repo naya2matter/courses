@@ -248,7 +248,6 @@ export function CourseAssignmentsSheet({ open, onClose }: CourseAssignmentsSheet
     fetchAssignments,
     setFilters,
     deleteAssignment,
-    clearError,
   } = useCourseAssignmentStore()
 
   const [searchDraft, setSearchDraft] = useState(filters.search ?? "")

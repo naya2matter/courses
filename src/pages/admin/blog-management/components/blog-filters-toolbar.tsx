@@ -21,12 +21,9 @@ interface BlogFiltersToolbarProps {
   searchValue: string
   statusFilter: BlogPostStatus | "all"
   mediaFilter: MediaFilter
-  perPage: number
-  resultCount: { from: number; to: number; total: number } | null
   onSearchChange: (v: string) => void
   onStatusChange: (v: BlogPostStatus | "all") => void
   onMediaChange: (v: MediaFilter) => void
-  onPerPageChange: (v: number) => void
   onClearAll: () => void
 }
 
@@ -34,12 +31,9 @@ export function BlogFiltersToolbar({
   searchValue,
   statusFilter,
   mediaFilter,
-  perPage,
-  resultCount,
   onSearchChange,
   onStatusChange,
   onMediaChange,
-  onPerPageChange,
   onClearAll,
 }: BlogFiltersToolbarProps) {
   const [draft, setDraft] = useState(searchValue)
@@ -111,22 +105,6 @@ export function BlogFiltersToolbar({
           </SelectContent>
         </Select>
 
-        {/* Per page */}
-        <Select
-          value={String(perPage)}
-          onValueChange={(v) => onPerPageChange(Number(v))}
-        >
-          <SelectTrigger className="w-28">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="10">10 / page</SelectItem>
-            <SelectItem value="15">15 / page</SelectItem>
-            <SelectItem value="25">25 / page</SelectItem>
-            <SelectItem value="50">50 / page</SelectItem>
-          </SelectContent>
-        </Select>
-
         {/* Clear */}
         {hasActive && (
           <Button
@@ -141,12 +119,6 @@ export function BlogFiltersToolbar({
         )}
       </div>
 
-      {/* Result count */}
-      {resultCount && (
-        <p className="text-xs text-muted-foreground">
-          Showing {resultCount.from}–{resultCount.to} of {resultCount.total} posts
-        </p>
-      )}
     </div>
   )
 }

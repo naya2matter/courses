@@ -18,6 +18,8 @@ import {
   SaveIcon,
   XCircleIcon,
   BookOpenIcon,
+  ShieldCheckIcon,
+  LightbulbIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -138,6 +140,20 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   radio: "Single choice (radio)",
   checkbox: "Multiple choice (checkbox)",
   text: "Open-ended (text)",
+}
+
+// ── Normalizers (backend sometimes returns options/correct_answer as JSON string) ──
+
+function normalizeStringArray(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map(String)
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed.map(String)
+    } catch {}
+    return raw.trim() ? [raw] : []
+  }
+  return []
 }
 
 // ── Question form state ───────────────────────────────────────────────────────
@@ -443,96 +459,120 @@ interface QuestionViewCardProps {
 
 function QuestionViewCard({ question, index, dimmed, onEdit, onDelete }: QuestionViewCardProps) {
   const type = question.type as QuestionType
-  const hasOptions = (question.options ?? []).length > 0
-  const correctSet = new Set(question.correct_answer ?? [])
+  const options = normalizeStringArray(question.options)
+  const correctAnswers = normalizeStringArray(question.correct_answer)
+  const hasOptions = options.length > 0
+  const correctSet = new Set(correctAnswers)
 
   return (
     <div
-      className={`rounded-xl border p-5 space-y-3 transition-opacity ${
-        dimmed ? "border-white/5 opacity-40 pointer-events-none" : "border-white/10 bg-white/2"
+      className={`rounded-xl border overflow-hidden transition-opacity ${
+        dimmed ? "border-white/5 opacity-40 pointer-events-none" : "border-white/10"
       }`}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 flex-1 min-w-0">
-          {TYPE_ICONS[type] ?? <BookOpenIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-              <span className="text-xs text-muted-foreground">Q{index + 1}</span>
-              <span className="inline-flex items-center rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {TYPE_LABELS[type] ?? type}
-              </span>
-              {question.points != null ? (
-                <span className="inline-flex items-center rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">
-                  {question.points} pt{question.points !== 1 ? "s" : ""}
+      {/* Card top stripe — admin correct-answer indicator */}
+      {!dimmed && hasOptions && correctAnswers.length > 0 && (
+        <div className="flex items-center gap-1.5 border-b border-emerald-500/20 bg-emerald-500/8 px-5 py-1.5">
+          <ShieldCheckIcon className="h-3 w-3 text-emerald-400 shrink-0" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
+            Admin view — correct answer highlighted
+          </span>
+        </div>
+      )}
+
+      <div className="bg-white/2 p-5 space-y-3">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 flex-1 min-w-0">
+            {TYPE_ICONS[type] ?? <BookOpenIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                <span className="text-xs text-muted-foreground">Q{index + 1}</span>
+                <span className="inline-flex items-center rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {TYPE_LABELS[type] ?? type}
                 </span>
-              ) : type === "text" ? (
-                <span className="inline-flex items-center rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
-                  Manual grading
-                </span>
-              ) : null}
+                {question.points != null ? (
+                  <span className="inline-flex items-center rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">
+                    {question.points} pt{question.points !== 1 ? "s" : ""}
+                  </span>
+                ) : type === "text" ? (
+                  <span className="inline-flex items-center rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                    Manual grading
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-sm font-medium leading-relaxed">{question.question_text}</p>
             </div>
-            <p className="text-sm font-medium leading-relaxed">{question.question_text}</p>
+          </div>
+
+          {/* Edit / Delete */}
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={onEdit}
+              aria-label="Edit question"
+            >
+              <PencilIcon className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={onDelete}
+              aria-label="Delete question"
+            >
+              <Trash2Icon className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
 
-        {/* Edit / Delete */}
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            onClick={onEdit}
-            aria-label="Edit question"
-          >
-            <PencilIcon className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
-            aria-label="Delete question"
-          >
-            <Trash2Icon className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {/* Options */}
+        {hasOptions && (
+          <ul className="space-y-1.5 pl-7">
+            {options.map((opt, i) => {
+              const isCorrect = correctSet.has(opt)
+              return (
+                <li
+                  key={i}
+                  className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
+                    isCorrect
+                      ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                      : "border border-white/5 bg-white/2 text-muted-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    {isCorrect ? (
+                      <CheckCircle2Icon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <XIcon className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                    )}
+                    {opt}
+                  </span>
+                  {isCorrect && (
+                    <span className="shrink-0 rounded border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                      Correct
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        {/* Explanation */}
+        {question.correct_answer_explanation && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 pl-7 pr-3 py-2.5">
+            <LightbulbIcon className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300/80 italic leading-relaxed">
+              {question.correct_answer_explanation}
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Options */}
-      {hasOptions && (
-        <ul className="space-y-1.5 pl-7">
-          {(question.options ?? []).map((opt, i) => {
-            const isCorrect = correctSet.has(opt)
-            return (
-              <li
-                key={i}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
-                  isCorrect
-                    ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                    : "border border-white/5 bg-white/2 text-muted-foreground"
-                }`}
-              >
-                {isCorrect ? (
-                  <CheckCircle2Icon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                ) : (
-                  <XIcon className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                )}
-                {opt}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
-      {/* Explanation */}
-      {question.correct_answer_explanation && (
-        <p className="pl-7 text-xs text-muted-foreground italic leading-relaxed">
-          {question.correct_answer_explanation}
-        </p>
-      )}
     </div>
   )
 }

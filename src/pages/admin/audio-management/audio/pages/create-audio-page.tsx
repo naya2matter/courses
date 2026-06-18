@@ -3,7 +3,7 @@
 // Sends multipart/form-data so the backend receives the binary file alongside
 // the other text fields.
 
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   ArrowLeftIcon,
@@ -11,6 +11,7 @@ import {
   Music2Icon,
   UploadIcon,
   ImageIcon,
+  XIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -18,9 +19,105 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import { isApiError } from "@/lib/api"
 import { createAudio } from "../service/audio.service"
+import { getAllCategories } from "../../categories/service/category.service"
+import type { AudioCategoryResource } from "../../categories/types/category.types"
+
+// ── ThumbnailPicker ────────────────────────────────────────────────────────────
+// File picker that shows a live image preview of the chosen thumbnail.
+
+function ThumbnailPicker({
+  id,
+  file,
+  existingUrl,
+  disabled,
+  onChange,
+}: {
+  id: string
+  file: File | null
+  existingUrl?: string | null
+  disabled?: boolean
+  onChange: (file: File | null) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const shownUrl = previewUrl ?? (existingUrl?.trim() ? existingUrl : null)
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      {/* Preview */}
+      <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-dashed border-input bg-background">
+        {shownUrl ? (
+          <img src={shownUrl} alt="Thumbnail preview" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground/60">
+            <ImageIcon className="h-6 w-6" />
+            <span className="text-[10px]">No image</span>
+          </div>
+        )}
+        {file && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              onChange(null)
+              if (ref.current) ref.current.value = ""
+            }}
+            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+            aria-label="Remove thumbnail"
+          >
+            <XIcon className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Picker */}
+      <div className="flex flex-1 flex-col gap-1.5">
+        <input
+          ref={ref}
+          id={id}
+          type="file"
+          accept="image/*"
+          disabled={disabled}
+          className="sr-only"
+          onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => ref.current?.click()}
+          className="flex items-center gap-3 rounded-md border border-dashed border-input bg-background px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <UploadIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">
+            {file ? file.name : (existingUrl ? "Replace thumbnail image" : "Click to choose a thumbnail image")}
+          </span>
+        </button>
+        <p className="text-xs text-muted-foreground">PNG, JPG or WEBP. Square images look best.</p>
+      </div>
+    </div>
+  )
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -129,15 +226,25 @@ export function CreateAudioPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
 
+  const [categories, setCategories] = useState<AudioCategoryResource[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load categories for the name-based picker
+  useEffect(() => {
+    setLoadingCategories(true)
+    getAllCategories()
+      .then(({ items }) => setCategories(items))
+      .catch(() => setCategories([]))
+      .finally(() => setLoadingCategories(false))
+  }, [])
 
   // ── Client-side validation before hitting the API ─────────────────────────
   function validate(): string | null {
     if (!name.trim()) return "Name is required."
-    if (!categoryId.trim()) return "Audio category ID is required."
-    const catNum = parseInt(categoryId, 10)
-    if (isNaN(catNum) || catNum < 1) return "Audio category ID must be a positive integer."
+    if (!categoryId.trim()) return "Please select an audio category."
     if (duration.trim()) {
       const dur = parseInt(duration, 10)
       if (isNaN(dur) || dur < 1) return "Duration must be a positive integer (seconds)."
@@ -230,23 +337,35 @@ export function CreateAudioPage() {
               />
             </div>
 
-            {/* Audio Category ID (required) */}
+            {/* Audio Category (required, picked by name) */}
             <div className="grid gap-1.5">
               <Label htmlFor="audio-category">
-                Category ID <span className="text-destructive">*</span>
+                Category <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="audio-category"
-                type="number"
-                min={1}
-                placeholder="e.g. 3"
+              <Select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                disabled={submitting}
-                required
-              />
+                onValueChange={setCategoryId}
+                disabled={submitting || loadingCategories}
+              >
+                <SelectTrigger id="audio-category" className="w-full">
+                  {loadingCategories ? (
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> Loading categories…
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select a category…" />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                The numeric ID of the audio category.
+                Choose the category this audio belongs to.
               </p>
             </div>
 
@@ -297,19 +416,17 @@ export function CreateAudioPage() {
               />
             </div>
 
-            {/* Thumbnail (optional binary upload) */}
+            {/* Thumbnail (optional binary upload, with live preview) */}
             <div className="grid gap-1.5 sm:col-span-2">
               <Label className="flex items-center gap-1.5">
                 <ImageIcon className="h-4 w-4 text-muted-foreground" />
                 Thumbnail Image
               </Label>
-              <FileInput
+              <ThumbnailPicker
                 id="thumbnail-input"
-                accept="image/*"
                 disabled={submitting}
                 file={thumbnail}
                 onChange={setThumbnail}
-                placeholder="Click to choose a thumbnail image"
               />
             </div>
           </div>

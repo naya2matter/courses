@@ -1,10 +1,16 @@
 // ─── EvaluationFiltersToolbar ─────────────────────────────────────────────────
-// Search + filter controls for the evaluations list.
+// Flat filter bar matching the "all pages" style.
 
-import { useRef } from "react"
-import { SearchIcon, XIcon, CalendarIcon } from "lucide-react"
+import { useRef, useState } from "react"
+import { CalendarIcon, FilterXIcon, SearchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -32,6 +38,82 @@ const COURSE_TYPES = [
   { value: "online", label: "Online" },
 ]
 
+// Convert "YYYY-MM-DD" string → local Date (avoids UTC-midnight timezone shift)
+function isoToLocalDate(iso: string): Date | undefined {
+  if (!iso) return undefined
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
+
+// Convert Date → "YYYY-MM-DD"
+function dateToIso(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function fmtDisplay(iso: string): string {
+  if (!iso) return ""
+  const d = isoToLocalDate(iso)!
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+}
+
+// ── Inline date-picker button ─────────────────────────────────────────────────
+
+function DatePickerButton({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string
+  onChange: (iso: string) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = isoToLocalDate(value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`h-8 gap-1.5 text-xs ${value ? "" : "text-muted-foreground"}`}
+        >
+          <CalendarIcon className="h-3.5 w-3.5" />
+          {value ? fmtDisplay(value) : placeholder}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selected}
+          onSelect={(d) => {
+            onChange(d ? dateToIso(d) : "")
+            setOpen(false)
+          }}
+          autoFocus
+        />
+        {value && (
+          <div className="border-t px-3 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-full text-xs text-muted-foreground"
+              onClick={() => {
+                onChange("")
+                setOpen(false)
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ── Main toolbar ──────────────────────────────────────────────────────────────
+
 export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -53,108 +135,85 @@ export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: P
     filters.end_date
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3 shadow-[0_8px_28px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/45">Search</p>
-          <div className="relative w-full sm:w-[440px]">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+    <div className="flex flex-col gap-2">
+      {/* Search row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by user or course name…"
             defaultValue={filters.search}
             onChange={handleSearchChange}
-            className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-white/30"
+            className="pl-9"
           />
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2">
+      {/* Filter row */}
+      <div className="flex flex-wrap items-center gap-2">
         {/* Course type */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/45">Course Type</p>
-          <Select
-            value={filters.course_type || "__all__"}
-            onValueChange={(v) =>
-              onFilterChange({ course_type: v === "__all__" ? "" : (v as "regular" | "online") })
-            }
-          >
-            <SelectTrigger className="w-36 border-white/10 bg-white/5 text-white">
-              <SelectValue placeholder="Course type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All types</SelectItem>
-              {COURSE_TYPES.map((ct) => (
-                <SelectItem key={ct.value} value={ct.value}>
-                  {ct.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={filters.course_type || "__all__"}
+          onValueChange={(v) =>
+            onFilterChange({ course_type: v === "__all__" ? "" : (v as "regular" | "online") })
+          }
+        >
+          <SelectTrigger className="h-8 w-36 text-xs">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All types</SelectItem>
+            {COURSE_TYPES.map((ct) => (
+              <SelectItem key={ct.value} value={ct.value}>
+                {ct.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Performance level */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/45">Performance</p>
-          <Select
-            value={filters.performance_level || "__all__"}
-            onValueChange={(v) =>
-              onFilterChange({ performance_level: v === "__all__" ? "" : v })
-            }
-          >
-            <SelectTrigger className="w-44 border-white/10 bg-white/5 text-white">
-              <SelectValue placeholder="Performance" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All levels</SelectItem>
-              {PERFORMANCE_LEVELS.map((pl) => (
-                <SelectItem key={pl.value} value={pl.value}>
-                  {pl.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={filters.performance_level || "__all__"}
+          onValueChange={(v) =>
+            onFilterChange({ performance_level: v === "__all__" ? "" : v })
+          }
+        >
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="All levels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All levels</SelectItem>
+            {PERFORMANCE_LEVELS.map((pl) => (
+              <SelectItem key={pl.value} value={pl.value}>
+                {pl.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Start date */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/45">From</p>
-          <div className="relative">
-            <CalendarIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-            <Input
-              type="date"
-              value={filters.start_date}
-              onChange={(e) => onFilterChange({ start_date: e.target.value })}
-              className="w-40 border-white/10 bg-white/5 pl-9 text-white"
-            />
-          </div>
-        </div>
-
-        {/* End date */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/45">To</p>
-          <div className="relative">
-            <CalendarIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-            <Input
-              type="date"
-              value={filters.end_date}
-              onChange={(e) => onFilterChange({ end_date: e.target.value })}
-              className="w-40 border-white/10 bg-white/5 pl-9 text-white"
-            />
-          </div>
-        </div>
+        {/* Date range */}
+        <DatePickerButton
+          value={filters.start_date ?? ""}
+          onChange={(iso) => onFilterChange({ start_date: iso })}
+          placeholder="From date"
+        />
+        <DatePickerButton
+          value={filters.end_date ?? ""}
+          onChange={(iso) => onFilterChange({ end_date: iso })}
+          placeholder="To date"
+        />
 
         {hasFilters && (
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 gap-1.5 text-xs text-muted-foreground"
             onClick={onClear}
-            className="mb-0.5 gap-1 text-white/60 hover:text-white"
           >
-            <XIcon className="h-4 w-4" />
-            Clear
+            <FilterXIcon className="h-3.5 w-3.5" />
+            Clear filters
           </Button>
         )}
-      </div>
       </div>
     </div>
   )

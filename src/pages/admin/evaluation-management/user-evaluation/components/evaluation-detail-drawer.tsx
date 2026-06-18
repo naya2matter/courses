@@ -1,7 +1,8 @@
 // ─── EvaluationDetailDrawer ───────────────────────────────────────────────────
-// Slide-in Sheet showing full evaluation details including scores and history.
+// Slide-in Sheet showing full evaluation details with improved UI.
 
 import { useEffect, useState } from "react"
+import { CalendarIcon, ClockIcon, UserIcon } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -12,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { PerformanceLevelBadge } from "./performance-level-badge"
 import { getEvaluationById } from "../service/evaluation.service"
 import type { Evaluation, EvaluationDetail } from "../types/evaluation.types"
@@ -37,6 +39,18 @@ function formatDate(d?: string | null): string {
   }
 }
 
+function ScoreBar({ score, max }: { score: number; max?: number }) {
+  if (!max || max <= 0) return null
+  const pct = Math.min(100, Math.round((score / max) * 100))
+  const color =
+    pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500"
+  return (
+    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
 export function EvaluationDetailDrawer({ evaluation, open, onOpenChange }: Props) {
   const [detail, setDetail] = useState<EvaluationDetail | null>(null)
   const [loading, setLoading] = useState(false)
@@ -60,125 +74,178 @@ export function EvaluationDetailDrawer({ evaluation, open, onOpenChange }: Props
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full flex flex-col overflow-y-auto sm:max-w-lg border-l border-white/10 bg-[oklch(0.18_0.02_260)] text-white">
-        <SheetHeader>
-          <SheetTitle>Evaluation Details</SheetTitle>
-          <SheetDescription>Review score history and performance details.</SheetDescription>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col border-l border-white/10 bg-[oklch(0.18_0.02_260)] text-white sm:max-w-lg p-0"
+      >
+        <SheetHeader className="border-b border-white/8 px-6 py-5">
+          <SheetTitle className="text-white">Evaluation Details</SheetTitle>
+          <SheetDescription className="text-white/40">
+            Score history and performance breakdown.
+          </SheetDescription>
         </SheetHeader>
 
-        <div className="px-6 pb-6">
-
-        {loading && (
-          <div className="mt-2 space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full rounded-lg bg-white/5" />
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <p className="mt-6 text-sm text-red-400">{error}</p>
-        )}
-
-        {detail && !loading && (
-          <div className="mt-2 flex flex-col gap-5">
-            {/* Identity */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-white">
-                    {detail.user?.name ?? `User #${detail.user_id}`}
-                  </p>
-                  {detail.user?.email && (
-                    <p className="text-xs text-white/40">{detail.user.email}</p>
-                  )}
-                </div>
-                <Badge variant="outline" className="border-white/10 text-white/60 capitalize">
-                  {detail.course_type}
-                </Badge>
-              </div>
-              <p className="text-sm text-white/50">
-                {detail.department?.name && <span>{detail.department.name}</span>}
-                {detail.course?.name && <span> · {detail.course.name}</span>}
-              </p>
-            </div>
-
-            {/* Score + Performance */}
-            <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
-              <div>
-                <p className="text-xs text-white/40">Total Score</p>
-                <p className="text-3xl font-bold text-white">{detail.total_score}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/40 mb-1">Performance</p>
-                <PerformanceLevelBadge performance_level={detail.performance_level} />
-              </div>
-            </div>
-
-            {/* Score breakdown */}
-            {detail.scores && detail.scores.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-white/60">Score Breakdown</p>
-                <div className="rounded-xl border border-white/10 bg-white/5 divide-y divide-white/5">
-                  {detail.scores.map((s, i) => (
-                    <div key={i} className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        {s.config_name && (
-                          <p className="text-xs text-white/40">{s.config_name}</p>
-                        )}
-                        <p className="text-sm text-white">{s.type_name ?? `Type #${s.evaluation_type_id}`}</p>
-                      </div>
-                      <p className="text-sm font-medium text-white">
-                        {s.score_given}
-                        {s.max_score !== undefined && (
-                          <span className="text-white/40"> / {s.max_score}</span>
-                        )}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-6 pb-8 pt-5 space-y-5">
+            {/* Loading skeleton */}
+            {loading && (
+              <div className="space-y-3">
+                <Skeleton className="h-24 w-full rounded-xl bg-white/5" />
+                <Skeleton className="h-16 w-full rounded-xl bg-white/5" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg bg-white/5" />
+                ))}
               </div>
             )}
 
-            {/* History */}
-            {detail.history && detail.history.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-white/60">History</p>
-                <div className="rounded-xl border border-white/10 bg-white/5 divide-y divide-white/5">
-                  {detail.history.map((h) => (
-                    <div key={h.id} className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        <p className="text-xs text-white/40">{h.config_name}</p>
-                        <p className="text-sm text-white">{h.type_name}</p>
+            {error && (
+              <p className="text-sm text-red-400">{error}</p>
+            )}
+
+            {detail && !loading && (
+              <>
+                {/* ── User card ────────────────────────────────────────────── */}
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 ring-1 ring-indigo-500/30">
+                      <UserIcon className="h-5 w-5 text-indigo-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate font-semibold text-white">
+                          {detail.user?.name ?? `User #${detail.user_id}`}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-white/10 capitalize text-white/60 text-xs"
+                        >
+                          {detail.course_type}
+                        </Badge>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-white">{h.score_given}</p>
-                        {h.created_at && (
-                          <p className="text-xs text-white/30">{formatDate(h.created_at)}</p>
-                        )}
+                      {detail.user?.email && (
+                        <p className="mt-0.5 truncate text-xs text-white/40">{detail.user.email}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-white/50">
+                        {detail.department?.name && <span>{detail.department.name}</span>}
+                        {detail.course?.name && <span>· {detail.course.name}</span>}
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Score hero ───────────────────────────────────────────── */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                    <p className="text-xs text-white/40 mb-1">Total Score</p>
+                    <p className="text-4xl font-extrabold tabular-nums text-white">
+                      {detail.total_score ?? "—"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-white/40 mb-2">Performance</p>
+                    <PerformanceLevelBadge performance_level={detail.performance_level} />
+                  </div>
+                </div>
+
+                {/* ── Score breakdown ──────────────────────────────────────── */}
+                {detail.scores && detail.scores.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+                      Score Breakdown
+                    </p>
+                    <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+                      {detail.scores.map((s, i) => (
+                        <div key={i} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              {s.config_name && (
+                                <p className="text-[10px] uppercase tracking-wider text-white/30">
+                                  {s.config_name}
+                                </p>
+                              )}
+                              <p className="truncate text-sm text-white">
+                                {s.type_name ?? `Type #${s.evaluation_type_id}`}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-sm font-semibold tabular-nums text-white">
+                              {s.score_given}
+                              {s.max_score !== undefined && (
+                                <span className="text-white/40 font-normal"> / {s.max_score}</span>
+                              )}
+                            </p>
+                          </div>
+                          {s.max_score !== undefined && (
+                            <ScoreBar score={s.score_given} max={s.max_score} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── History timeline ─────────────────────────────────────── */}
+                {detail.history && detail.history.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+                      Score History
+                    </p>
+                    <div className="relative pl-5">
+                      {/* vertical line */}
+                      <div className="absolute left-1.5 top-2 bottom-2 w-px bg-white/10" />
+                      <div className="space-y-3">
+                        {detail.history.map((h) => (
+                          <div key={h.id} className="relative">
+                            {/* dot */}
+                            <div className="absolute -left-3.5 top-2 h-2.5 w-2.5 rounded-full border border-white/20 bg-indigo-500/60" />
+                            <div className="rounded-lg border border-white/8 bg-white/3 px-3 py-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  {h.config_name && (
+                                    <p className="text-[10px] uppercase tracking-wider text-white/30">
+                                      {h.config_name}
+                                    </p>
+                                  )}
+                                  <p className="truncate text-sm text-white">{h.type_name}</p>
+                                </div>
+                                <span className="shrink-0 text-sm font-semibold tabular-nums text-white">
+                                  {h.score_given}
+                                </span>
+                              </div>
+                              {h.created_at && (
+                                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-white/30">
+                                  <ClockIcon className="h-3 w-3" />
+                                  {formatDate(h.created_at)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Separator className="bg-white/10" />
+
+                {/* ── Meta dates ───────────────────────────────────────────── */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Created", value: detail.created_at },
+                    { label: "Updated", value: detail.updated_at },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-lg border border-white/8 bg-white/3 px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/30 mb-1">
+                        <CalendarIcon className="h-3 w-3" />
+                        {label}
+                      </div>
+                      <p className="text-xs text-white/60">{formatDate(value)}</p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </>
             )}
-
-            <Separator className="bg-white/10" />
-
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-2 text-sm text-white/50">
-              <div>
-                <p className="text-xs text-white/30">Created</p>
-                <p>{formatDate(detail.created_at)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/30">Updated</p>
-                <p>{formatDate(detail.updated_at)}</p>
-              </div>
-            </div>
           </div>
-        )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   )

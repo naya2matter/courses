@@ -2,7 +2,7 @@
 
 import { apiClient } from "@/lib/api"
 import { downloadCsv, buildExportQuery } from "../../shared/download-csv"
-import type { KpiFilters, KpiOverviewResponse, KpiTrendsResponse } from "../types/kpi.types"
+import type { KpiFilters, KpiOverviewResponse } from "../types/kpi.types"
 
 function buildQuery(filters: Partial<KpiFilters>): string {
   const params = new URLSearchParams()
@@ -20,14 +20,6 @@ export async function getKpiOverview(
 ): Promise<KpiOverviewResponse> {
   return apiClient.get<KpiOverviewResponse>(
     `/admin/reporting/kpi/overview${buildQuery(filters)}`,
-  )
-}
-
-export async function getKpiTrends(
-  filters: Partial<KpiFilters> = {},
-): Promise<KpiTrendsResponse> {
-  return apiClient.get<KpiTrendsResponse>(
-    `/admin/reporting/kpi/trends${buildQuery(filters)}`,
   )
 }
 

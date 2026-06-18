@@ -514,26 +514,6 @@ export function VideoTable(
                 </SelectContent>
               </Select>
 
-              {/* Per-page */}
-              <Select
-                value={String(filters.per_page ?? 15)}
-                onValueChange={(v) =>
-                  onFiltersChange({ ...filters, per_page: Number(v), page: 1 })
-                }
-                disabled={isLoading}
-              >
-                <SelectTrigger className="h-9 w-22.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 15, 25, 50].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n} / page
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               <Button
                 variant="outline"
                 size="sm"
@@ -679,36 +659,58 @@ export function VideoTable(
           </Table>
 
           {/* ── Desktop Pagination (inside table card) ───────────────── */}
-          {paginationMeta && lastPage > 1 && (
-            <div className="flex items-center justify-between border-t border-white/8 px-4 py-3 text-sm text-muted-foreground">
-              <span>
-                Page {currentPage} of {lastPage}
-                {paginationMeta.total != null && (
-                  <> &middot; {paginationMeta.total.toLocaleString()} total</>
-                )}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={!canPrev || isLoading}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={!canNext || isLoading}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
-              </div>
+          <div className="flex items-center justify-between border-t border-white/8 px-4 py-3 text-sm text-muted-foreground">
+            <span>
+              {paginationMeta?.from != null && paginationMeta?.to != null
+                ? `Showing ${paginationMeta.from}–${paginationMeta.to} of ${paginationMeta.total?.toLocaleString() ?? 0}`
+                : paginationMeta?.total != null
+                  ? `${paginationMeta.total.toLocaleString()} videos`
+                  : null}
+            </span>
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(filters.per_page ?? 15)}
+                onValueChange={(v) =>
+                  onFiltersChange({ ...filters, per_page: Number(v), page: 1 })
+                }
+                disabled={isLoading}
+              >
+                <SelectTrigger className="h-8 w-24 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 15, 25, 50].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {lastPage > 1 && (
+                <>
+                  <span className="text-xs tabular-nums">{currentPage} / {lastPage}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={!canPrev || isLoading}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={!canNext || isLoading}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* ── Mobile Cards (< md) ───────────────────────────────────────── */}
@@ -739,36 +741,58 @@ export function VideoTable(
           )}
 
           {/* ── Mobile Pagination ─────────────────────────────────────── */}
-          {paginationMeta && lastPage > 1 && (
-            <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
-              <span>
-                Page {currentPage} of {lastPage}
-                {paginationMeta.total != null && (
-                  <> &middot; {paginationMeta.total.toLocaleString()} total</>
-                )}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={!canPrev || isLoading}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={!canNext || isLoading}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
-              </div>
+          <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
+            <span>
+              {paginationMeta?.from != null && paginationMeta?.to != null
+                ? `Showing ${paginationMeta.from}–${paginationMeta.to} of ${paginationMeta.total?.toLocaleString() ?? 0}`
+                : paginationMeta?.total != null
+                  ? `${paginationMeta.total.toLocaleString()} videos`
+                  : null}
+            </span>
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(filters.per_page ?? 15)}
+                onValueChange={(v) =>
+                  onFiltersChange({ ...filters, per_page: Number(v), page: 1 })
+                }
+                disabled={isLoading}
+              >
+                <SelectTrigger className="h-8 w-24 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 15, 25, 50].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {lastPage > 1 && (
+                <>
+                  <span className="text-xs tabular-nums">{currentPage} / {lastPage}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={!canPrev || isLoading}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={!canNext || isLoading}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* ── Edit Sheet ────────────────────────────────────────────────── */}

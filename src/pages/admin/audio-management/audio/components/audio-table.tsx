@@ -6,7 +6,7 @@
 //   • Detail Sheet (slide-in panel) showing full audio info fetched by ID
 //   • Soft-delete confirmation AlertDialog
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Loader2Icon,
@@ -109,8 +109,28 @@ export function AudioTable({
 }: AudioTableProps) {
   const navigate = useNavigate()
 
-  // Local search draft — committed to the store on Enter
+  // Local search draft — debounced and committed to the store on each keystroke
   const [searchDraft, setSearchDraft] = useState(filters.search ?? "")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
+
+  // Live search: refresh results ~350ms after the user stops typing
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if ((filters.search ?? "") !== searchDraft) {
+        onFilterChange({ search: searchDraft, page: 1 })
+      }
+    }, 350)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft])
 
   // ── Delete dialog state ────────────────────────────────────────────────────
   const [itemToDelete, setItemToDelete] = useState<AudioResource | null>(null)

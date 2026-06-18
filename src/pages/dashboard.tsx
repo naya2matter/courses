@@ -18,7 +18,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import heroImage from "@/assets/hero-character.png"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { AdminDashboardData, UserDashboardData } from "@/types/dashboard"
 
 type DashboardProps =

@@ -50,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Hydrate session from a persisted token on first render.
   useEffect(() => {
+    const controller = new AbortController()
+
     const token = apiClient.getToken()
     const storedRole = localStorage.getItem(USER_ROLE_KEY) as Role | null
 
@@ -59,13 +61,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     authService
-      .getMe(storedRole)
+      .getMe(storedRole, controller.signal)
       .then((resource) => setUser(resourceToAuthUser(resource)))
-      .catch(() => {
+      .catch((err: Error) => {
+        if (err.name === "AbortError") return
         // Token is invalid or expired — clear storage
         apiClient.clearToken()
       })
-      .finally(() => setIsBootstrapping(false))
+      .finally(() => {
+        // Skip state update if this effect was cleaned up (StrictMode unmount)
+        if (!controller.signal.aborted) setIsBootstrapping(false)
+      })
+
+    return () => controller.abort()
   }, [])
 
   const signIn = async (email: string, password: string): Promise<Role> => {

@@ -2,7 +2,7 @@
 // Displays all clocking records in a paginated, searchable data table.
 // Supports inline Edit (PUT) and Delete operations.
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIcon,
   AlertCircleIcon,
@@ -268,6 +268,21 @@ export default function AttendancePage() {
     fetchData()
   }, [fetchData])
 
+  // ── Client-side search filter ────────────────────────────────────────────
+  // The backend doesn't currently apply the `search` param, so we also filter
+  // locally on the fetched page. When the backend is updated to handle it,
+  // this becomes a fast second pass (no-op when results are already filtered).
+
+  const displayedRecords = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase()
+    if (!q) return records
+    return records.filter((r) =>
+      r.user?.name?.toLowerCase().includes(q) ||
+      r.user?.email?.toLowerCase().includes(q) ||
+      r.course?.name?.toLowerCase().includes(q)
+    )
+  }, [records, debouncedSearch])
+
   // ── Edit handlers ────────────────────────────────────────────────────────
 
   function openEdit(record: ClockingRecord) {
@@ -300,7 +315,7 @@ export default function AttendancePage() {
   }
 
   const hasActiveSearch = debouncedSearch.trim().length > 0
-  const isEmpty = !isLoading && records.length === 0 && !error
+  const isEmpty = !isLoading && displayedRecords.length === 0 && !error
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -417,8 +432,8 @@ export default function AttendancePage() {
           </Alert>
         )}
 
-        {/* ── Table ── */}
-        <div className="rounded-lg border bg-card overflow-hidden">
+        {/* ── Table (desktop / tablet) ── */}
+        <div className="hidden rounded-lg border bg-card overflow-hidden md:block">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -486,7 +501,7 @@ export default function AttendancePage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  records.map((record, idx) => {
+                  displayedRecords.map((record, idx) => {
                     const rowNumber =
                       (meta.current_page - 1) * PER_PAGE + idx + 1
                     return (
@@ -621,6 +636,119 @@ export default function AttendancePage() {
               </TableBody>
             </Table>
           </div>
+        </div>
+
+        {/* ── Cards (mobile) ── */}
+        <div className="space-y-3 md:hidden">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border bg-card p-4">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="mt-3 h-3 w-3/4" />
+                <Skeleton className="mt-2 h-3 w-2/3" />
+              </div>
+            ))
+          ) : isEmpty ? (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card py-12 text-center text-muted-foreground">
+              <ClockIcon className="h-10 w-10 opacity-30" />
+              <p className="text-base font-medium">
+                {hasActiveSearch ? "No records match your search." : "No attendance records found."}
+              </p>
+              {hasActiveSearch && (
+                <Button variant="outline" size="sm" onClick={clearSearch}>
+                  Clear search
+                </Button>
+              )}
+            </div>
+          ) : (
+            displayedRecords.map((record, idx) => {
+              const rowNumber = (meta.current_page - 1) * PER_PAGE + idx + 1
+              return (
+                <div
+                  key={record.id}
+                  className="rounded-2xl border bg-card p-4 shadow-sm ring-1 ring-white/5"
+                >
+                  {/* Header: user + actions */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold leading-tight">
+                        {record.user?.name ?? "—"}
+                      </p>
+                      {record.user?.email && (
+                        <p className="truncate text-xs text-muted-foreground">{record.user.email}</p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="mr-1 text-[11px] text-muted-foreground">#{rowNumber}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => openEdit(record)}
+                        aria-label="Edit record"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => openDelete(record)}
+                        aria-label="Delete record"
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Course */}
+                  {record.course && (
+                    <div className="mt-3">
+                      <Badge variant="secondary" className="max-w-full truncate font-normal">
+                        {record.course.name}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Times */}
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Clock In</p>
+                      <p className="mt-0.5 font-medium text-green-600 dark:text-green-400">
+                        {record.clock_in ? formatDatetime(record.clock_in) : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Clock Out</p>
+                      {record.clock_out ? (
+                        <p className="mt-0.5 font-medium text-red-500 dark:text-red-400">
+                          {formatDatetime(record.clock_out)}
+                        </p>
+                      ) : (
+                        <Badge variant="outline" className="mt-0.5 border-amber-400 text-[11px] font-normal text-amber-600">
+                          In Progress
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer: duration + rating */}
+                  <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3">
+                    <span className="text-xs">
+                      <span className="text-muted-foreground">Duration: </span>
+                      <span className="font-medium">{formatDuration(record.duration)}</span>
+                    </span>
+                    <RatingStars value={record.rating} />
+                  </div>
+
+                  {/* Comment */}
+                  {record.comment && (
+                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{record.comment}</p>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
 
         {/* ── Pagination ── */}

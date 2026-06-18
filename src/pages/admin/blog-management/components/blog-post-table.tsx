@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -148,11 +155,6 @@ export function BlogPostTable({
     if (currentPage < lastPage) onFilterChange({ page: currentPage + 1 })
   }
 
-  const resultCount =
-    meta && !hasActiveFilters
-      ? { from: meta.from ?? 0, to: meta.to ?? 0, total: meta.total ?? 0 }
-      : null
-
   function openDetail(post: BlogPost) {
     navigate(`/admin/blog-management/blog/${post.id}`)
   }
@@ -187,12 +189,9 @@ export function BlogPostTable({
         searchValue={searchValue}
         statusFilter={statusFilter}
         mediaFilter={mediaFilter}
-        perPage={filters.per_page ?? 15}
-        resultCount={resultCount}
         onSearchChange={setSearchValue}
         onStatusChange={setStatusFilter}
         onMediaChange={setMediaFilter}
-        onPerPageChange={(v) => onFilterChange({ per_page: v, page: 1 })}
         onClearAll={clearAll}
       />
 
@@ -416,34 +415,42 @@ export function BlogPostTable({
         )}
       </div>
 
-      {/* ── Pagination ─────────────────────────────────────────────────────── */}
-      {!isLoading && meta && lastPage > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Page {currentPage} of {lastPage}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={prevPage}
-              disabled={currentPage <= 1}
-            >
-              <ChevronLeftIcon className="h-4 w-4" />
-              <span className="sr-only">Previous page</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={nextPage}
-              disabled={currentPage >= lastPage}
-            >
-              <ChevronRightIcon className="h-4 w-4" />
-              <span className="sr-only">Next page</span>
-            </Button>
-          </div>
+      {/* ── Pagination bar ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          {meta?.from != null && meta?.to != null
+            ? `Showing ${meta.from}–${meta.to} of ${meta.total}`
+            : meta?.total != null
+              ? `${meta.total} posts`
+              : null}
+        </span>
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(filters.per_page ?? 15)}
+            onValueChange={(v) => onFilterChange({ per_page: Number(v), page: 1 })}
+          >
+            <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 15, 25, 50].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {meta && lastPage > 1 && (
+            <>
+              <span className="text-xs tabular-nums">{currentPage} / {lastPage}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevPage} disabled={currentPage <= 1 || isLoading}>
+                <ChevronLeftIcon className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextPage} disabled={currentPage >= lastPage || isLoading}>
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ── Dialogs ────────────────────────────────────────────────────────── */}
 

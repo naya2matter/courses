@@ -12,6 +12,7 @@ import {
   Music2Icon,
   UploadIcon,
   ImageIcon,
+  XIcon,
   AlertCircleIcon,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -21,10 +22,104 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import { isApiError } from "@/lib/api"
 import { getAudioById, updateAudio } from "../service/audio.service"
+import { getAllCategories } from "../../categories/service/category.service"
+import type { AudioCategoryResource } from "../../categories/types/category.types"
 import type { AudioResource } from "../types/audio.types"
+
+// ── ThumbnailPicker ────────────────────────────────────────────────────────────
+// File picker with a live preview; falls back to the existing thumbnail URL.
+
+function ThumbnailPicker({
+  id,
+  file,
+  existingUrl,
+  disabled,
+  onChange,
+}: {
+  id: string
+  file: File | null
+  existingUrl?: string | null
+  disabled?: boolean
+  onChange: (file: File | null) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const shownUrl = previewUrl ?? (existingUrl?.trim() ? existingUrl : null)
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-dashed border-input bg-background">
+        {shownUrl ? (
+          <img src={shownUrl} alt="Thumbnail preview" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground/60">
+            <ImageIcon className="h-6 w-6" />
+            <span className="text-[10px]">No image</span>
+          </div>
+        )}
+        {file && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              onChange(null)
+              if (ref.current) ref.current.value = ""
+            }}
+            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+            aria-label="Remove new thumbnail"
+          >
+            <XIcon className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-1.5">
+        <input
+          ref={ref}
+          id={id}
+          type="file"
+          accept="image/*"
+          disabled={disabled}
+          className="sr-only"
+          onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => ref.current?.click()}
+          className="flex items-center gap-3 rounded-md border border-dashed border-input bg-background px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <UploadIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">
+            {file ? file.name : (existingUrl ? "Replace thumbnail (keeps current if blank)" : "Click to choose a thumbnail image")}
+          </span>
+        </button>
+        <p className="text-xs text-muted-foreground">Leave blank to keep the current thumbnail.</p>
+      </div>
+    </div>
+  )
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -133,16 +228,33 @@ export function EditAudioPage() {
 
   // ── Form field state ──────────────────────────────────────────────────────
   const [name, setName] = useState(audioFromState?.title ?? "")
-  const [categoryId, setCategoryId] = useState("")   // no category id in list response; leave blank
+  const [categoryId, setCategoryId] = useState(
+    audioFromState?.audio_category_id != null ? String(audioFromState.audio_category_id) : "",
+  )
   const [description, setDescription] = useState(audioFromState?.description ?? "")
   const [duration, setDuration] = useState(
     audioFromState?.duration != null ? String(audioFromState.duration) : "",
   )
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [thumbnail, setThumbnail] = useState<File | null>(null)
+  const [existingThumbnail, setExistingThumbnail] = useState<string | null>(
+    audioFromState?.thumbnail_path ?? null,
+  )
+
+  const [categories, setCategories] = useState<AudioCategoryResource[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load categories for the name-based picker
+  useEffect(() => {
+    setLoadingCategories(true)
+    getAllCategories()
+      .then(({ items }) => setCategories(items))
+      .catch(() => setCategories([]))
+      .finally(() => setLoadingCategories(false))
+  }, [])
 
   // Fetch full detail from the API to populate fields the list response omits
   useEffect(() => {
@@ -152,10 +264,11 @@ export function EditAudioPage() {
       try {
         const detail = await getAudioById(audioId)
         // Pre-fill form with the full detail data
-        setName(detail.title ?? "")
+        setName(detail.title ?? detail.name ?? "")
         setDescription(detail.description ?? "")
         setDuration(detail.duration != null ? String(detail.duration) : "")
-        // category_id is not in AudioResource — keep blank for user to fill
+        if (detail.audio_category_id != null) setCategoryId(String(detail.audio_category_id))
+        if (detail.thumbnail_path) setExistingThumbnail(detail.thumbnail_path)
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return
         setFetchError(extractErrorMessage(err))
@@ -171,10 +284,6 @@ export function EditAudioPage() {
   // ── Client-side validation ────────────────────────────────────────────────
   function validate(): string | null {
     if (!name.trim()) return "Name is required."
-    if (categoryId.trim()) {
-      const catNum = parseInt(categoryId, 10)
-      if (isNaN(catNum) || catNum < 1) return "Category ID must be a positive integer."
-    }
     if (duration.trim()) {
       const dur = parseInt(duration, 10)
       if (isNaN(dur) || dur < 1) return "Duration must be a positive integer (seconds)."
@@ -313,20 +422,33 @@ export function EditAudioPage() {
               />
             </div>
 
-            {/* Category ID (optional on update) */}
+            {/* Category (picked by name) */}
             <div className="grid gap-1.5">
-              <Label htmlFor="edit-audio-category">Category ID</Label>
-              <Input
-                id="edit-audio-category"
-                type="number"
-                min={1}
-                placeholder="e.g. 3"
+              <Label htmlFor="edit-audio-category">Category</Label>
+              <Select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                disabled={submitting}
-              />
+                onValueChange={setCategoryId}
+                disabled={submitting || loadingCategories}
+              >
+                <SelectTrigger id="edit-audio-category" className="w-full">
+                  {loadingCategories ? (
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> Loading categories…
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select a category…" />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Leave blank to keep the current category.
+                Select to change the audio's category.
               </p>
             </div>
 
@@ -374,19 +496,18 @@ export function EditAudioPage() {
               />
             </div>
 
-            {/* Thumbnail — leave empty to keep the existing image */}
+            {/* Thumbnail — live preview; leave empty to keep the existing image */}
             <div className="grid gap-1.5 sm:col-span-2">
               <Label className="flex items-center gap-1.5">
                 <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                Replace Thumbnail Image
+                Thumbnail Image
               </Label>
-              <FileInput
+              <ThumbnailPicker
                 id="edit-thumbnail-input"
-                accept="image/*"
                 disabled={submitting}
                 file={thumbnail}
+                existingUrl={existingThumbnail}
                 onChange={setThumbnail}
-                placeholder="Click to choose a new thumbnail (leave blank to keep existing)"
               />
             </div>
           </div>

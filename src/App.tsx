@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom"
 import { AuthProvider } from "@/context/auth"
 import { Role } from "@/types/auth"
 import { ProtectedRoute } from "@/routes/protected-route"
@@ -228,6 +228,13 @@ function App() {
             </Route>
           </Route>
 
+          {/* Email magic-link landing routes.
+              The backend redirects clicked links to /courses/:id or /audio/:id
+              (carrying ?token=...). AuthProvider consumes the token on bootstrap;
+              here we forward to the real, role-guarded user pages. */}
+          <Route path="/courses/:id" element={<EmailLinkRedirect section="courses" />} />
+          <Route path="/audio/:id" element={<EmailLinkRedirect section="audio" />} />
+
           {/* Fallbacks */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<RoleAwareFallback />} />
@@ -236,6 +243,16 @@ function App() {
       </BrowserRouter>
     </AuthProvider>
   )
+}
+
+/**
+ * Forwards a bare email-link landing path (e.g. /courses/2) to the real
+ * role-guarded user route (/user/courses/2), preserving the :id. The session
+ * token from the link has already been adopted by AuthProvider's bootstrap.
+ */
+function EmailLinkRedirect({ section }: { section: "courses" | "audio" }) {
+  const { id } = useParams()
+  return <Navigate to={`/user/${section}/${id}`} replace />
 }
 
 function RoleAwareFallback() {

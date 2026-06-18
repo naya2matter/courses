@@ -4,7 +4,16 @@
 // Read-only — no create / edit / delete actions.
 
 import { useEffect, useState } from "react"
-import { Loader2Icon, AlertCircleIcon } from "lucide-react"
+import {
+  Loader2Icon,
+  AlertCircleIcon,
+  UserIcon,
+  BuildingIcon,
+  BookOpenIcon,
+  CalendarIcon,
+  ClockIcon,
+  ShieldCheckIcon,
+} from "lucide-react"
 
 import {
   Sheet,
@@ -13,22 +22,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 import { isApiError } from "@/lib/api"
 import { getEvaluationHistoryById } from "../service/evaluation-history.service"
 import { PerformanceLevelBadge } from "./performance-level-badge"
-import type {
-  EvaluationHistoryEntry,
-} from "../types/evaluation-history.types"
+import type { EvaluationHistoryEntry } from "../types/evaluation-history.types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -42,24 +40,14 @@ function formatDateTime(iso: string): string {
   })
 }
 
-// ── Info row ──────────────────────────────────────────────────────────────────
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+function ScoreBar({ score, max }: { score: number; max: number }) {
+  if (!max || max <= 0) return null
+  const pct = Math.min(100, Math.round((score / max) * 100))
+  const color = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-rose-500"
   return (
-    <div className="flex items-start justify-between gap-4 py-2 text-sm">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right font-medium text-foreground">{value}</span>
+    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
     </div>
-  )
-}
-
-// ── Section heading ───────────────────────────────────────────────────────────
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h4 className="mt-5 mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-      {children}
-    </h4>
   )
 }
 
@@ -67,87 +55,113 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function DrawerContent({ entry }: { entry: EvaluationHistoryEntry }) {
   return (
-    <div className="flex-1 overflow-y-auto px-6 pb-8 text-sm">
-      {/* ── Overview ──────────────────────────────────────────────────────── */}
-      <SectionHeading>Overview</SectionHeading>
-      <div className="rounded-xl border border-white/10 bg-white/5 px-4 divide-y divide-white/10">
-        <InfoRow label="Employee" value={entry.user.name} />
-        <InfoRow label="Department" value={entry.department.name} />
-        <InfoRow label="Course" value={entry.course.name} />
-        <InfoRow
-          label="Course Type"
-          value={
-            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium border-white/20 text-white/80">
-              {entry.course_type}
-            </span>
-          }
-        />
-        <InfoRow label="Total Score" value={
-          <span className="tabular-nums text-lg font-bold">{entry.total_score}</span>
-        } />
-        <InfoRow
-          label="Performance"
-          value={<PerformanceLevelBadge level={entry.performance_level} />}
-        />
-        <InfoRow label="Created" value={formatDateTime(entry.created_at)} />
-        <InfoRow label="Updated" value={formatDateTime(entry.updated_at)} />
-      </div>
-
-      {/* ── Performance level detail ───────────────────────────────────────── */}
-      <SectionHeading>Performance Level</SectionHeading>
-      <div className="rounded-xl border border-white/10 bg-white/5 px-4 divide-y divide-white/10">
-        <InfoRow label="Label" value={entry.performance_level.label} />
-        <InfoRow label="Level" value={entry.performance_level.level} />
-        <InfoRow
-          label="Score Range"
-          value={`${entry.performance_level.range.min} – ${entry.performance_level.range.max}`}
-        />
-       
-      </div>
-
-      {/* ── Score snapshot ────────────────────────────────────────────────── */}
-      <SectionHeading>
-        Score Snapshot ({entry.history.length} item{entry.history.length !== 1 ? "s" : ""})
-      </SectionHeading>
-
-      {entry.history.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No snapshot rows.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/5">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-muted-foreground text-xs">Config</TableHead>
-                <TableHead className="text-muted-foreground text-xs">Type</TableHead>
-                <TableHead className="text-right text-muted-foreground text-xs">Score</TableHead>
-                <TableHead className="text-right text-muted-foreground text-xs">Max</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entry.history.map((row) => (
-                <TableRow key={row.id} className="border-white/10 hover:bg-white/5">
-                  <TableCell className="text-xs">{row.config_name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{row.type_name}</TableCell>
-                  <TableCell className="text-right tabular-nums text-xs font-semibold">
-                    {row.score_given}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
-                    {row.max_score}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-5 space-y-5">
+      {/* ── User card ──────────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 ring-1 ring-indigo-500/30">
+            <UserIcon className="h-5 w-5 text-indigo-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate font-semibold text-white">{entry.user.name}</p>
+              <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-xs capitalize text-white/70">
+                {entry.course_type}
+              </span>
+            </div>
+            <div className="mt-2 space-y-1 text-xs text-white/50">
+              <p className="flex items-center gap-1.5">
+                <BuildingIcon className="h-3.5 w-3.5 shrink-0 text-white/30" />
+                {entry.department.name}
+              </p>
+              <p className="flex items-center gap-1.5">
+                <BookOpenIcon className="h-3.5 w-3.5 shrink-0 text-white/30" />
+                {entry.course.name}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* ── Audit note ────────────────────────────────────────────────────── */}
-      <Separator className="my-5 opacity-20" />
-      <p className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-muted-foreground leading-relaxed">
-        This is a read-only audit snapshot. Deleted configs or types do not
-        affect this record — config and type names are stored as plain strings
-        at the time of evaluation.
-      </p>
+      {/* ── Score hero ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+          <p className="mb-1 text-xs text-white/40">Total Score</p>
+          <p className="text-4xl font-extrabold tabular-nums text-white">{entry.total_score}</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/40">Performance</p>
+          <PerformanceLevelBadge level={entry.performance_level} />
+          <p className="text-[11px] text-white/40">
+            Range {entry.performance_level.range.min}–{entry.performance_level.range.max}
+            {" · "}Level {entry.performance_level.level}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Score snapshot ─────────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+          Score Snapshot
+          <span className="ml-1.5 text-white/25">
+            ({entry.history.length} item{entry.history.length !== 1 ? "s" : ""})
+          </span>
+        </p>
+
+        {entry.history.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-white/10 px-4 py-6 text-center text-xs text-white/40">
+            No snapshot rows.
+          </p>
+        ) : (
+          <div className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+            {entry.history.map((row) => (
+              <div key={row.id} className="px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">
+                      {row.config_name}
+                    </p>
+                    <p className="truncate text-sm text-white">{row.type_name}</p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold tabular-nums text-white">
+                    {row.score_given}
+                    <span className="font-normal text-white/40"> / {row.max_score}</span>
+                  </p>
+                </div>
+                <ScoreBar score={row.score_given} max={row.max_score} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Meta dates ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-white/8 bg-white/3 px-3 py-2.5">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/30">
+            <CalendarIcon className="h-3 w-3" />
+            Created
+          </div>
+          <p className="text-xs text-white/60">{formatDateTime(entry.created_at)}</p>
+        </div>
+        <div className="rounded-lg border border-white/8 bg-white/3 px-3 py-2.5">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/30">
+            <ClockIcon className="h-3 w-3" />
+            Updated
+          </div>
+          <p className="text-xs text-white/60">{formatDateTime(entry.updated_at)}</p>
+        </div>
+      </div>
+
+      {/* ── Audit note ─────────────────────────────────────────────────────── */}
+      <div className="flex gap-2.5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs leading-relaxed text-white/50">
+        <ShieldCheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/30" />
+        <p>
+          This is a read-only audit snapshot. Deleted configs or types do not affect
+          this record — config and type names are stored as plain strings at the time
+          of evaluation.
+        </p>
+      </div>
     </div>
   )
 }
@@ -206,16 +220,19 @@ export function EvaluationHistoryDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col p-0 w-full sm:max-w-lg overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-white/10">
-          <SheetTitle>Evaluation Details</SheetTitle>
-          <SheetDescription>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col overflow-hidden border-l border-white/10 bg-[oklch(0.18_0.02_260)] p-0 text-white sm:max-w-lg"
+      >
+        <SheetHeader className="shrink-0 border-b border-white/10 px-6 py-5">
+          <SheetTitle className="text-white">Evaluation Details</SheetTitle>
+          <SheetDescription className="text-white/40">
             Read-only audit snapshot for this evaluation record.
           </SheetDescription>
         </SheetHeader>
 
         {isLoading && (
-          <div className="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center gap-2 text-white/50">
             <Loader2Icon className="size-4 animate-spin" />
             <span className="text-sm">Loading…</span>
           </div>

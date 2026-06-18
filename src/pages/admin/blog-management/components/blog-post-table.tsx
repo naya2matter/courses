@@ -271,7 +271,11 @@ export function BlogPostTable({
               </TableRow>
             ) : (
               displayedItems.map((post) => (
-                <TableRow key={post.id}>
+                <TableRow
+                  key={post.id}
+                  className="cursor-pointer"
+                  onClick={() => openDetail(post)}
+                >
                   {/* Thumbnail */}
                   <TableCell>
                     {post.thumbnail_url ? (
@@ -344,7 +348,7 @@ export function BlogPostTable({
                   </TableCell>
 
                   {/* Actions */}
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7">

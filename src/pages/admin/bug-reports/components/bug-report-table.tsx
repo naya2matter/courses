@@ -245,7 +245,11 @@ export function BugReportTable({
                 const canResolve =
                   report.status !== "resolved" && report.status !== "closed"
                 return (
-                  <TableRow key={report.id}>
+                  <TableRow
+                    key={report.id}
+                    className="cursor-pointer"
+                    onClick={() => openDetail(report)}
+                  >
                     <TableCell className="max-w-[260px]">
                       <p className="font-medium line-clamp-1">{report.title}</p>
                       {report.description && (
@@ -289,7 +293,7 @@ export function BugReportTable({
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">
                       {formatDate(report.resolved_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-7 w-7">

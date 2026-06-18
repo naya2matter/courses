@@ -174,7 +174,11 @@ export function FeedbackTable({
               </TableRow>
             ) : (
               items.map((fb) => (
-                <TableRow key={fb.id}>
+                <TableRow
+                  key={fb.id}
+                  className="cursor-pointer"
+                  onClick={() => openDetail(fb)}
+                >
                   <TableCell className="max-w-[260px]">
                     <p className="font-medium line-clamp-1">{fb.title}</p>
                     {fb.description && (
@@ -211,7 +215,7 @@ export function FeedbackTable({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7">

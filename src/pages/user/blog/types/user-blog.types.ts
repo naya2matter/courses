@@ -31,6 +31,13 @@ export interface BlogAuthor {
   name: string
 }
 
+export interface BlogVideoQuality {
+  id: number
+  quality: string      // "360p" | "720p" | "1080p"
+  file_size: number    // bytes
+  stream_url: string   // signed URL
+}
+
 export interface BlogMedia {
   type: "audio" | "video"
   id: number
@@ -38,6 +45,8 @@ export interface BlogMedia {
   duration: number | null
   thumbnail_url: string | null
   stream_url: string
+  qualities?: BlogVideoQuality[]   // video only; empty/absent = no variants
+  subtitle_url?: string | null     // video only; VTT public URL
 }
 
 export interface BlogComment {

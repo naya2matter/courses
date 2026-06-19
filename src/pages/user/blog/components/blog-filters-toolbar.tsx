@@ -24,12 +24,10 @@ interface BlogFiltersToolbarProps {
   search: string
   mediaType: MediaTypeFilter
   authorId: string
-  perPage: number
   authors: Array<{ id: number; name: string }>
   onSearchChange: (v: string) => void
   onMediaTypeChange: (v: MediaTypeFilter) => void
   onAuthorChange: (v: string) => void
-  onPerPageChange: (v: number) => void
   onClear: () => void
   resultCount: number
   totalCount: number
@@ -55,12 +53,10 @@ export function BlogFiltersToolbar({
   search,
   mediaType,
   authorId,
-  perPage,
   authors,
   onSearchChange,
   onMediaTypeChange,
   onAuthorChange,
-  onPerPageChange,
   onClear,
   resultCount,
   totalCount,
@@ -158,23 +154,6 @@ export function BlogFiltersToolbar({
           </SelectContent>
         </Select>
       )}
-
-      {/* Per page */}
-      <Select
-        value={String(perPage)}
-        onValueChange={(v) => onPerPageChange(Number(v))}
-      >
-        <SelectTrigger className="h-8 w-[6.5rem] rounded-lg border-white/10 bg-white/5 text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {[10, 15, 20, 30].map((n) => (
-            <SelectItem key={n} value={String(n)}>
-              {n} / page
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       {/* Result count */}
       <span className="ml-auto shrink-0 text-[11px] text-white/30">

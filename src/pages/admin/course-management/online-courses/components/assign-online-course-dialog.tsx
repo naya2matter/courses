@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 import type { OnlineCourse } from "../types/online-course.types"
 import { useOnlineCourseAssignmentStore } from "../store/online-course-assignment.store"
@@ -150,18 +151,26 @@ export function AssignOnlineCourseDialog({
 
           <div className="space-y-1.5">
             <Label>Users</Label>
-            <Select value={userId} onValueChange={addUser}>
-              <SelectTrigger>
-                <SelectValue placeholder="Add user" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[320px]" position="popper" sideOffset={4}>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
-                    {u.name} ({u.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={userId}
+              onValueChange={addUser}
+              placeholder="Add user…"
+              searchPlaceholder="Search by name, email, or dept…"
+              emptyText="No users found"
+              options={users.map((u) => ({
+                value: String(u.id),
+                label: u.name,
+                keywords: `${u.email} ${u.department?.name ?? ""}`,
+                node: (
+                  <span className="flex flex-col leading-tight">
+                    <span className="font-medium">{u.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {u.department?.name ?? u.email}
+                    </span>
+                  </span>
+                ),
+              }))}
+            />
             {selectedUsers.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {selectedUsers.map((u) => (

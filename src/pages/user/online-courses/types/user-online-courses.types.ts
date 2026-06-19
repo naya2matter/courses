@@ -102,12 +102,21 @@ export interface ContentNavRef {
   content_type: ContentType
 }
 
+export interface VideoQuality {
+  id: number
+  quality: string      // "360p" | "720p" | "1080p"
+  file_size: number    // bytes
+  stream_url: string   // signed URL, valid 4 hours
+}
+
 export interface ContentViewerData {
   content_id: number
   content_type: ContentType
   title: string
   duration_seconds: number
   media_url: string               // signed URL — no auth header required
+  qualities?: VideoQuality[]      // empty/absent = no quality variants
+  subtitle_url?: string | null    // VTT public URL; null = no subtitle file
   pdf_total_pages: number | null
   attachment_path: string | null  // direct storage URL, no auth needed
   attachment_name: string | null

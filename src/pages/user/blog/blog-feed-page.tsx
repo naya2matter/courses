@@ -1,14 +1,17 @@
 // ─── UserBlogFeedPage ─────────────────────────────────────────────────────────
-// Premium editorial blog feed.
-// Layout: summary cards → filter bar → hero + trending sidebar → editorial grid → pagination.
-// Hero takes filteredItems[0], trending takes [1..3], grid takes [4+].
+// Editorial blog feed: top highlight card + card grid + pagination.
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   AlertCircleIcon,
+  ArrowRightIcon,
   BookOpenIcon,
+  CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  HeartIcon,
+  MessageSquareIcon,
   RefreshCwIcon,
   SearchXIcon,
 } from "lucide-react"
@@ -27,9 +30,9 @@ import {
   BlogFiltersToolbar,
   type MediaTypeFilter,
 } from "./components/blog-filters-toolbar"
-import { BlogHeroFeature } from "./components/blog-featured-card"
-import { BlogTrendingSidebar } from "./components/blog-trending-sidebar"
 import { BlogEditorialCard } from "./components/blog-post-card"
+import { BlogMediaBadge } from "./components/blog-media-badge"
+import { BlogTagBadge } from "./components/blog-tag-badge"
 
 // ── Default pagination meta ───────────────────────────────────────────────────
 
@@ -43,51 +46,144 @@ const DEFAULT_META: PaginationMeta = {
   path: "",
 }
 
-// ── Skeleton components ───────────────────────────────────────────────────────
+// ── Gradient palette (shared with cards) ─────────────────────────────────────
 
-function SkeletonHero() {
+const THUMB_GRADIENTS = [
+  "from-violet-600/45 via-purple-700/35 to-indigo-800/55",
+  "from-rose-500/45 via-pink-600/35 to-red-700/55",
+  "from-amber-500/45 via-orange-600/35 to-yellow-700/55",
+  "from-emerald-500/45 via-green-600/35 to-teal-700/55",
+  "from-sky-500/45 via-blue-600/35 to-cyan-700/55",
+  "from-fuchsia-500/45 via-pink-600/35 to-purple-700/55",
+] as const
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return "—"
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+// ── Top highlight card ────────────────────────────────────────────────────────
+
+function TopHighlightCard({ post }: { post: PublicBlogPost }) {
+  const gradient = THUMB_GRADIENTS[post.id % THUMB_GRADIENTS.length]
+  const tags = Array.isArray(post.tags) ? post.tags : []
+
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.03]">
-      <div className="flex flex-col lg:flex-row lg:min-h-[420px]">
-        <Skeleton className="aspect-video w-full rounded-none lg:aspect-auto lg:w-[55%]" />
-        <div className="flex-1 space-y-4 p-6 lg:p-9">
-          <div className="flex gap-2">
-            <Skeleton className="h-5 w-28 rounded-full" />
-            <Skeleton className="h-5 w-16 rounded-full" />
+    <article
+      className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
+      aria-label={post.title}
+    >
+      <div className="flex flex-col sm:flex-row">
+        {/* Thumbnail */}
+        <div className="relative shrink-0 overflow-hidden sm:w-[42%]">
+          {post.thumbnail_url ? (
+            <img
+              src={post.thumbnail_url}
+              alt={post.title}
+              className="h-52 w-full object-cover sm:h-full"
+              loading="eager"
+            />
+          ) : (
+            <div
+              className={`flex h-52 w-full items-center justify-center bg-gradient-to-br ${gradient} sm:h-full`}
+            >
+              <span className="select-none text-7xl font-black text-white/10">
+                {post.title.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+          <div className="absolute left-3 top-3">
+            <BlogMediaBadge mediaType={post.media_type} />
           </div>
-          <Skeleton className="h-8 w-4/5" />
-          <Skeleton className="h-6 w-3/5" />
-          <div className="space-y-2 pt-1">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-5/6" />
-            <Skeleton className="h-3 w-4/6" />
+        </div>
+
+        {/* Content */}
+        <div className="flex flex-1 flex-col justify-between gap-4 p-5 sm:p-7">
+          <div className="space-y-3">
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {tags.slice(0, 3).map((tag) => (
+                  <BlogTagBadge key={tag} tag={tag} />
+                ))}
+              </div>
+            )}
+            <Link to={`/user/blog/${post.slug}`}>
+              <h2 className="text-lg font-bold leading-snug tracking-tight text-white transition-colors hover:text-white/80 sm:text-xl lg:text-2xl">
+                {post.title}
+              </h2>
+            </Link>
+            {post.excerpt && (
+              <p className="line-clamp-3 text-sm leading-relaxed text-white/45">
+                {post.excerpt}
+              </p>
+            )}
           </div>
-          <div className="flex gap-1.5 pt-1">
-            <Skeleton className="h-5 w-14 rounded-full" />
-            <Skeleton className="h-5 w-20 rounded-full" />
-          </div>
-          <div className="flex items-center justify-between pt-2">
-            <Skeleton className="h-3 w-36" />
-            <Skeleton className="h-9 w-32 rounded-xl" />
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-4 text-[11px] text-white/40">
+              <span className="font-medium text-white/55">{post.author.name}</span>
+              <span className="flex items-center gap-1">
+                <CalendarIcon className="size-3" />
+                {formatDate(post.published_at)}
+              </span>
+              <span className="flex items-center gap-1 text-rose-400/60">
+                <HeartIcon className="size-3" />
+                {post.like_count.toLocaleString()}
+              </span>
+              <span className="flex items-center gap-1 text-sky-400/60">
+                <MessageSquareIcon className="size-3" />
+                {post.comment_count.toLocaleString()}
+              </span>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="shrink-0 gap-1.5 rounded-lg px-3 text-xs text-white/50 hover:bg-white/8 hover:text-white"
+            >
+              <Link to={`/user/blog/${post.slug}`} aria-label={`Read: ${post.title}`}>
+                Read Article
+                <ArrowRightIcon className="size-3" />
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   )
 }
 
-function SkeletonTrendingCard() {
+// ── Skeleton components ───────────────────────────────────────────────────────
+
+function SkeletonHighlight() {
   return (
-    <div className="flex gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
-      <Skeleton className="size-16 shrink-0 rounded-xl sm:size-20" />
-      <div className="flex flex-1 flex-col gap-2 py-0.5">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-3 w-6" />
-          <Skeleton className="h-4 w-16 rounded-full" />
+    <div className="overflow-hidden rounded-2xl border border-white/[0.07]">
+      <div className="flex flex-col sm:flex-row">
+        <Skeleton className="h-52 w-full rounded-none sm:h-auto sm:w-[42%]" />
+        <div className="flex flex-1 flex-col gap-4 p-5 sm:p-7">
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              <Skeleton className="h-4 w-14 rounded-full" />
+              <Skeleton className="h-4 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-7 w-4/5" />
+            <Skeleton className="h-7 w-3/5" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-4/6" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3 w-48" />
+            <Skeleton className="h-7 w-28 rounded-lg" />
+          </div>
         </div>
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-3/4" />
-        <Skeleton className="h-3 w-16" />
       </div>
     </div>
   )
@@ -106,10 +202,7 @@ function SkeletonEditorialCard() {
           <Skeleton className="h-4 w-16 rounded-full" />
         </div>
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="size-5 rounded-full" />
-            <Skeleton className="h-3 w-20" />
-          </div>
+          <Skeleton className="h-3 w-28" />
           <Skeleton className="h-7 w-16 rounded-lg" />
         </div>
       </div>
@@ -126,15 +219,12 @@ export function UserBlogFeedPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
+  const perPage = 15
 
   // ── Client-side filter state ─────────────────────────────────────────────────
   const [search, setSearch] = useState("")
   const [mediaType, setMediaType] = useState<MediaTypeFilter>("all")
   const [authorId, setAuthorId] = useState("all")
-
-  // ── Hero selection for "Also This Week" switching ────────────────────────────
-  const [featuredSlug, setFeaturedSlug] = useState<string | null>(null)
 
   // ── Derived: unique authors from current page ────────────────────────────────
   const authors = useMemo(() => {
@@ -199,26 +289,15 @@ export function UserBlogFeedPage() {
     })
   }, [items, search, mediaType, authorId])
 
-  const featuredPost =
-    featuredSlug != null
-      ? (filteredItems.find((p) => p.slug === featuredSlug) ?? filteredItems[0] ?? null)
-      : (filteredItems[0] ?? null)
-  const trendingPosts = filteredItems.filter((p) => p.slug !== featuredPost?.slug).slice(0, 3)
-  const gridPosts = filteredItems.filter((p) => p.slug !== featuredPost?.slug).slice(3)
-  const hasActiveFilters =
-    search.trim().length > 0 || mediaType !== "all" || authorId !== "all"
+  const highlightPost = filteredItems[0] ?? null
+  const gridPosts = filteredItems.slice(1)
+  const hasActiveFilters = search.trim().length > 0 || mediaType !== "all" || authorId !== "all"
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   function handleClearFilters() {
     setSearch("")
     setMediaType("all")
     setAuthorId("all")
-    setFeaturedSlug(null)
-  }
-
-  function handlePerPageChange(v: number) {
-    setPerPage(v)
-    setPage(1)
   }
 
   function handlePrevPage() {
@@ -272,12 +351,10 @@ export function UserBlogFeedPage() {
           search={search}
           mediaType={mediaType}
           authorId={authorId}
-          perPage={perPage}
           authors={authors}
           onSearchChange={setSearch}
           onMediaTypeChange={setMediaType}
           onAuthorChange={setAuthorId}
-          onPerPageChange={handlePerPageChange}
           onClear={handleClearFilters}
           resultCount={filteredItems.length}
           totalCount={items.length}
@@ -286,18 +363,10 @@ export function UserBlogFeedPage() {
 
       {/* ── Loading skeletons ─────────────────────────────────────────────── */}
       {isLoading && (
-        <div className="space-y-6">
-          <div className="grid gap-5 lg:grid-cols-[1fr_minmax(0,360px)]">
-            <SkeletonHero />
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-5 w-32" />
-              {Array.from({ length: 3 }).map((_, i) => (
-                <SkeletonTrendingCard key={i} />
-              ))}
-            </div>
-          </div>
+        <div className="space-y-5">
+          <SkeletonHighlight />
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonEditorialCard key={i} />
             ))}
           </div>
@@ -347,37 +416,21 @@ export function UserBlogFeedPage() {
               </div>
             )
           ) : (
-            <>
-              {/* ── Hero + Trending ──────────────────────────────────────── */}
-              {featuredPost && (
-                <section aria-label="Featured and trending articles">
-                  <div
-                    className={
-                      trendingPosts.length > 0
-                        ? "grid gap-5 lg:grid-cols-[1fr_minmax(0,360px)]"
-                        : ""
-                    }
-                  >
-                    <BlogHeroFeature post={featuredPost} />
-                    {trendingPosts.length > 0 && (
-                      <BlogTrendingSidebar
-                        posts={trendingPosts}
-                        onSelect={(p) => setFeaturedSlug(p.slug)}
-                      />
-                    )}
-                  </div>
-                </section>
-              )}
+            <div className="space-y-5">
+              {/* ── Top highlight ────────────────────────────────────────── */}
+              {highlightPost && <TopHighlightCard post={highlightPost} />}
 
-              {/* ── Editorial grid ───────────────────────────────────────── */}
+              {/* ── Card grid ────────────────────────────────────────────── */}
               {gridPosts.length > 0 && (
                 <section aria-label="More articles">
-                  <div className="mb-4 flex items-center gap-3">
-                    <h2 className="text-sm font-semibold tracking-tight text-white/60">
-                      More Articles
-                    </h2>
-                    <div className="h-px flex-1 bg-white/[0.06]" />
-                  </div>
+                  {highlightPost && (
+                    <div className="mb-4 flex items-center gap-3">
+                      <h2 className="text-sm font-semibold tracking-tight text-white/50">
+                        More Articles
+                      </h2>
+                      <div className="h-px flex-1 bg-white/[0.06]" />
+                    </div>
+                  )}
                   <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                     {gridPosts.map((post) => (
                       <BlogEditorialCard key={post.id} post={post} />
@@ -385,7 +438,7 @@ export function UserBlogFeedPage() {
                   </div>
                 </section>
               )}
-            </>
+            </div>
           )}
 
           {/* ── Pagination bar ────────────────────────────────────────────── */}
@@ -429,5 +482,3 @@ export function UserBlogFeedPage() {
     </div>
   )
 }
-
-

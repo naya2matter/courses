@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
   AlertCircleIcon,
-  BookOpenCheckIcon,
   CheckCircle2Icon,
   ClockIcon,
   TrophyIcon,
@@ -13,7 +12,6 @@ import {
   PlayCircleIcon,
   RefreshCwIcon,
   ChevronRightIcon,
-  InfoIcon,
   LockIcon,
   TextIcon,
   SquareCheckIcon,
@@ -79,18 +77,18 @@ const SHOW_ANSWERS_LABELS: Record<string, string> = {
 function QuestionRow({ q, index }: { q: UserQuizQuestion; index: number }) {
   return (
     <div className="flex items-start gap-3 py-3.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border border-indigo-500/20 bg-indigo-500/10 text-xs font-bold text-indigo-400">
         {index + 1}
       </div>
-      <div className="flex-1 min-w-0 space-y-2">
-        <p className="text-sm text-white/80 leading-snug font-medium">{q.question_text}</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-white/40 bg-white/4 border border-white/8 rounded-full px-2 py-0.5">
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="text-sm font-medium leading-snug text-white/80">{q.question_text}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[11px] font-medium text-white/40">
             {QUESTION_ICONS[q.type]}
             {QUESTION_LABELS[q.type] ?? q.type}
           </span>
           {q.points != null && (
-            <span className="inline-flex text-[11px] font-semibold text-amber-400/80 bg-amber-500/8 border border-amber-500/15 rounded-full px-2 py-0.5">
+            <span className="inline-flex rounded-full border border-amber-500/15 bg-amber-500/8 px-2 py-0.5 text-[11px] font-semibold text-amber-400/80">
               {q.points} pt{q.points !== 1 ? "s" : ""}
             </span>
           )}
@@ -100,7 +98,7 @@ function QuestionRow({ q, index }: { q: UserQuizQuestion; index: number }) {
   )
 }
 
-// ── Info chip ──────────────────────────────────────────────────────────────────
+// ── Info chip ─────────────────────────────────────────────────────────────────
 
 function InfoChip({
   icon,
@@ -130,9 +128,11 @@ function InfoChip({
 
 function QuizDetailSkeleton() {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-64 rounded" />
-      <Skeleton className="h-4 w-full max-w-lg rounded" />
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Skeleton className="h-9 w-64 rounded" />
+        <Skeleton className="h-4 w-full max-w-lg rounded" />
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
@@ -209,23 +209,17 @@ export function QuizDetailPage() {
     quiz?.max_attempts != null ? quiz.max_attempts : null
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       {/* Back nav */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/user/quizzes")}
-          className="flex items-center gap-1.5 text-white/50 hover:text-white -ml-2"
-        >
-          <ArrowLeftIcon className="size-4" />
-          My Quizzes
-        </Button>
-        <span className="text-white/20">/</span>
-        <span className="text-sm text-white/50 truncate max-w-xs">
-          {isLoading ? "Loading…" : (quiz?.title ?? "Quiz")}
-        </span>
-      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate("/user/quizzes")}
+        className="-ml-2 flex items-center gap-1.5 text-white/45 hover:text-white"
+      >
+        <ArrowLeftIcon className="size-4" />
+        My Quizzes
+      </Button>
 
       {/* Error state */}
       {error && (
@@ -252,83 +246,65 @@ export function QuizDetailPage() {
 
       {/* Loaded */}
       {!isLoading && !error && quiz && (
-        <div className="space-y-7">
-          {/* Title + status */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-4">
-              <div className="flex items-center justify-center size-12 shrink-0 rounded-2xl bg-indigo-600/20 border border-indigo-500/25 shadow-md shadow-indigo-500/10">
-                <BookOpenCheckIcon className="size-6 text-indigo-400" />
-              </div>
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex flex-wrap items-start gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex-1 min-w-0">
-                    {quiz.title}
-                  </h1>
-                  {quiz.status && (
-                    <Badge
-                      variant="outline"
-                      className={`shrink-0 capitalize border-white/15 ${
-                        quiz.status === "published"
-                          ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                          : "text-white/50"
-                      }`}
-                    >
-                      {quiz.status}
-                    </Badge>
-                  )}
-                </div>
-                {quiz.description && (
-                  <p className="text-sm text-white/50 max-w-2xl leading-relaxed">
-                    {quiz.description}
-                  </p>
-                )}
-              </div>
+        <div className="space-y-6">
+
+          {/* ── Header ──────────────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {quiz.title}
+              </h1>
+              {quiz.status && (
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 capitalize border-white/15 ${
+                    quiz.status === "published"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : "text-white/50"
+                  }`}
+                >
+                  {quiz.status}
+                </Badge>
+              )}
             </div>
+            {quiz.description && (
+              <p className="max-w-2xl text-sm leading-relaxed text-white/50">
+                {quiz.description}
+              </p>
+            )}
           </div>
 
-          {/* Pass/Fail status */}
+          {/* ── Pass/Fail banner ─────────────────────────────────────────── */}
           {quiz.user_passed != null && (
-            <Card
-              className={`rounded-2xl border ${
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
                 quiz.user_passed
                   ? "border-emerald-500/20 bg-emerald-500/8"
                   : "border-rose-500/20 bg-rose-500/8"
               }`}
             >
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex size-10 items-center justify-center rounded-2xl border ${
-                      quiz.user_passed
-                        ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                        : "border-rose-500/30 bg-rose-500/15 text-rose-300"
-                    }`}
-                  >
-                    {quiz.user_passed ? (
-                      <CheckCircle2Icon className="size-5" />
-                    ) : (
-                      <XCircleIcon className="size-5" />
-                    )}
-                  </div>
-                  <div>
-                    <p className={`text-lg font-semibold ${quiz.user_passed ? "text-emerald-300" : "text-rose-300"}`}>
-                      {quiz.user_passed ? "Passed" : "Failed"}
-                    </p>
-                    {quiz.user_total_score != null && (
-                      <p className="text-sm text-white/50">
-                        Score: {quiz.user_total_score} pts
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-white/60">
-                  This quiz has been completed and your status is available here.
-                </p>
-              </CardContent>
-            </Card>
+              <div className="flex items-center gap-2.5">
+                {quiz.user_passed ? (
+                  <CheckCircle2Icon className="size-5 shrink-0 text-emerald-400" />
+                ) : (
+                  <XCircleIcon className="size-5 shrink-0 text-rose-400" />
+                )}
+                <span className={`font-semibold ${quiz.user_passed ? "text-emerald-300" : "text-rose-300"}`}>
+                  {quiz.user_passed ? "Passed" : "Failed"}
+                </span>
+                {quiz.user_total_score != null && (
+                  <span className="text-sm text-white/45">
+                    · Score: {quiz.user_total_score} pts
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-white/40">
+                Your result is recorded and available here.
+              </p>
+            </div>
           )}
 
-          {/* Info grid */}
+          {/* ── Info grid ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {quiz.questions_count != null && (
               <InfoChip
@@ -341,7 +317,7 @@ export function QuizDetailPage() {
               <InfoChip
                 icon={<ClockIcon className="size-3.5" />}
                 label="Time Limit"
-                value={`${quiz.time_limit_minutes} minutes`}
+                value={`${quiz.time_limit_minutes} min`}
               />
             )}
             {quiz.pass_threshold != null && (
@@ -383,7 +359,7 @@ export function QuizDetailPage() {
             )}
           </div>
 
-          {/* Overdue warning */}
+          {/* ── Overdue warning ──────────────────────────────────────────── */}
           {overdue && (
             <Alert className="border-red-500/30 bg-red-500/8">
               <AlertCircleIcon className="size-4 text-red-400" />
@@ -394,23 +370,14 @@ export function QuizDetailPage() {
             </Alert>
           )}
 
-          {/* Start error */}
-          {startError && (
-            <Alert variant="destructive" className="border-red-500/30 bg-red-500/10">
-              <AlertCircleIcon className="size-4" />
-              <AlertTitle>Could Not Start Quiz</AlertTitle>
-              <AlertDescription>{startError}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Questions preview */}
+          {/* ── Questions overview ───────────────────────────────────────── */}
           {quiz.questions && quiz.questions.length > 0 && (
-            <Card className="border-white/8 bg-white/2 overflow-hidden">
-              <CardHeader className="pb-3 border-b border-white/6">
-                <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-white/40 flex items-center gap-2">
+            <Card className="overflow-hidden border-white/8 bg-white/2">
+              <CardHeader className="border-b border-white/6 pb-3">
+                <CardTitle className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-white/40">
                   <ListChecksIcon className="size-4 text-indigo-400" />
                   Questions Overview
-                  <span className="ml-auto text-xs font-medium text-white/30 normal-case tracking-normal">
+                  <span className="ml-auto text-xs font-medium normal-case tracking-normal text-white/30">
                     {quiz.questions.length} question{quiz.questions.length !== 1 ? "s" : ""}
                   </span>
                 </CardTitle>
@@ -423,58 +390,54 @@ export function QuizDetailPage() {
             </Card>
           )}
 
-          {/* Instruction card */}
-          <Card className="border-indigo-500/20 bg-indigo-500/6 rounded-2xl">
-            <CardContent className="flex items-start gap-3.5 py-4 px-5">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 border border-indigo-500/25">
-                <InfoIcon className="size-4 text-indigo-400" />
-              </div>
-              <div className="text-sm text-white/50 space-y-1 leading-relaxed pt-0.5">
-                <p>
-                  Once you start the quiz, a new attempt will be created.
-                  {quiz.time_limit_minutes != null &&
-                    ` You will have ${quiz.time_limit_minutes} minutes to complete it.`}
-                </p>
-                {attemptsLeft != null && (
-                  <p>
-                    You have <span className="text-white/80 font-medium">{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""}</span>{" "}
-                    remaining.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* ── Start error ──────────────────────────────────────────────── */}
+          {startError && (
+            <Alert variant="destructive" className="border-red-500/30 bg-red-500/10">
+              <AlertCircleIcon className="size-4" />
+              <AlertTitle>Could Not Start Quiz</AlertTitle>
+              <AlertDescription>{startError}</AlertDescription>
+            </Alert>
+          )}
 
-          {/* CTA */}
-          <div className="flex flex-wrap gap-3 pt-1">
-            <Button
-              size="lg"
-              onClick={handleStart}
-              disabled={isStarting}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white border-0 px-8 h-12 rounded-xl shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 transition-all"
-            >
-              {isStarting ? (
-                <>
-                  <Loader2Icon className="size-4 animate-spin" />
-                  Starting…
-                </>
-              ) : (
-                <>
-                  <PlayCircleIcon className="size-5" />
-                  Start Quiz
-                  <ChevronRightIcon className="size-4" />
-                </>
+          {/* ── CTA ──────────────────────────────────────────────────────── */}
+          <div className="space-y-3 pt-1">
+            <p className="text-sm text-white/45">
+              Once you start, a new attempt will be created.
+              {quiz.time_limit_minutes != null && ` You will have ${quiz.time_limit_minutes} minutes to complete it.`}
+              {attemptsLeft != null && (
+                <> You have <span className="font-medium text-white/70">{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""}</span> remaining.</>
               )}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/user/quizzes")}
-              className="border-white/15 text-white/60 hover:text-white hover:border-white/30 bg-transparent h-12 rounded-xl"
-            >
-              <ArrowLeftIcon className="size-4 mr-2" />
-              Back
-            </Button>
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                onClick={handleStart}
+                disabled={isStarting}
+                className="flex items-center gap-2 rounded-xl border-0 bg-indigo-600 px-8 text-white hover:bg-indigo-500"
+              >
+                {isStarting ? (
+                  <>
+                    <Loader2Icon className="size-4 animate-spin" />
+                    Starting…
+                  </>
+                ) : (
+                  <>
+                    <PlayCircleIcon className="size-5" />
+                    Start Quiz
+                    <ChevronRightIcon className="size-4" />
+                  </>
+                )}
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate("/user/quizzes")}
+                className="rounded-xl border-white/15 bg-transparent text-white/60 hover:border-white/30 hover:text-white"
+              >
+                <ArrowLeftIcon className="mr-2 size-4" />
+                Back
+              </Button>
+            </div>
           </div>
         </div>
       )}

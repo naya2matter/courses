@@ -242,6 +242,8 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
           <VideoPlayer
             src={data.media_url}
             resumePosition={data.progress?.playback_position ?? 0}
+            qualities={data.qualities ?? []}
+            subtitleUrl={data.subtitle_url ?? null}
             onPlay={session.handlePlay}
             onPause={session.handlePause}
             onSeek={session.handleSeek}

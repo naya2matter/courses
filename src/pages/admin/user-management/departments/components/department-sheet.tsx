@@ -18,13 +18,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 import { isApiError } from "@/lib/api"
 import { createDepartment, updateDepartment } from "../service/department.service"
@@ -180,24 +174,22 @@ export function DepartmentSheet({
           {/* Parent Department */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="dept-parent">Parent Department</Label>
-            <Select
+            <SearchableSelect
+              id="dept-parent"
               value={parentId}
               onValueChange={setParentId}
               disabled={submitting}
-            >
-              <SelectTrigger id="dept-parent" className="w-full">
-                <SelectValue placeholder="None (root department)" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Allow clearing parent — makes this a root department */}
-                <SelectItem value="none">None (root department)</SelectItem>
-                {parentOptions.map((d) => (
-                  <SelectItem key={d.id} value={String(d.id)}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="None (root department)"
+              searchPlaceholder="Search departments…"
+              triggerClassName="w-full"
+              emptyText="No departments found"
+              /* Allow clearing parent — makes this a root department */
+              pinnedOptions={[{ value: "none", label: "None (root department)" }]}
+              options={parentOptions.map((d) => ({
+                value: String(d.id),
+                label: d.name,
+              }))}
+            />
           </div>
 
           {/* Sort Order */}

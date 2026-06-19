@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Dialog,
@@ -50,6 +51,19 @@ import { deleteOnlineCourse, reorderModules } from "../service/online-course.ser
 import { useOnlineCourseStore } from "../store/online-course.store"
 import { OnlineCourseDetailView } from "../components/online-course-detail-drawer"
 import type { OnlineCourseModule } from "../types/online-course.types"
+
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case "published":
+      return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+    case "draft":
+      return "bg-amber-500/20 text-amber-300 border-amber-500/30"
+    case "archived":
+      return "bg-zinc-500/20 text-zinc-300 border-zinc-500/30"
+    default:
+      return "bg-white/10 text-white/60 border-white/10"
+  }
+}
 
 function SortableModuleRow({ module: mod, index }: { module: OnlineCourseModule; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -220,61 +234,73 @@ export default function ViewOnlineCoursePage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="rounded-full shadow-sm border bg-background hover:bg-muted"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              {currentCourse ? currentCourse.name : "Online Course"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Course details and content
-            </p>
+      {/* ── Hero header ──────────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-white/2 p-5 sm:p-6">
+        {/* subtle indigo radial accent */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(99,102,241,0.10),transparent_55%)]" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBack}
+              className="mt-0.5 shrink-0 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
+              aria-label="Back to online courses"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white wrap-break-word">
+                  {currentCourse ? currentCourse.name : "Online Course"}
+                </h1>
+                {currentCourse && (
+                  <Badge className={`text-[11px] border ${statusBadgeClass(currentCourse.status)}`}>
+                    {currentCourse.status}
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-white/45">
+                Course details and content
+              </p>
+            </div>
           </div>
-        </div>
 
-        {currentCourse && (
-          <div className="flex flex-wrap items-center gap-2">
-            {canReorder && (
+          {currentCourse && (
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              {canReorder && (
+                <Button
+                  variant="outline"
+                  onClick={openReorder}
+                  className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
+                >
+                  <GripVerticalIcon className="h-4 w-4" />
+                  Reorder Modules
+                </Button>
+              )}
               <Button
-                variant="outline"
-                onClick={openReorder}
+                onClick={() =>
+                  navigate(`/admin/course-management/online-courses/edit/${id}`)
+                }
                 className="gap-2"
               >
-                <GripVerticalIcon className="h-4 w-4" />
-                Reorder Modules
+                <PencilIcon className="h-4 w-4" />
+                Edit Course
               </Button>
-            )}
-            <Button
-              onClick={() =>
-                navigate(`/admin/course-management/online-courses/edit/${id}`)
-              }
-              className="gap-2"
-            >
-              <PencilIcon className="h-4 w-4" />
-              Edit Course
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setDeleteError(null)
-                setIsDeleteOpen(true)
-              }}
-              className="gap-2"
-            >
-              <Trash2Icon className="h-4 w-4" />
-              Delete
-            </Button>
-          </div>
-        )}
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setDeleteError(null)
+                  setIsDeleteOpen(true)
+                }}
+                className="gap-2"
+              >
+                <Trash2Icon className="h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Error banner ──────────────────────────────────────────────────────── */}

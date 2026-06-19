@@ -10,6 +10,7 @@ import {
   ArrowLeftIcon,
   Loader2Icon,
   Music2Icon,
+  SparklesIcon,
   UploadIcon,
   ImageIcon,
   XIcon,
@@ -32,6 +33,7 @@ import {
 
 import { isApiError } from "@/lib/api"
 import { getAudioById, updateAudio } from "../service/audio.service"
+import { extractAudioMetadata } from "../service/audio-metadata"
 import { getAllCategories } from "../../categories/service/category.service"
 import type { AudioCategoryResource } from "../../categories/types/category.types"
 import type { AudioResource } from "../types/audio.types"
@@ -244,6 +246,9 @@ export function EditAudioPage() {
   const [categories, setCategories] = useState<AudioCategoryResource[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
 
+  const [nameAutoDetected, setNameAutoDetected] = useState(false)
+  const [durationAutoDetected, setDurationAutoDetected] = useState(false)
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -280,6 +285,23 @@ export function EditAudioPage() {
     fetchDetail()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioId])
+
+  function handleAudioFileChange(file: File | null) {
+    setAudioFile(file)
+    if (file) {
+      extractAudioMetadata(file).then((meta) => {
+        setName(file.name.replace(/\.[^.]+$/, ""))
+        setNameAutoDetected(true)
+        if (meta.duration) {
+          setDuration(String(Math.round(meta.duration)))
+          setDurationAutoDetected(true)
+        }
+      }).catch(() => {})
+    } else {
+      setNameAutoDetected(false)
+      setDurationAutoDetected(false)
+    }
+  }
 
   // ── Client-side validation ────────────────────────────────────────────────
   function validate(): string | null {
@@ -408,15 +430,20 @@ export function EditAudioPage() {
           <div className="grid gap-5 sm:grid-cols-2">
             {/* Name */}
             <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="edit-audio-name">
+              <Label htmlFor="edit-audio-name" className="flex items-center gap-2">
                 Name <span className="text-destructive">*</span>
+                {nameAutoDetected && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-normal text-indigo-400">
+                    <SparklesIcon className="size-3" />Auto-detected
+                  </span>
+                )}
               </Label>
               <Input
                 id="edit-audio-name"
                 placeholder="e.g. Introduction to React"
                 maxLength={255}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); setNameAutoDetected(false) }}
                 disabled={submitting}
                 required
               />
@@ -454,14 +481,21 @@ export function EditAudioPage() {
 
             {/* Duration (optional) */}
             <div className="grid gap-1.5">
-              <Label htmlFor="edit-audio-duration">Duration (seconds)</Label>
+              <Label htmlFor="edit-audio-duration" className="flex items-center gap-2">
+                Duration (seconds)
+                {durationAutoDetected && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-normal text-indigo-400">
+                    <SparklesIcon className="size-3" />Auto-detected
+                  </span>
+                )}
+              </Label>
               <Input
                 id="edit-audio-duration"
                 type="number"
                 min={1}
                 placeholder="e.g. 240"
                 value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                onChange={(e) => { setDuration(e.target.value); setDurationAutoDetected(false) }}
                 disabled={submitting}
               />
             </div>
@@ -491,7 +525,7 @@ export function EditAudioPage() {
                 accept="audio/*"
                 disabled={submitting}
                 file={audioFile}
-                onChange={setAudioFile}
+                onChange={handleAudioFileChange}
                 placeholder="Click to choose a new audio file (leave blank to keep existing)"
               />
             </div>

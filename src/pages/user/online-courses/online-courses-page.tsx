@@ -34,14 +34,7 @@ const FILTERS: { value: LearningStatus | "all"; label: string }[] = [
 
 function CardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-[20px] border border-white/5 bg-[#0a0a0f]">
-      <Skeleton className="h-40 w-full rounded-none bg-white/5" />
-      <div className="space-y-2.5 p-5">
-        <Skeleton className="h-5 w-4/5 bg-white/5" />
-        <Skeleton className="h-3 w-full bg-white/5" />
-        <Skeleton className="h-1.5 w-full rounded-full bg-white/5" />
-      </div>
-    </div>
+    <div className="h-[290px] overflow-hidden rounded-2xl border border-white/8 bg-white/3" />
   )
 }
 
@@ -172,9 +165,9 @@ export function UserOnlineCoursesPage() {
       )}
 
       {/* Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)
+          Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
         ) : filtered.length === 0 && !error ? (
           <div className="col-span-full flex flex-col items-center justify-center gap-4 py-20">
             <div className="flex size-20 items-center justify-center rounded-2xl border border-white/10 bg-white/5">

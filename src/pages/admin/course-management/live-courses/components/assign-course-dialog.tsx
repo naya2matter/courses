@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -436,28 +437,27 @@ export function AssignCourseDialog({
               </div>
             ) : (
               <div>
-                <Select
+                <SearchableSelect
                   value={selectedUserId}
                   onValueChange={(value) => addUser(value)}
-                >
-                  <SelectTrigger className="h-11 w-full">
-                    <SelectValue placeholder="Select a user…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.length === 0 ? (
-                      <div className="py-8 text-center text-sm text-muted-foreground">No users found</div>
-                    ) : (
-                      users.map((u) => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          <span className="flex flex-col leading-tight">
-                            <span className="font-medium">{u.name}</span>
-                            <span className="text-xs text-muted-foreground">{u.department?.name ?? u.email}</span>
-                          </span>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select a user…"
+                  searchPlaceholder="Search users…"
+                  triggerClassName="h-11 w-full"
+                  emptyText="No users found"
+                  options={users.map((u) => ({
+                    value: String(u.id),
+                    label: u.name,
+                    keywords: `${u.email} ${u.department?.name ?? ""}`,
+                    node: (
+                      <span className="flex flex-col leading-tight">
+                        <span className="font-medium">{u.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {u.department?.name ?? u.email}
+                        </span>
+                      </span>
+                    ),
+                  }))}
+                />
               </div>
             )}
 

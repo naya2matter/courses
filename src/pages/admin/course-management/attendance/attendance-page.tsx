@@ -41,6 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { PageHeader } from "@/components/admin/page-header"
 import { getAllAttendance } from "./service/attendance.service"
 import { EditAttendanceDialog } from "./components/edit-attendance-dialog"
 import { DeleteAttendanceDialog } from "./components/delete-attendance-dialog"
@@ -130,30 +131,23 @@ function PaginationBar({
   onPageChange,
 }: PaginationBarProps) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-white/40">
       <span>
         {from != null && to != null
           ? `Showing ${from}–${to} of ${total} records`
           : `${total} record${total !== 1 ? "s" : ""}`}
       </span>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage <= 1 || isLoading}
-          onClick={() => onPageChange(1)}
-        >
-          «
-        </Button>
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
           disabled={currentPage <= 1 || isLoading}
           onClick={() => onPageChange(currentPage - 1)}
+          className="rounded-lg border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
         >
-          ‹
+          Prev
         </Button>
-        <span className="px-3 text-sm font-medium">
+        <span className="px-2 text-sm font-medium text-white/50">
           {currentPage} / {lastPage}
         </span>
         <Button
@@ -161,16 +155,9 @@ function PaginationBar({
           size="sm"
           disabled={currentPage >= lastPage || isLoading}
           onClick={() => onPageChange(currentPage + 1)}
+          className="rounded-lg border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
         >
-          ›
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage >= lastPage || isLoading}
-          onClick={() => onPageChange(lastPage)}
-        >
-          »
+          Next
         </Button>
       </div>
     </div>
@@ -322,95 +309,99 @@ export default function AttendancePage() {
       <div className="space-y-6 p-4 md:p-6">
 
         {/* ── Header ── */}
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <ClockIcon className="h-6 w-6 text-primary" />
-              Attendance
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage and review all clocking records across courses.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchData}
-            disabled={isLoading}
-            className="self-start sm:self-auto"
-          >
-            {isLoading ? (
-              <Loader2Icon className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCwIcon className="h-4 w-4" />
-            )}
-            <span className="ml-1.5">Refresh</span>
-          </Button>
-        </div>
-
-        
+        <PageHeader
+          title="Attendance"
+          description="Manage and review all clocking records across courses."
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchData}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2Icon className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCwIcon className="h-4 w-4" />
+              )}
+              <span className="ml-1.5">Refresh</span>
+            </Button>
+          }
+        />
 
         {/* ── Summary Cards ── */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {(summaryCards.length > 0 ? summaryCards : [
+        {(() => {
+          const cards = summaryCards.length > 0 ? summaryCards : [
             { key: "total_records", title: "Total Records", value: meta.total },
             { key: "visible_records", title: "Showing", value: records.length },
             { key: "page", title: "Page", value: `${meta.current_page} / ${meta.last_page}` },
-          ]).map((card) => {
-            const Icon = getSummaryIcon(card.key)
-            return (
-              <div
-                key={card.key}
-                className="flex flex-col items-center justify-between "
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 mb-3">
-                  <Icon className="h-5 w-5 text-sky-400" />
-                </div>
-                {isLoading ? (
-                  <div className="text-4xl font-semibold tabular-nums text-foreground">
-                    <Skeleton className="h-10 w-24" />
+          ]
+          return (
+            <section
+              className="grid gap-6 items-center"
+              style={{ gridTemplateColumns: `repeat(${Math.min(cards.length, 4)}, minmax(0, 1fr))` }}
+            >
+              {cards.map((card) => {
+                const Icon = getSummaryIcon(card.key)
+                return (
+                  <div key={card.key} className="flex flex-col items-center text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/6 bg-white/5">
+                      <Icon className="h-6 w-6 text-indigo-400" />
+                    </div>
+                    {isLoading ? (
+                      <Skeleton className="mt-3 h-8 w-20" />
+                    ) : (
+                      <p className="mt-3 text-3xl font-bold tabular-nums text-foreground">{card.value}</p>
+                    )}
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{card.title}</p>
                   </div>
-                ) : (
-                  <p className="text-4xl font-semibold tabular-nums text-foreground">{card.value}</p>
-                )}
-                <p className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                  {card.title}
-                </p>
-              </div>
-            )
-          })}
-        </section>
+                )
+              })}
+            </section>
+          )
+        })()}
 
         {/* ── Search & Filters ── */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative flex-1 max-w-sm">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search by user or course…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-9"
-            />
-            {search && (
-              <button
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:max-w-xs">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search by user or course…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {search && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Clear search"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {hasActiveSearch && (
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear search"
+                className="gap-1.5 text-muted-foreground"
               >
-                <XIcon className="h-4 w-4" />
-              </button>
+                <FilterXIcon className="h-3.5 w-3.5" />
+                Clear filters
+              </Button>
             )}
           </div>
-          {hasActiveSearch && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearSearch}
-              className="text-muted-foreground gap-1.5"
-            >
-              <FilterXIcon className="h-4 w-4" />
-              Clear filter
-            </Button>
+          {!isLoading && (
+            <p className="text-sm text-muted-foreground">
+              {meta.total === 0
+                ? "No records found"
+                : meta.from != null && meta.to != null
+                  ? `Showing ${meta.from}–${meta.to} of ${meta.total} record${meta.total !== 1 ? "s" : ""}`
+                  : `${meta.total} record${meta.total !== 1 ? "s" : ""}`}
+            </p>
           )}
         </div>
 
@@ -433,50 +424,50 @@ export default function AttendancePage() {
         )}
 
         {/* ── Table (desktop / tablet) ── */}
-        <div className="hidden rounded-lg border bg-card overflow-hidden md:block">
+        <div className="hidden rounded-2xl border border-white/8 overflow-hidden md:block">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12 font-semibold">#</TableHead>
-                  <TableHead className="font-semibold">
+                <TableRow className="bg-white/2 hover:bg-white/2 border-b border-white/8">
+                  <TableHead className="w-12 text-xs font-medium uppercase tracking-wide text-white/40">#</TableHead>
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <UserIcon className="h-3.5 w-3.5" />
                       User
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <BookOpenIcon className="h-3.5 w-3.5" />
                       Course
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <ClockIcon className="h-3.5 w-3.5" />
                       Clock In
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <ClockIcon className="h-3.5 w-3.5" />
                       Clock Out
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <TimerIcon className="h-3.5 w-3.5" />
                       Duration
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">
                     <span className="flex items-center gap-1.5">
                       <StarIcon className="h-3.5 w-3.5" />
                       Rating
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">Comment</TableHead>
-                  <TableHead className="text-right font-semibold">Actions</TableHead>
+                  <TableHead className="text-xs font-medium uppercase tracking-wide text-white/40">Comment</TableHead>
+                  <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-white/40">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -507,7 +498,7 @@ export default function AttendancePage() {
                     return (
                       <TableRow
                         key={record.id}
-                        className="hover:bg-muted/40 transition-colors"
+                        className="border-white/5 hover:bg-white/3 transition-colors"
                       >
                         <TableCell className="text-muted-foreground text-xs">
                           {rowNumber}
@@ -642,14 +633,14 @@ export default function AttendancePage() {
         <div className="space-y-3 md:hidden">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border bg-card p-4">
+              <div key={i} className="rounded-2xl border border-white/8 bg-white/3 p-4">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="mt-3 h-3 w-3/4" />
                 <Skeleton className="mt-2 h-3 w-2/3" />
               </div>
             ))
           ) : isEmpty ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card py-12 text-center text-muted-foreground">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/8 bg-white/2 py-12 text-center text-muted-foreground">
               <ClockIcon className="h-10 w-10 opacity-30" />
               <p className="text-base font-medium">
                 {hasActiveSearch ? "No records match your search." : "No attendance records found."}
@@ -666,7 +657,7 @@ export default function AttendancePage() {
               return (
                 <div
                   key={record.id}
-                  className="rounded-2xl border bg-card p-4 shadow-sm ring-1 ring-white/5"
+                  className="rounded-2xl border border-white/8 bg-white/3 p-4"
                 >
                   {/* Header: user + actions */}
                   <div className="flex items-start justify-between gap-3">

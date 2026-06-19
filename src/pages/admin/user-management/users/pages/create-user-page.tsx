@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 import { isApiError } from "@/lib/api"
 import { createUser } from "../service/user.service"
@@ -341,27 +342,23 @@ export function CreateUserPage() {
 
                   <div className="grid gap-1.5">
                     <Label htmlFor="user-department">Department</Label>
-                    <Select
+                    <SearchableSelect
+                      id="user-department"
                       value={departmentId || NONE_VALUE}
                       onValueChange={(value) =>
                         setDepartmentId(value === NONE_VALUE ? "" : value)
                       }
                       disabled={submitting || isLoadingOptions}
-                    >
-                      <SelectTrigger id="user-department" className="h-9 w-full">
-                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select department"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
-                          {departments.map((department) => (
-                            <SelectItem key={department.id} value={String(department.id)}>
-                              {department.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                      placeholder={isLoadingOptions ? "Loading..." : "Select department"}
+                      searchPlaceholder="Search departments…"
+                      triggerClassName="h-9 w-full"
+                      emptyText="No departments found"
+                      pinnedOptions={[{ value: NONE_VALUE, label: "Unassigned" }]}
+                      options={departments.map((department) => ({
+                        value: String(department.id),
+                        label: department.name,
+                      }))}
+                    />
                     <p className="text-xs text-muted-foreground">
                       Leave blank for an unassigned user.
                     </p>
@@ -369,27 +366,24 @@ export function CreateUserPage() {
 
                   <div className="grid gap-1.5">
                     <Label htmlFor="user-report-to">Reports To</Label>
-                    <Select
+                    <SearchableSelect
+                      id="user-report-to"
                       value={reportTo || NONE_VALUE}
                       onValueChange={(value) =>
                         setReportTo(value === NONE_VALUE ? "" : value)
                       }
                       disabled={submitting || isLoadingOptions}
-                    >
-                      <SelectTrigger id="user-report-to" className="h-9 w-full">
-                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : "Select manager"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value={NONE_VALUE}>No manager</SelectItem>
-                          {allUsers.map((user) => (
-                            <SelectItem key={user.id} value={String(user.id)}>
-                              {user.name} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                      placeholder={isLoadingOptions ? "Loading..." : "Select manager"}
+                      searchPlaceholder="Search users…"
+                      triggerClassName="h-9 w-full"
+                      emptyText="No users found"
+                      pinnedOptions={[{ value: NONE_VALUE, label: "No manager" }]}
+                      options={allUsers.map((user) => ({
+                        value: String(user.id),
+                        label: `${user.name} (${user.email})`,
+                        keywords: user.email,
+                      }))}
+                    />
                   </div>
 
                   <div className="grid gap-1.5">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { FilterIcon, SearchIcon, XIcon } from "lucide-react"
+import { SearchIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,8 @@ function getActiveFilterCount(filters: UserEvaluationFilters): number {
   return count
 }
 
+const LABEL = "block text-[11px] font-medium text-muted-foreground mb-1"
+
 export function UserEvaluationFiltersToolbar({
   filters,
   onFiltersChange,
@@ -51,7 +53,6 @@ export function UserEvaluationFiltersToolbar({
         onFiltersChange({ ...filters, search: searchDraft, page: 1 })
       }
     }, 300)
-
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
@@ -60,6 +61,7 @@ export function UserEvaluationFiltersToolbar({
   const activeCount = getActiveFilterCount(filters)
 
   function clearAll() {
+    setSearchDraft("")
     onFiltersChange({
       ...filters,
       search: "",
@@ -72,99 +74,121 @@ export function UserEvaluationFiltersToolbar({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <FilterIcon className="size-3.5" />
-          {activeCount} active filter{activeCount !== 1 ? "s" : ""}
-        </span>
-        <span className="text-white/25">|</span>
-        <span>{resultCount.toLocaleString()} result{resultCount !== 1 ? "s" : ""}</span>
-        <span className="text-white/25">of {totalCount.toLocaleString()}</span>
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+      {/* Search */}
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
+          placeholder="Search course name…"
+          className="pl-9"
+          aria-label="Search evaluations by course name"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
-        <div className="relative xl:col-span-2">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
-            placeholder="Search course name..."
-            className="pl-9"
-            aria-label="Search evaluations by course name"
-          />
+      {/* Filter row */}
+      <div className="flex flex-wrap items-end gap-4">
+        {/* Date range */}
+        <div className="flex items-end gap-2">
+          <div>
+            <label className={LABEL}>From</label>
+            <Input
+              type="date"
+              value={filters.start_date}
+              onChange={(e) =>
+                onFiltersChange({ ...filters, start_date: e.target.value, page: 1 })
+              }
+              aria-label="Filter start date"
+              className="h-8 w-[8.5rem] text-xs"
+            />
+          </div>
+          <span className="mb-1.5 text-sm text-muted-foreground">—</span>
+          <div>
+            <label className={LABEL}>To</label>
+            <Input
+              type="date"
+              value={filters.end_date}
+              onChange={(e) =>
+                onFiltersChange({ ...filters, end_date: e.target.value, page: 1 })
+              }
+              aria-label="Filter end date"
+              className="h-8 w-[8.5rem] text-xs"
+            />
+          </div>
         </div>
 
-        <Select
-          value={filters.course_type}
-          onValueChange={(value) =>
-            onFiltersChange({
-              ...filters,
-              course_type: value as UserEvaluationFilters["course_type"],
-              page: 1,
-            })
-          }
-        >
-          <SelectTrigger aria-label="Filter by course type">
-            <SelectValue placeholder="Course Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="regular">Regular</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.performance_level}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, performance_level: value, page: 1 })
-          }
-        >
-          <SelectTrigger aria-label="Filter by performance level">
-            <SelectValue placeholder="Performance Level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Levels</SelectItem>
-            {levelOptions.map((level) => (
-              <SelectItem key={level} value={level}>
-                Level {level}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-2">
-          <Input
-            type="date"
-            value={filters.start_date}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, start_date: e.target.value, page: 1 })
+        {/* Course type */}
+        <div>
+          <label className={LABEL}>Type</label>
+          <Select
+            value={filters.course_type}
+            onValueChange={(value) =>
+              onFiltersChange({
+                ...filters,
+                course_type: value as UserEvaluationFilters["course_type"],
+                page: 1,
+              })
             }
-            aria-label="Filter start date"
-          />
-          <Input
-            type="date"
-            value={filters.end_date}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, end_date: e.target.value, page: 1 })
-            }
-            aria-label="Filter end date"
-          />
+          >
+            <SelectTrigger className="h-8 w-[9rem] text-xs" aria-label="Filter by course type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="regular">Regular</SelectItem>
+              <SelectItem value="online">Online</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
 
-      <div className="mt-3 flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5"
-          onClick={clearAll}
-          disabled={activeCount === 0}
-        >
-          <XIcon className="size-3.5" />
-          Clear Filters
-        </Button>
+        {/* Performance level */}
+        <div>
+          <label className={LABEL}>Level</label>
+          <Select
+            value={filters.performance_level}
+            onValueChange={(value) =>
+              onFiltersChange({ ...filters, performance_level: value, page: 1 })
+            }
+          >
+            <SelectTrigger className="h-8 w-[9rem] text-xs" aria-label="Filter by performance level">
+              <SelectValue placeholder="All Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              {levelOptions.map((level) => (
+                <SelectItem key={level} value={level}>
+                  Level {level}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Results + clear */}
+        <div className="flex items-center gap-3 pb-0.5">
+          <span className="text-xs text-muted-foreground">
+            {resultCount.toLocaleString()}
+            {totalCount !== resultCount && (
+              <span className="text-white/25"> of {totalCount.toLocaleString()}</span>
+            )}{" "}
+            result{resultCount !== 1 ? "s" : ""}
+          </span>
+          {activeCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <XIcon className="size-3" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

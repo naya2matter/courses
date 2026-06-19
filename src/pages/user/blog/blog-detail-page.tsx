@@ -69,8 +69,18 @@ function wordCount(text: string | null): number {
 function DetailSkeleton() {
   return (
     <div className="space-y-8" aria-busy="true" aria-label="Loading article">
-      {/* Hero */}
-      <Skeleton className="aspect-[21/9] w-full rounded-3xl sm:aspect-[16/7]" />
+      {/* Compact hero */}
+      <div className="space-y-4">
+        <Skeleton className="aspect-video w-full max-h-64 rounded-2xl" />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
 
       {/* Two-column layout */}
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -79,11 +89,6 @@ function DetailSkeleton() {
           <div className="flex gap-2">
             <Skeleton className="h-6 w-24 rounded-full" />
             <Skeleton className="h-6 w-16 rounded-full" />
-            <Skeleton className="h-6 w-20 rounded-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
           </div>
           <Skeleton className="h-44 w-full rounded-2xl" />
           <div className="space-y-3">

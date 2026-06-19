@@ -1,7 +1,5 @@
-import { useMemo, useState } from "react"
-import { SearchIcon, XIcon } from "lucide-react"
+import { XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -9,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 import type { OnlineCourse } from "../types/online-course.types"
 import type { OnlineCourseAssignmentFilters } from "../types/online-course-assignment.types"
@@ -30,19 +29,9 @@ export function OnlineCourseAssignmentFiltersToolbar({
   onFilterChange,
   onClearAll,
 }: Props) {
-  const [userSearch, setUserSearch] = useState("")
-
   const hasActive = Boolean(
     filters.course_online_id || filters.user_id || filters.is_overdue != null,
   )
-
-  const filteredUsers = useMemo(() => {
-    const q = userSearch.trim().toLowerCase()
-    if (!q) return users
-    return users.filter((u) =>
-      `${u.name} ${u.email}`.toLowerCase().includes(q),
-    )
-  }, [users, userSearch])
 
   return (
     <div className="space-y-3">
@@ -69,35 +58,22 @@ export function OnlineCourseAssignmentFiltersToolbar({
           </SelectContent>
         </Select>
 
-        <Select
+        <SearchableSelect
           value={filters.user_id != null ? String(filters.user_id) : "all"}
           onValueChange={(v) =>
             onFilterChange({ user_id: v === "all" ? undefined : Number(v), page: 1 })
           }
-        >
-          <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="Filter by user" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[420px]" position="popper" sideOffset={4}>
-            <div className="px-2 pt-2 pb-1 sticky top-0 z-10 bg-popover">
-              <div className="relative">
-                <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search users..."
-                  className="h-9 pl-8"
-                />
-              </div>
-            </div>
-            <SelectItem value="all">All users</SelectItem>
-            {filteredUsers.map((u) => (
-              <SelectItem key={u.id} value={String(u.id)}>
-                {u.name} ({u.email})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="Filter by user"
+          searchPlaceholder="Search users..."
+          triggerClassName="w-[240px]"
+          emptyText="No users found"
+          pinnedOptions={[{ value: "all", label: "All users" }]}
+          options={users.map((u) => ({
+            value: String(u.id),
+            label: `${u.name} (${u.email})`,
+            keywords: u.email,
+          }))}
+        />
 
         <Select
           value={
@@ -130,10 +106,7 @@ export function OnlineCourseAssignmentFiltersToolbar({
             variant="ghost"
             size="sm"
             className="gap-1.5 text-muted-foreground"
-            onClick={() => {
-              setUserSearch("")
-              onClearAll()
-            }}
+            onClick={onClearAll}
           >
             <XIcon className="h-3.5 w-3.5" />
             Clear filters

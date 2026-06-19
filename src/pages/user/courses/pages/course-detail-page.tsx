@@ -95,7 +95,7 @@ function AvailabilityCard({ av }: { av: CourseAvailability }) {
       : 0
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/3 p-4 space-y-3">
+    <div className="rounded-2xl border border-white/8 bg-white/2 p-4 space-y-3">
       {/* Header */}
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
@@ -184,7 +184,7 @@ function AvailabilityCard({ av }: { av: CourseAvailability }) {
 function PageSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <Skeleton className="h-52 sm:h-72 lg:h-80 w-full rounded-2xl bg-white/5" />
+      <Skeleton className="h-40 sm:h-52 w-full rounded-2xl bg-white/5" />
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4 order-2 lg:order-1">
           <Skeleton className="h-9 w-2/3 bg-white/5" />
@@ -213,7 +213,7 @@ function CourseStatsCard({ course }: { course: Course }) {
   const totalSpots = activeAvs.reduce((acc, a) => acc + a.available_spots, 0)
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/3 p-5 space-y-3">
+    <div className="rounded-2xl border border-white/8 bg-white/2 p-5 space-y-3">
       <h3 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">
         Course Info
       </h3>
@@ -265,7 +265,7 @@ function CourseEnrollCard({
   onEnrolled: (reg: CourseRegistration) => void
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/3 p-5 space-y-4">
+    <div className="rounded-2xl border border-white/8 bg-white/2 p-5 space-y-4">
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-white">Enroll in this Course</h3>
         <p className="text-xs text-white/40">
@@ -320,7 +320,7 @@ function EnrolledSessionCard({
       {availability ? (
         <AvailabilityCard av={availability} />
       ) : (
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4 text-xs text-white/40">
+        <div className="rounded-2xl border border-white/8 bg-white/2 p-4 text-xs text-white/40">
           Session #{latestReg.course_availability_id}
         </div>
       )}
@@ -565,7 +565,7 @@ export function CourseDetailPage() {
       {!isLoading && course && (
         <div className="space-y-6">
           {/* ── Hero image ─────────────────────────────────────────────────── */}
-          <div className="group relative w-full h-52 sm:h-72 lg:h-80 rounded-2xl overflow-hidden border border-white/8 bg-[#0c0c14]">
+          <div className="group relative w-full h-40 sm:h-52 rounded-2xl overflow-hidden border border-white/8 bg-[#0c0c14]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.1),transparent_50%)] z-10" />
 
             {course.image_path ? (
@@ -710,7 +710,7 @@ export function CourseDetailPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-white/8 bg-white/3 p-8 flex flex-col items-center gap-3 text-center">
+                    <div className="rounded-2xl border border-white/8 bg-white/2 p-8 flex flex-col items-center gap-3 text-center">
                       <CalendarIcon className="size-8 text-white/15" />
                       <p className="text-sm text-white/35">No batches scheduled yet.</p>
                     </div>

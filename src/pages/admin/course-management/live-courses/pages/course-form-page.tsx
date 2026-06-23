@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DateTimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, TimePickerField } from "@/components/ui/date-picker"
 import {
   Select,
   SelectContent,
@@ -582,33 +582,27 @@ export default function CourseFormPage() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Time Shifts</p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor={`shift1_${index}`} className="text-xs text-muted-foreground">Shift 1</Label>
-                          <Input
-                            id={`shift1_${index}`}
-                            type="time"
+                          <Label className="text-xs text-muted-foreground">Shift 1</Label>
+                          <TimePickerField
                             value={row.session_time_shift_1}
-                            onChange={(e) => updateAvailRow(index, "session_time_shift_1", e.target.value)}
-                            className="bg-background/60"
+                            onChange={(v) => updateAvailRow(index, "session_time_shift_1", v)}
+                            placeholder="Pick time"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`shift2_${index}`} className="text-xs text-muted-foreground">Shift 2 <span className="text-muted-foreground/50">(optional)</span></Label>
-                          <Input
-                            id={`shift2_${index}`}
-                            type="time"
+                          <Label className="text-xs text-muted-foreground">Shift 2 <span className="text-muted-foreground/50">(optional)</span></Label>
+                          <TimePickerField
                             value={row.session_time_shift_2}
-                            onChange={(e) => updateAvailRow(index, "session_time_shift_2", e.target.value)}
-                            className="bg-background/60"
+                            onChange={(v) => updateAvailRow(index, "session_time_shift_2", v)}
+                            placeholder="Pick time"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`shift3_${index}`} className="text-xs text-muted-foreground">Shift 3 <span className="text-muted-foreground/50">(optional)</span></Label>
-                          <Input
-                            id={`shift3_${index}`}
-                            type="time"
+                          <Label className="text-xs text-muted-foreground">Shift 3 <span className="text-muted-foreground/50">(optional)</span></Label>
+                          <TimePickerField
                             value={row.session_time_shift_3}
-                            onChange={(e) => updateAvailRow(index, "session_time_shift_3", e.target.value)}
-                            className="bg-background/60"
+                            onChange={(v) => updateAvailRow(index, "session_time_shift_3", v)}
+                            placeholder="Pick time"
                           />
                         </div>
                       </div>

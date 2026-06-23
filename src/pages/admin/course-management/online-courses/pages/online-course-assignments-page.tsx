@@ -235,7 +235,6 @@ export default function OnlineCourseAssignmentsPage() {
   const [assignOpen, setAssignOpen]     = useState(false)
   const [searchDraft, setSearchDraft]   = useState("")
   const deletingIdRef = useRef<number | null>(null)
-  const searchMounted = useRef(false)
   const lastErrorRef  = useRef<string | null>(null)
 
   // Load course + user options once
@@ -266,15 +265,6 @@ export default function OnlineCourseAssignmentsPage() {
     lastErrorRef.current = error
     toast.error(error)
   }, [error])
-
-  // Debounced text search
-  useEffect(() => {
-    if (!searchMounted.current) { searchMounted.current = true; return }
-    const id = setTimeout(() => {
-      setFilters({ search: searchDraft || undefined, page: 1 })
-    }, 400)
-    return () => clearTimeout(id)
-  }, [searchDraft])
 
   async function handleDelete(id: number) {
     deletingIdRef.current = id
@@ -372,7 +362,10 @@ export default function OnlineCourseAssignmentsPage() {
             <Input
               placeholder="Search user, course…"
               value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
+              onChange={(e) => {
+                setSearchDraft(e.target.value)
+                setFilters({ search: e.target.value || undefined, page: 1 })
+              }}
               className="h-9 pl-9"
             />
           </div>
@@ -381,7 +374,7 @@ export default function OnlineCourseAssignmentsPage() {
               variant="ghost"
               size="icon"
               className="h-9 w-9 shrink-0"
-              onClick={() => setSearchDraft("")}
+              onClick={() => { setSearchDraft(""); setFilters({ search: undefined, page: 1 }) }}
               aria-label="Clear search"
             >
               <XIcon className="h-4 w-4" />

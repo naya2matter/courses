@@ -13,8 +13,8 @@ import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePickerField } from "@/components/ui/date-picker"
 import { Separator } from "@/components/ui/separator"
 
 import { useKpi } from "./hook/use-kpi"
@@ -65,21 +65,21 @@ export default function KpisPage() {
         <div className="flex items-center gap-1.5">
           <div className="flex flex-col gap-0.5">
             <Label className="text-[10px] text-white/35">From</Label>
-            <Input
-              type="date"
+            <DatePickerField
               value={filters.date_from ?? ""}
-              onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
-              className="h-7 w-32 border-white/10 bg-white/5 text-xs text-white [color-scheme:dark]"
+              onChange={(v) => setFilters({ ...filters, date_from: v })}
+              placeholder="From"
+              className="h-7 w-36 border-white/10 bg-white/5 text-xs"
             />
           </div>
           <span className="mt-4 text-white/25 text-xs">—</span>
           <div className="flex flex-col gap-0.5">
             <Label className="text-[10px] text-white/35">To</Label>
-            <Input
-              type="date"
+            <DatePickerField
               value={filters.date_to ?? ""}
-              onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
-              className="h-7 w-32 border-white/10 bg-white/5 text-xs text-white [color-scheme:dark]"
+              onChange={(v) => setFilters({ ...filters, date_to: v })}
+              placeholder="To"
+              className="h-7 w-36 border-white/10 bg-white/5 text-xs"
             />
           </div>
         </div>

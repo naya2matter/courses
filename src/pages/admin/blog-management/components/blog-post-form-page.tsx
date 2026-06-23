@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { isApiError } from "@/lib/api"
 import {
@@ -497,20 +498,14 @@ export function BlogPostFormPage({ postId, onSaved, onCancel }: BlogPostFormPage
                     No {form.mediableType === "video" ? "videos" : "audios"} available.
                   </div>
                 ) : (
-                  <Select
+                  <SearchableSelect
                     value={form.mediableId || "none"}
                     onValueChange={(v) => setForm((prev) => ({ ...prev, mediableId: v === "none" ? "" : v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None (remove attachment)</SelectItem>
-                      {mediaOptions.map((m) => (
-                        <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select item"
+                    searchPlaceholder="Search…"
+                    pinnedOptions={[{ value: "none", label: "None (remove attachment)" }]}
+                    options={mediaOptions.map((m) => ({ value: String(m.id), label: m.title }))}
+                  />
                 )}
                 {fieldErrors.mediable_id && <p className="text-xs text-destructive">{fieldErrors.mediable_id}</p>}
               </div>

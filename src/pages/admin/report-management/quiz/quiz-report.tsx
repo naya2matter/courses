@@ -11,8 +11,8 @@ import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePickerField } from "@/components/ui/date-picker"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -90,16 +90,22 @@ export default function QuizReportPage() {
         <div className="flex items-center gap-1.5">
           <div className="flex flex-col gap-0.5">
             <Label className="text-[10px] text-white/35">From</Label>
-            <Input type="date" value={filters.date_from ?? ""}
-              onChange={(e) => setFilters({ ...filters, date_from: e.target.value, page: 1 })}
-              className="h-7 w-32 border-white/10 bg-white/5 text-xs text-white [color-scheme:dark]" />
+            <DatePickerField
+              value={filters.date_from ?? ""}
+              onChange={(v) => setFilters({ ...filters, date_from: v, page: 1 })}
+              placeholder="From"
+              className="h-7 w-36 border-white/10 bg-white/5 text-xs"
+            />
           </div>
           <span className="mt-4 text-white/25 text-xs">—</span>
           <div className="flex flex-col gap-0.5">
             <Label className="text-[10px] text-white/35">To</Label>
-            <Input type="date" value={filters.date_to ?? ""}
-              onChange={(e) => setFilters({ ...filters, date_to: e.target.value, page: 1 })}
-              className="h-7 w-32 border-white/10 bg-white/5 text-xs text-white [color-scheme:dark]" />
+            <DatePickerField
+              value={filters.date_to ?? ""}
+              onChange={(v) => setFilters({ ...filters, date_to: v, page: 1 })}
+              placeholder="To"
+              className="h-7 w-36 border-white/10 bg-white/5 text-xs"
+            />
           </div>
         </div>
 

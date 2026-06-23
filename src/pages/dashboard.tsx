@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   Calendar,
-  MoreHorizontal,
   TrendingUp,
   UserPlus,
   CheckCircle2,
@@ -16,7 +15,6 @@ import {
   LogIn,
   GraduationCap,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import heroImage from "@/assets/hero-character.png"
 import type { AdminDashboardData, UserDashboardData } from "@/types/dashboard"
 
@@ -487,12 +485,6 @@ export function Dashboard(props: DashboardProps) {
               <div className="h-5 w-[3px] rounded-full bg-linear-to-b from-indigo-400 to-violet-500" />
               <h2 className="text-2xl font-semibold text-white">Recent Activity</h2>
             </div>
-            <Button
-              variant="ghost"
-              className="rounded-xl border border-white/5 bg-white/5 text-sm text-indigo-400 backdrop-blur-md transition-all hover:bg-white/10 hover:text-indigo-300"
-            >
-              Export log
-            </Button>
           </div>
 
           <div
@@ -547,9 +539,6 @@ export function Dashboard(props: DashboardProps) {
                       </div>
                     </div>
 
-                    <button className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white/20 transition-all duration-200 hover:bg-white/8 hover:text-white/50 group-hover:text-white/35">
-                      <MoreHorizontal className="size-4" />
-                    </button>
                   </div>
                 )
               })}

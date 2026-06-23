@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import {
   Sheet,
   SheetContent,
@@ -338,25 +339,16 @@ export function UsersTable({
 
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-2">
-          <Select
+          <SearchableSelect
             value={filters.department_id != null ? String(filters.department_id) : NONE}
             onValueChange={handleDepartmentFilter}
             disabled={loadingDepts}
-          >
-            <SelectTrigger className="h-8 w-44 text-xs">
-              <SelectValue placeholder="All departments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={NONE}>All departments</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={String(d.id)}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            placeholder="All departments"
+            searchPlaceholder="Search departments…"
+            triggerClassName="h-8 w-44 text-xs"
+            pinnedOptions={[{ value: NONE, label: "All departments" }]}
+            options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+          />
 
           <Select
             value={filterLevelId || NONE}

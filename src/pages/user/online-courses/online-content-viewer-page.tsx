@@ -247,6 +247,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
             onPlay={session.handlePlay}
             onPause={session.handlePause}
             onSeek={session.handleSeek}
+            onSpeedChange={session.handleSpeedChange}
             onFullscreen={session.handleFullscreen}
             onTimeUpdate={session.handleTimeUpdate}
             onEnded={session.handleEnded}

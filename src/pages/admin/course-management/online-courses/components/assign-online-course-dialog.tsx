@@ -20,13 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 import type { OnlineCourse } from "../types/online-course.types"
@@ -130,18 +123,14 @@ export function AssignOnlineCourseDialog({
 
           <div className="space-y-1.5">
             <Label>Course</Label>
-            <Select value={courseId} onValueChange={setCourseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select online course" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[320px]" position="popper" sideOffset={4}>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={courseId}
+              onValueChange={setCourseId}
+              placeholder="Select online course"
+              searchPlaceholder="Search courses…"
+              emptyText="No courses found"
+              options={courses.map((c) => ({ value: String(c.id), label: c.name }))}
+            />
             {selectedCourse && (
               <p className="text-xs text-muted-foreground">
                 Status: <span className="capitalize">{selectedCourse.status}</span>

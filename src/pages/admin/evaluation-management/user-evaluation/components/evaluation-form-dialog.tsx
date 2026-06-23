@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { isApiError } from "@/lib/api"
 import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
@@ -198,29 +199,15 @@ export function EvaluationFormDialog({ open, onOpenChange, availableTypes, onSuc
         <form id="evaluation-form" onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6 px-6 py-4">
           <div className="space-y-1.5">
             <Label>Department</Label>
-            <Select
+            <SearchableSelect
               value={selectedDepartmentId || "__none__"}
               onValueChange={(value) => setSelectedDepartmentId(value === "__none__" ? "" : value)}
               disabled={loadingDepartments}
-            >
-              <SelectTrigger className="border-white/10 bg-white/5 text-white">
-                {loadingDepartments ? (
-                  <span className="flex items-center gap-2 text-white/50">
-                    <Loader2Icon className="h-4 w-4 animate-spin" /> Loading departments…
-                  </span>
-                ) : (
-                  <SelectValue placeholder="Select department…" />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Select department —</SelectItem>
-                {departments.map((department) => (
-                  <SelectItem key={department.id} value={String(department.id)}>
-                    {department.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={loadingDepartments ? "Loading departments…" : "Select department…"}
+              searchPlaceholder="Search departments…"
+              pinnedOptions={[{ value: "__none__", label: "— Select department —" }]}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            />
           </div>
 
           {/* User selector */}

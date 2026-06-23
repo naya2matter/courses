@@ -412,3 +412,46 @@ export function DateTimePickerField({
     </div>
   )
 }
+
+// ─── TimePickerField ──────────────────────────────────────────────────────────
+// Standalone time-only picker — drop-in for <Input type="time" value="HH:mm" onChange={…} />
+// Shows a trigger button that opens the scroll-wheel popover.
+
+interface TimePickerFieldProps {
+  value: string          // "HH:mm" 24-h format, or ""
+  onChange: (v: string) => void
+  placeholder?: string
+  disabled?: boolean
+  className?: string
+}
+
+export function TimePickerField({
+  value,
+  onChange,
+  placeholder = "Pick a time",
+  disabled,
+  className,
+}: TimePickerFieldProps) {
+  const label = value ? formatTime(value) : placeholder
+
+  return (
+    <ScrollTimePicker value={value} onChange={onChange} disabled={disabled}>
+      <button
+        type="button"
+        disabled={disabled}
+        className={cn(
+          "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors",
+          "hover:bg-muted/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          !value && "text-muted-foreground/60",
+          className,
+        )}
+      >
+        <ClockIcon className="size-3.5 shrink-0 text-indigo-400/70" />
+        <span className={cn("tabular-nums", value ? "text-foreground" : "text-muted-foreground/55")}>
+          {label}
+        </span>
+      </button>
+    </ScrollTimePicker>
+  )
+}

@@ -15,8 +15,8 @@ import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePickerField } from "@/components/ui/date-picker"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -168,20 +168,20 @@ export default function RefreshOperationsPage() {
           <div className="flex gap-2">
             <div className="flex flex-1 flex-col gap-1">
               <Label className="text-xs text-white/50">From</Label>
-              <Input
-                type="date"
+              <DatePickerField
                 value={rangeFrom}
-                onChange={(e) => setRangeFrom(e.target.value)}
-                className="h-9 border-white/10 bg-white/5 text-sm text-white [color-scheme:dark]"
+                onChange={setRangeFrom}
+                placeholder="From"
+                className="border-white/10 bg-white/5"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <Label className="text-xs text-white/50">To</Label>
-              <Input
-                type="date"
+              <DatePickerField
                 value={rangeTo}
-                onChange={(e) => setRangeTo(e.target.value)}
-                className="h-9 border-white/10 bg-white/5 text-sm text-white [color-scheme:dark]"
+                onChange={setRangeTo}
+                placeholder="To"
+                className="border-white/10 bg-white/5"
               />
             </div>
           </div>

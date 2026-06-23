@@ -3,7 +3,15 @@
 // Uses the shared apiClient so auth tokens are handled automatically.
 
 import { apiClient } from "@/lib/api"
-import type { Department, DepartmentCard, DepartmentsApiResponse, DepartmentMutationPayload } from "../types/department.types"
+import type {
+  Department,
+  DepartmentCard,
+  DepartmentsApiResponse,
+  DepartmentMutationPayload,
+  DepartmentFilters,
+  FlatDepartment,
+  FilteredDepartmentsResponse,
+} from "../types/department.types"
 
 /**
  * Fetch all departments from the backend.
@@ -52,4 +60,35 @@ export async function updateDepartment(id: number, payload: DepartmentMutationPa
  */
 export async function deleteDepartment(id: number): Promise<void> {
   return apiClient.delete<void>(`/admin/departments/delete/${id}`)
+}
+
+/**
+ * Fetch departments with filters (returns flat paginated list).
+ * Endpoint: GET /admin/departments/getAll?search=&parent_id=&has_users=1&per_page=&page=
+ */
+export async function getFilteredDepartments(
+  filters: DepartmentFilters,
+  perPage = 20,
+  page = 1,
+): Promise<FilteredDepartmentsResponse> {
+  const params = new URLSearchParams()
+  if (filters.search?.trim()) params.set("search", filters.search.trim())
+  if (filters.parent_id !== undefined && filters.parent_id !== null) {
+    params.set("parent_id", String(filters.parent_id))
+  }
+  if (filters.has_users) params.set("has_users", "1")
+  params.set("per_page", String(perPage))
+  params.set("page", String(page))
+
+  const response = await apiClient.get<{
+    data: FlatDepartment[]
+    meta: { current_page: number; last_page: number; total: number; per_page: number }
+    cards?: DepartmentCard[]
+  }>(`/admin/departments/getAll?${params.toString()}`)
+
+  return {
+    departments: response.data ?? [],
+    cards: response.cards ?? [],
+    meta: response.meta,
+  }
 }

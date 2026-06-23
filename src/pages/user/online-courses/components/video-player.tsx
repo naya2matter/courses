@@ -19,13 +19,10 @@ import {
   Maximize2Icon,
   SkipBackIcon,
   SkipForwardIcon,
-  GaugeIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { VideoQuality } from "../types/user-online-courses.types"
-
-const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 function pad(n: number) {
   return String(Math.floor(n)).padStart(2, "0")
@@ -46,7 +43,6 @@ interface Props {
   onPlay: () => void
   onPause: () => void
   onSeek: (from: number, to: number) => void
-  onSpeedChange: () => void
   onFullscreen: () => void
   onTimeUpdate: (position: number, duration: number) => void
   onEnded: () => void
@@ -60,7 +56,6 @@ export function VideoPlayer({
   onPlay,
   onPause,
   onSeek,
-  onSpeedChange,
   onFullscreen,
   onTimeUpdate,
   onEnded,
@@ -73,7 +68,6 @@ export function VideoPlayer({
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
   const [buffered, setBuffered] = useState(0)
   const [showSubtitles, setShowSubtitles] = useState(true)
 
@@ -164,12 +158,6 @@ export function VideoPlayer({
     lastTimeRef.current = to
     if (Math.abs(to - from) > 0.5) onSeek(from, to)
   }
-  function handleRateChange() {
-    const el = videoRef.current
-    if (!el) return
-    setPlaybackRate(el.playbackRate)
-    onSpeedChange()
-  }
   function handleEndedInternal() {
     setIsPlaying(false)
     isPlayingRef.current = false
@@ -209,13 +197,6 @@ export function VideoPlayer({
     el.volume = vol
     setVolume(vol)
     setIsMuted(vol === 0)
-  }
-  function cycleSpeed() {
-    const el = videoRef.current
-    if (!el) return
-    const idx = PLAYBACK_SPEEDS.indexOf(playbackRate)
-    const next = PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length]
-    el.playbackRate = next // triggers ratechange → handleRateChange
   }
   function toggleFullscreen() {
     const node = containerRef.current
@@ -293,6 +274,7 @@ export function VideoPlayer({
         <video
           ref={videoRef}
           src={activeUrl}
+          crossOrigin="anonymous"
           className="aspect-video w-full bg-black"
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdateInternal}
@@ -300,7 +282,6 @@ export function VideoPlayer({
           onPause={handlePauseInternal}
           onSeeking={handleSeeking}
           onSeeked={handleSeeked}
-          onRateChange={handleRateChange}
           onEnded={handleEndedInternal}
           onClick={togglePlay}
           playsInline
@@ -381,11 +362,6 @@ export function VideoPlayer({
             </span>
 
             <div className="ml-auto flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={cycleSpeed}
-                className="h-8 gap-1 rounded-full px-2 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white" title="Playback speed">
-                <GaugeIcon className="size-3.5" />{playbackRate}x
-              </Button>
-
               {/* CC toggle — only when a subtitle track is provided */}
               {subtitleUrl && (
                 <button

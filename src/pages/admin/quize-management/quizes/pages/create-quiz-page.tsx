@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DateTimePickerField } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -337,12 +338,11 @@ export function CreateQuizPage() {
           {/* Deadline + Quiz Course Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Deadline" hint="Optional">
-              <Input
-                type="datetime-local"
+              <DateTimePickerField
                 value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
+                onChange={setDeadline}
+                placeholder="Pick deadline"
                 disabled={isSubmitting}
-                className="h-10"
               />
             </Field>
 

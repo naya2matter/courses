@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { DateTimePickerField } from "@/components/ui/date-picker"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -926,7 +927,7 @@ function ModuleEditor({
           value={mod.name}
           onChange={(e) => onChange({ name: e.target.value })}
           placeholder="Module name…"
-          className="flex-1 border-transparent bg-transparent shadow-none px-0 text-sm font-medium focus-visible:ring-0 placeholder:text-muted-foreground/50"
+          className="flex-1 border-transparent bg-transparent shadow-none pl-2 pr-0 text-sm font-medium focus-visible:ring-0 placeholder:text-muted-foreground/50"
         />
 
         <div className="flex items-center gap-1 shrink-0">
@@ -1744,12 +1745,11 @@ export default function OnlineCourseFormPage() {
 
               {/* Deadline */}
               <div className="space-y-1.5">
-                <Label htmlFor="course-deadline">Deadline (optional)</Label>
-                <Input
-                  id="course-deadline"
-                  type="datetime-local"
+                <Label>Deadline (optional)</Label>
+                <DateTimePickerField
                   value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
+                  onChange={setDeadline}
+                  placeholder="Pick deadline"
                 />
               </div>
 

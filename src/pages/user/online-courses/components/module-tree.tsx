@@ -125,6 +125,32 @@ function ModuleBlock({ module, index, onOpenContent, onOpenQuiz }: { module: Cou
           {module.content.length === 0 && (
             <p className="px-1 py-3 text-xs text-white/30">No content in this module yet.</p>
           )}
+          {module.has_quiz && module.quiz_id != null && (
+            <button
+              type="button"
+              onClick={() => onOpenQuiz(module.quiz_id!)}
+              className="flex w-full items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-500/[0.05] px-3.5 py-3 text-left transition-colors hover:border-purple-500/35 hover:bg-purple-500/[0.1]"
+            >
+              <span className="shrink-0">
+                {module.quiz_status === "passed" ? (
+                  <CheckCircle2Icon className="size-5 text-emerald-400" />
+                ) : (
+                  <HelpCircleIcon className="size-4.5 text-purple-400" />
+                )}
+              </span>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-400">
+                <HelpCircleIcon className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-purple-200">
+                  {module.quiz_status === "passed" ? "Quiz · Passed" : "Take Quiz"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-purple-400/60">
+                  {module.quiz_status === "passed" ? "Retake to improve your score" : "Test your knowledge for this module"}
+                </p>
+              </div>
+            </button>
+          )}
         </div>
       )}
     </div>

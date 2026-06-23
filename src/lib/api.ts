@@ -146,6 +146,10 @@ class ApiClient {
     return this.request<T>("DELETE", path, undefined, signal)
   }
 
+  deleteBody<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    return this.request<T>("DELETE", path, body, signal)
+  }
+
   // ── Blob download (authenticated) ─────────────────────────────────────────
 
   async getBlob(path: string): Promise<Blob> {

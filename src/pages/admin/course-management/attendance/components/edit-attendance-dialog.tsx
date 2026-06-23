@@ -1,15 +1,12 @@
 // ─── EditAttendanceDialog ─────────────────────────────────────────────────────
-// Centered dialog for editing a clocking record. Mirrors the premium styling of
-// DeleteAttendanceDialog so the two share one visual language. Fully responsive:
-// full-width sheet-like feel on mobile, comfortable centered card on desktop.
 
-import { useEffect, useState } from "react"
-import { AlertCircleIcon, Loader2Icon, PencilIcon, SaveIcon } from "lucide-react"
+import { useEffect, useState, useMemo } from "react"
+import { AlertCircleIcon, ClockIcon, Loader2Icon, SaveIcon, StarIcon, UserIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DateTimePickerField } from "@/components/ui/date-picker"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
@@ -19,41 +16,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 
 import type { ClockingRecord, UpdateAttendancePayload } from "../types/attendance.types"
 import { updateAttendance } from "../service/attendance.service"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Convert an ISO 8601 datetime string to the value accepted by
- * <input type="datetime-local"> (YYYY-MM-DDTHH:mm, local-time).
- */
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return ""
   try {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ""
-    // Offset to local time
     const offset = d.getTimezoneOffset() * 60_000
-    const local = new Date(d.getTime() - offset)
+    const local  = new Date(d.getTime() - offset)
     return local.toISOString().slice(0, 16)
-  } catch {
-    return ""
-  }
+  } catch { return "" }
 }
 
-/**
- * Convert a <input type="datetime-local"> value back to RFC 3339 UTC string.
- * Returns null if the value is empty.
- */
 function fromDatetimeLocal(value: string): string | null {
   if (!value.trim()) return null
-  try {
-    return new Date(value).toISOString()
-  } catch {
-    return null
-  }
+  try { return new Date(value).toISOString() } catch { return null }
 }
 
 function isCanceledError(err: unknown): boolean {
@@ -63,6 +46,61 @@ function isCanceledError(err: unknown): boolean {
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message || fallback
   return fallback
+}
+
+/** Format minutes → "Xh Ym" or "Ym" */
+function formatDuration(mins: number): string {
+  if (mins <= 0) return "—"
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
+}
+
+// ── Star Rating ───────────────────────────────────────────────────────────────
+
+function StarRating({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (v: string) => void
+  disabled?: boolean
+}) {
+  const numeric = value.trim() !== "" ? Number(value) : 0
+  const [hovered, setHovered] = useState(0)
+
+  return (
+    <div className="flex items-center gap-1" onMouseLeave={() => setHovered(0)}>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const filled = hovered ? star <= hovered : star <= numeric
+        return (
+          <button
+            key={star}
+            type="button"
+            disabled={disabled}
+            onMouseEnter={() => setHovered(star)}
+            onClick={() => onChange(value.trim() !== "" && numeric === star ? "" : String(star))}
+            className="rounded p-0.5 transition-transform hover:scale-110 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <StarIcon
+              className={cn(
+                "size-5 transition-colors duration-100",
+                filled
+                  ? "fill-amber-400 text-amber-400"
+                  : "fill-transparent text-muted-foreground/25 hover:text-amber-400/40",
+              )}
+            />
+          </button>
+        )
+      })}
+      {numeric > 0 && (
+        <span className="ml-1 text-xs text-muted-foreground/60 tabular-nums">{numeric}/5</span>
+      )}
+    </div>
+  )
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -75,18 +113,18 @@ interface EditAttendanceDialogProps {
 }
 
 interface FormState {
-  clock_in: string
+  clock_in:  string
   clock_out: string
-  comment: string
-  rating: string
+  comment:   string
+  rating:    string
 }
 
 function recordToForm(record: ClockingRecord | null): FormState {
   return {
-    clock_in: toDatetimeLocal(record?.clock_in),
+    clock_in:  toDatetimeLocal(record?.clock_in),
     clock_out: toDatetimeLocal(record?.clock_out),
-    comment: record?.comment ?? "",
-    rating: record?.rating != null ? String(record.rating) : "",
+    comment:   record?.comment ?? "",
+    rating:    record?.rating != null ? String(record.rating) : "",
   }
 }
 
@@ -96,92 +134,82 @@ export function EditAttendanceDialog({
   onClose,
   onUpdated,
 }: EditAttendanceDialogProps) {
-  const [form, setForm] = useState<FormState>(recordToForm(record))
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [form, setForm]                   = useState<FormState>(recordToForm(record))
+  const [isSaving, setIsSaving]           = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
+  const [validationErrors, setValidation] = useState<Record<string, string>>({})
 
-  // Reset form whenever the record changes or dialog opens
   useEffect(() => {
     if (open) {
       setForm(recordToForm(record))
       setError(null)
-      setValidationErrors({})
+      setValidation({})
     }
   }, [open, record])
 
+  // Compute duration in minutes
+  const durationMins = useMemo(() => {
+    if (!form.clock_in || !form.clock_out) return null
+    const inMs  = new Date(form.clock_in).getTime()
+    const outMs = new Date(form.clock_out).getTime()
+    if (isNaN(inMs) || isNaN(outMs) || outMs < inMs) return null
+    return Math.round((outMs - inMs) / 60_000)
+  }, [form.clock_in, form.clock_out])
+
   function handleChange(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
-    // Clear field-level validation error on change
     if (validationErrors[field]) {
-      setValidationErrors((prev) => {
-        const next = { ...prev }
-        delete next[field]
-        return next
-      })
+      setValidation((prev) => { const n = { ...prev }; delete n[field]; return n })
     }
   }
 
   function validate(): boolean {
     const errors: Record<string, string> = {}
-
     const ratingNum = form.rating.trim() !== "" ? Number(form.rating) : null
-    if (ratingNum !== null && (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5)) {
+    if (ratingNum !== null && (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5))
       errors.rating = "Rating must be between 1 and 5."
-    }
-
-    if (form.comment.length > 1000) {
+    if (form.comment.length > 1000)
       errors.comment = "Comment must not exceed 1000 characters."
-    }
-
-    // Validate clock_in/clock_out ordering
     if (form.clock_in && form.clock_out) {
-      const inMs = new Date(form.clock_in).getTime()
+      const inMs  = new Date(form.clock_in).getTime()
       const outMs = new Date(form.clock_out).getTime()
-      if (!isNaN(inMs) && !isNaN(outMs) && outMs < inMs) {
+      if (!isNaN(inMs) && !isNaN(outMs) && outMs < inMs)
         errors.clock_out = "Clock-out must be after clock-in."
-      }
     }
-
-    setValidationErrors(errors)
+    setValidation(errors)
     return Object.keys(errors).length === 0
   }
 
   async function handleSave() {
-    if (!record) return
-    if (!validate()) return
-
+    if (!record || !validate()) return
     setError(null)
     setIsSaving(true)
 
     const payload: UpdateAttendancePayload = {
-      clock_in: form.clock_in ? fromDatetimeLocal(form.clock_in) : null,
+      clock_in:  form.clock_in  ? fromDatetimeLocal(form.clock_in)  : null,
       clock_out: form.clock_out ? fromDatetimeLocal(form.clock_out) : null,
-      comment: form.comment.trim() || null,
-      rating: form.rating.trim() !== "" ? Number(form.rating) : undefined,
+      comment:   form.comment.trim() || null,
+      rating:    form.rating.trim() !== "" ? Number(form.rating) : undefined,
     }
 
     try {
       const updated = await updateAttendance(record.id, payload)
-      toast.success("Attendance record updated successfully.")
+      toast.success("Attendance record updated.")
       onUpdated(updated)
       onClose()
     } catch (err) {
       if (isCanceledError(err)) return
-
-      // Handle 422 validation errors from server
       const apiErr = err as { status?: number; data?: { errors?: Record<string, string[]> } }
       if (apiErr?.status === 422 && apiErr?.data?.errors) {
         const serverErrors: Record<string, string> = {}
-        for (const [field, messages] of Object.entries(apiErr.data.errors)) {
+        for (const [field, messages] of Object.entries(apiErr.data.errors))
           serverErrors[field] = Array.isArray(messages) ? messages[0] : String(messages)
-        }
-        setValidationErrors(serverErrors)
+        setValidation(serverErrors)
         setError("Please fix the highlighted fields.")
       } else {
-        const message = extractErrorMessage(err, "Failed to update attendance record.")
-        setError(message)
-        toast.error(message)
+        const msg = extractErrorMessage(err, "Failed to update attendance record.")
+        setError(msg)
+        toast.error(msg)
       }
     } finally {
       setIsSaving(false)
@@ -190,165 +218,178 @@ export function EditAttendanceDialog({
 
   function handleOpenChange(next: boolean) {
     if (next || isSaving) return
-    setError(null)
-    setValidationErrors({})
+    setError(null); setValidation({})
     onClose()
   }
 
-  const userName = record?.user?.name ?? "Unknown user"
+  const userName   = record?.user?.name   ?? "Unknown user"
   const courseName = record?.course?.name ?? "—"
-
-  const textareaClasses = [
-    "flex w-full rounded-xl border bg-background/80 px-3 py-2 text-sm",
-    "placeholder:text-muted-foreground focus-visible:outline-none",
-    "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-0",
-    "disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-colors",
-    validationErrors.comment ? "border-destructive" : "border-border/60",
-  ].join(" ")
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={!isSaving}
-        className="w-full max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden border border-border/60 bg-background/95 p-0 text-sm shadow-2xl shadow-indigo-950/20 backdrop-blur-2xl sm:max-w-lg"
+        className="w-full max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden border border-white/[0.08] bg-[#0a0917]/98 p-0 text-sm shadow-2xl shadow-indigo-950/30 backdrop-blur-2xl sm:max-w-lg"
       >
-        {/* Soft top glow to match the delete dialog */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-primary/15 to-transparent" />
+        {/* Top glow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-indigo-600/10 to-transparent" />
 
-        <DialogHeader className="relative gap-0 px-5 pb-5 pt-6 sm:px-6 sm:pt-7">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm backdrop-blur-sm sm:h-14 sm:w-14">
-              <PencilIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+        {/* ── Header ── */}
+        <DialogHeader className="relative gap-0 px-5 pb-4 pt-6 sm:px-6 sm:pt-7">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 shadow-sm">
+              <ClockIcon className="h-5 w-5 text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-semibold text-foreground sm:text-lg">
+              <DialogTitle className="text-base font-semibold sm:text-[17px]">
                 Edit attendance record
               </DialogTitle>
-              <DialogDescription className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                Update clocking times, comment, or rating. Duration is recalculated automatically.
+              <DialogDescription className="mt-0.5 text-xs text-muted-foreground/70 sm:text-[13px]">
+                Update clocking times, rating, or comment.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Scrollable body — caps height so tall forms never overflow the viewport */}
-        <div className="relative max-h-[60vh] space-y-5 overflow-y-auto px-5 pb-2 sm:px-6">
-          {/* Context strip: who / which course (read-only) */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-card/70 p-3.5 ring-1 ring-border/40">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Attendee</p>
-              <p className="mt-1.5 truncate text-sm font-semibold text-foreground">{userName}</p>
-            </div>
-            <div className="rounded-2xl bg-card/70 p-3.5 ring-1 ring-border/40">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Course</p>
-              <p className="mt-1.5 truncate text-sm font-semibold text-foreground">{courseName}</p>
-            </div>
+        {/* ── Body ── */}
+        <div className="relative max-h-[62vh] space-y-4 overflow-y-auto px-5 pb-3 sm:px-6">
+
+          {/* Context strip */}
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {[
+              { icon: UserIcon, label: "Attendee", value: userName },
+              { label: "Course", value: courseName },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-start gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
+                {Icon && <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/40" />}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/40">{label}</p>
+                  <p className="mt-1 truncate text-sm font-medium">{value}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Error banner */}
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="py-2.5">
               <AlertCircleIcon className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {/* Clock In / Clock Out — side by side on larger screens */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit-clock-in" className="text-sm font-medium">Clock In</Label>
-              <Input
-                id="edit-clock-in"
-                type="datetime-local"
+          {/* ── Clock times card ── */}
+          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+            {/* Clock In */}
+            <div className="p-4">
+              <Label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                Clock In
+              </Label>
+              <DateTimePickerField
                 value={form.clock_in}
-                onChange={(e) => handleChange("clock_in", e.target.value)}
+                onChange={(v) => handleChange("clock_in", v)}
                 disabled={isSaving}
-                className={`h-10 ${validationErrors.clock_in ? "border-destructive" : ""}`}
+                placeholder="Pick clock-in time"
               />
               {validationErrors.clock_in && (
-                <p className="text-sm text-destructive">{validationErrors.clock_in}</p>
+                <p className="mt-1.5 text-xs text-destructive">{validationErrors.clock_in}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-clock-out" className="text-sm font-medium">Clock Out</Label>
-              <Input
-                id="edit-clock-out"
-                type="datetime-local"
+            {/* Duration indicator */}
+            <div className="flex items-center gap-3 px-4 py-1">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <div className={cn(
+                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums",
+                durationMins !== null
+                  ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-500/20"
+                  : "bg-white/[0.04] text-muted-foreground/30",
+              )}>
+                <ClockIcon className="size-3 shrink-0" />
+                {durationMins !== null ? formatDuration(durationMins) : "Duration"}
+              </div>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            {/* Clock Out */}
+            <div className="p-4">
+              <Label className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                Clock Out
+              </Label>
+              <DateTimePickerField
                 value={form.clock_out}
-                onChange={(e) => handleChange("clock_out", e.target.value)}
+                onChange={(v) => handleChange("clock_out", v)}
                 disabled={isSaving}
-                className={`h-10 ${validationErrors.clock_out ? "border-destructive" : ""}`}
+                placeholder="Pick clock-out time"
               />
               {validationErrors.clock_out && (
-                <p className="text-sm text-destructive">{validationErrors.clock_out}</p>
+                <p className="mt-1.5 text-xs text-destructive">{validationErrors.clock_out}</p>
               )}
             </div>
           </div>
 
-          {/* Rating */}
+          {/* ── Rating ── */}
           <div className="space-y-2">
-            <Label htmlFor="edit-rating" className="text-sm font-medium">Rating (1–5)</Label>
-            <Input
-              id="edit-rating"
-              type="number"
-              min={1}
-              max={5}
-              step={0.5}
-              placeholder="e.g. 4"
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+              Rating
+            </Label>
+            <StarRating
               value={form.rating}
-              onChange={(e) => handleChange("rating", e.target.value)}
+              onChange={(v) => handleChange("rating", v)}
               disabled={isSaving}
-              className={`h-10 ${validationErrors.rating ? "border-destructive" : ""}`}
             />
             {validationErrors.rating && (
-              <p className="text-sm text-destructive">{validationErrors.rating}</p>
+              <p className="text-xs text-destructive">{validationErrors.rating}</p>
             )}
           </div>
 
-          {/* Comment */}
+          {/* ── Comment ── */}
           <div className="space-y-2">
-            <Label htmlFor="edit-comment" className="text-sm font-medium">
+            <Label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
               Comment
-              <span className="ml-1 text-xs text-muted-foreground">
+              <span className="normal-case tracking-normal text-muted-foreground/35">
                 ({form.comment.length}/1000)
               </span>
             </Label>
             <textarea
-              id="edit-comment"
-              rows={4}
+              rows={3}
               placeholder="Optional comment…"
               value={form.comment}
               onChange={(e) => handleChange("comment", e.target.value)}
               disabled={isSaving}
               maxLength={1000}
-              className={textareaClasses}
+              className={cn(
+                "flex w-full resize-none rounded-xl border bg-white/[0.03] px-3 py-2.5 text-sm",
+                "placeholder:text-muted-foreground/30 focus-visible:outline-none",
+                "focus-visible:ring-1 focus-visible:ring-indigo-500/40",
+                "disabled:cursor-not-allowed disabled:opacity-50 transition-colors",
+                validationErrors.comment ? "border-destructive" : "border-white/[0.08]",
+              )}
             />
             {validationErrors.comment && (
-              <p className="text-sm text-destructive">{validationErrors.comment}</p>
+              <p className="text-xs text-destructive">{validationErrors.comment}</p>
             )}
           </div>
         </div>
 
-        <DialogFooter className="mt-2 gap-2 border-t border-border/40 bg-background/40 px-5 py-4 backdrop-blur-sm sm:px-6">
+        {/* ── Footer ── */}
+        <DialogFooter className="gap-2 border-t border-white/[0.07] bg-white/[0.02] px-5 py-3.5 sm:px-6">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={isSaving}
-            className="w-full sm:w-auto sm:min-w-[100px]"
+            className="h-9 w-full border-white/10 bg-white/[0.03] hover:bg-white/[0.07] sm:w-auto sm:min-w-[90px]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full gap-2 sm:w-auto sm:min-w-[110px]"
+            className="h-9 w-full gap-2 sm:w-auto sm:min-w-[110px]"
           >
-            {isSaving ? (
-              <Loader2Icon className="h-4 w-4 animate-spin" />
-            ) : (
-              <SaveIcon className="h-4 w-4" />
-            )}
+            {isSaving
+              ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+              : <SaveIcon className="h-3.5 w-3.5" />}
             {isSaving ? "Saving…" : "Save changes"}
           </Button>
         </DialogFooter>

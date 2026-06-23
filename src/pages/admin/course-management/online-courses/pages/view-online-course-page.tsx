@@ -50,6 +50,7 @@ import { isApiError } from "@/lib/api"
 import { deleteOnlineCourse, reorderModules } from "../service/online-course.service"
 import { useOnlineCourseStore } from "../store/online-course.store"
 import { OnlineCourseDetailView } from "../components/online-course-detail-drawer"
+import { OnlineCourseEnrollmentsSection } from "../components/online-course-enrollments-section"
 import type { OnlineCourseModule } from "../types/online-course.types"
 
 function statusBadgeClass(status: string): string {
@@ -338,6 +339,11 @@ export default function ViewOnlineCoursePage() {
         isLoading={isLoadingDetail}
         detailError={detailError}
       />
+
+      {/* ── Enrolled Users section ────────────────────────────────────────────── */}
+      {currentCourse && !isLoadingDetail && (
+        <OnlineCourseEnrollmentsSection courseId={Number(id)} />
+      )}
 
       {/* ── Delete dialog ──────────────────────────────────────────────────────── */}
       <ConfirmDeleteDialog

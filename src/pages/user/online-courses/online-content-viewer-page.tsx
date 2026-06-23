@@ -247,7 +247,6 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
             onPlay={session.handlePlay}
             onPause={session.handlePause}
             onSeek={session.handleSeek}
-            onSpeedChange={session.handleSpeedChange}
             onFullscreen={session.handleFullscreen}
             onTimeUpdate={session.handleTimeUpdate}
             onEnded={session.handleEnded}
@@ -283,13 +282,30 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
           ) : <span />}
 
           {data.next_content ? (
-            <button type="button" onClick={() => goTo(data.next_content!.id)}
-              className="group flex items-center justify-end gap-3 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.07] px-4 py-3 text-right transition-colors hover:border-indigo-500/35 hover:bg-indigo-500/[0.12]">
+            <button
+              type="button"
+              onClick={() => {
+                if (!contentDone) {
+                  toast.warning("Finish this content first", {
+                    description: isVideo
+                      ? "Watch to at least 95% to unlock the next item."
+                      : "Read through all pages to unlock the next item.",
+                  })
+                  return
+                }
+                goTo(data.next_content!.id)
+              }}
+              className={`group flex items-center justify-end gap-3 rounded-xl border px-4 py-3 text-right transition-colors ${
+                contentDone
+                  ? "border-indigo-500/20 bg-indigo-500/[0.07] hover:border-indigo-500/35 hover:bg-indigo-500/[0.12]"
+                  : "cursor-not-allowed border-white/8 bg-white/[0.03] opacity-50"
+              }`}
+            >
               <div className="min-w-0">
-                <p className="mb-0.5 text-[10px] uppercase tracking-wider text-indigo-400/60">Up next</p>
-                <p className="truncate text-sm font-medium text-indigo-200">{data.next_content.title}</p>
+                <p className={`mb-0.5 text-[10px] uppercase tracking-wider ${contentDone ? "text-indigo-400/60" : "text-white/30"}`}>Up next</p>
+                <p className={`truncate text-sm font-medium ${contentDone ? "text-indigo-200" : "text-white/40"}`}>{data.next_content.title}</p>
               </div>
-              <ChevronRightIcon className="size-4 shrink-0 text-indigo-400 transition-transform group-hover:translate-x-0.5" />
+              <ChevronRightIcon className={`size-4 shrink-0 transition-transform ${contentDone ? "text-indigo-400 group-hover:translate-x-0.5" : "text-white/25"}`} />
             </button>
           ) : (
             <button type="button" onClick={() => navigate(`/user/online-courses/${courseId}`)}

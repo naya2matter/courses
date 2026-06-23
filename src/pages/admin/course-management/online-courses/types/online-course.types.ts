@@ -149,3 +149,44 @@ export interface ReorderModuleItem {
 export interface ReorderModulesPayload {
   order: ReorderModuleItem[]
 }
+
+// ── Enrollment types ──────────────────────────────────────────────────────────
+
+export type EnrollmentStatus = 'not_started' | 'in_progress' | 'completed'
+
+export interface CourseEnrollment {
+  user_id: number
+  user_name: string
+  user_email: string
+  department: string | null
+  assigned_at: string
+  assigned_by: string | null
+  status: EnrollmentStatus
+  progress_percentage: number
+  completed_content_items: number
+  total_content_items: number
+  started_at: string | null
+  completed_at: string | null
+  last_accessed_at: string | null
+}
+
+export interface EnrollmentFilters {
+  search?: string
+  status?: EnrollmentStatus | ''
+  department_id?: number | null
+  page?: number
+  per_page?: number
+}
+
+export interface EnrollmentMeta {
+  current_page: number
+  last_page: number
+  total: number
+  per_page: number
+}
+
+export interface EnrollmentListResponse {
+  data: CourseEnrollment[]
+  meta: EnrollmentMeta
+  cards: OnlineCourseSummaryCard[]
+}

@@ -92,6 +92,7 @@ export function BlogVideoPlayer({ media, onRefresh }: BlogVideoPlayerProps) {
         ref={videoRef}
         controls
         src={activeUrl}
+        crossOrigin="anonymous"
         poster={media.thumbnail_url ?? undefined}
         className="aspect-video w-full"
         onError={() => setMediaError(true)}

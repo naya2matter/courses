@@ -21,7 +21,7 @@ export function AdminLayout() {
           <AppSidebar />
           <BreadcrumbProvider>
             <div className="flex min-h-svh w-full flex-col">
-              <SiteHeader showAdminCalendar />
+              <SiteHeader />
               <main className="flex-1 p-5 md:p-6">
                 <div className="mx-auto w-full max-w-350 pb-8">
                   <Outlet />

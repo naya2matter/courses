@@ -135,6 +135,14 @@ export async function getQuizAttemptById(
   return (res as { data: QuizAttemptAdminResource }).data ?? res
 }
 
+/**
+ * DELETE /admin/quizzes/{quizId}/attempts/grant-retry
+ * Deletes the user's last attempt so they can retry the quiz.
+ */
+export async function grantRetry(quizId: number, userId: number): Promise<void> {
+  await apiClient.deleteBody<void>(`/admin/quizzes/${quizId}/attempts/grant-retry`, { user_id: userId })
+}
+
 // ── Manual grading ────────────────────────────────────────────────────────────
 
 /**

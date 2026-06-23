@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DateTimePickerField } from "@/components/ui/date-picker"
 import {
   Select,
   SelectContent,
@@ -459,25 +460,19 @@ export default function CourseFormPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="space-y-2">
-                        <Label htmlFor={`start_date_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start Date</Label>
-                        <Input
-                          id={`start_date_${index}`}
-                          type="datetime-local"
-                          value={row.start_date.replace("Z", "").replace("+00:00", "")}
-                          onChange={(e) => updateAvailRow(index, "start_date", e.target.value ? `${e.target.value}:00Z` : "")}
-                          required={index === 0 || isEditMode}
-                          className="bg-muted/30"
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start Date</Label>
+                        <DateTimePickerField
+                          value={row.start_date.replace("Z", "").replace("+00:00", "").slice(0, 16)}
+                          onChange={(v) => updateAvailRow(index, "start_date", v ? `${v}:00Z` : "")}
+                          placeholder="Pick start date"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`end_date_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">End Date</Label>
-                        <Input
-                          id={`end_date_${index}`}
-                          type="datetime-local"
-                          value={row.end_date.replace("Z", "").replace("+00:00", "")}
-                          onChange={(e) => updateAvailRow(index, "end_date", e.target.value ? `${e.target.value}:00Z` : "")}
-                          required={index === 0 || isEditMode}
-                          className="bg-muted/30"
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">End Date</Label>
+                        <DateTimePickerField
+                          value={row.end_date.replace("Z", "").replace("+00:00", "").slice(0, 16)}
+                          onChange={(v) => updateAvailRow(index, "end_date", v ? `${v}:00Z` : "")}
+                          placeholder="Pick end date"
                         />
                       </div>
                     </div>

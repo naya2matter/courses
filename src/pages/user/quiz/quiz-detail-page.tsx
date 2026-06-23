@@ -60,8 +60,8 @@ const QUESTION_ICONS: Record<string, React.ReactNode> = {
 }
 
 const QUESTION_LABELS: Record<string, string> = {
-  radio: "Multiple Choice",
-  checkbox: "Checkboxes",
+  radio: "Single Choice",
+  checkbox: "Multiple Choice",
   text: "Open Text",
 }
 

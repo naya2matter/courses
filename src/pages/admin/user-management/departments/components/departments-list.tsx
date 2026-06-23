@@ -130,7 +130,7 @@ function UserNode({
  * Builds and renders the manager→report tree for a flat list of users.
  * Root users are those whose manager is null or points outside the dept.
  */
-function UserHierarchyTree({ users }: { users: DepartmentUser[] }) {
+export function UserHierarchyTree({ users }: { users: DepartmentUser[] }) {
   if (users.length === 0) return null
 
   const userIdSet = new Set(users.map((u) => u.id))

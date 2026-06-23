@@ -9,6 +9,8 @@ import type {
   OnlineCourseFilters,
   OnlineCourseListResponse,
   ReorderModulesPayload,
+  EnrollmentFilters,
+  EnrollmentListResponse,
 } from "../types/online-course.types"
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -121,5 +123,25 @@ export async function reorderModules(
   return apiClient.put<{ message: string }>(
     "/admin/online-courses/modules/reorder",
     payload,
+  )
+}
+
+/**
+ * Fetch enrolled users for a course with filters.
+ * Endpoint: GET /admin/online-courses/{courseId}/enrollments
+ */
+export async function getCourseEnrollments(
+  courseId: number,
+  filters: EnrollmentFilters = {},
+): Promise<EnrollmentListResponse> {
+  const params = new URLSearchParams()
+  if (filters.search?.trim()) params.set("search", filters.search.trim())
+  if (filters.status) params.set("status", filters.status)
+  if (filters.department_id != null) params.set("department_id", String(filters.department_id))
+  if (filters.page != null) params.set("page", String(filters.page))
+  if (filters.per_page != null) params.set("per_page", String(filters.per_page))
+  const qs = params.toString()
+  return apiClient.get<EnrollmentListResponse>(
+    `/admin/online-courses/${courseId}/enrollments${qs ? `?${qs}` : ""}`,
   )
 }

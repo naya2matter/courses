@@ -37,6 +37,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePickerField } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 
@@ -183,25 +184,23 @@ function ComposeStep({
       {/* Date range */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="notif-start" className="text-sm text-muted-foreground">
+          <Label className="text-sm text-muted-foreground">
             Start Date <span className="text-muted-foreground/50">(optional)</span>
           </Label>
-          <Input
-            id="notif-start"
-            type="date"
+          <DatePickerField
             value={form.start_date}
-            onChange={(e) => onChange({ start_date: e.target.value })}
+            onChange={(v) => onChange({ start_date: v })}
+            placeholder="Pick start date"
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="notif-end" className="text-sm text-muted-foreground">
+          <Label className="text-sm text-muted-foreground">
             End Date <span className="text-muted-foreground/50">(optional)</span>
           </Label>
-          <Input
-            id="notif-end"
-            type="date"
+          <DatePickerField
             value={form.end_date}
-            onChange={(e) => onChange({ end_date: e.target.value })}
+            onChange={(v) => onChange({ end_date: v })}
+            placeholder="Pick end date"
           />
         </div>
       </div>

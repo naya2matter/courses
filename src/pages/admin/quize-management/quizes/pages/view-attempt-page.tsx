@@ -18,6 +18,7 @@ import {
   ClockIcon,
   UserIcon,
   StarIcon,
+  RotateCcwIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -30,7 +31,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 
 import { isApiError } from "@/lib/api"
-import { getQuizAttemptById, gradeAnswer } from "../service/quiz.service"
+import { getQuizAttemptById, gradeAnswer, grantRetry } from "../service/quiz.service"
 import type {
   QuizAttemptAdminResource,
   QuizAnswerAdminResource,
@@ -322,6 +323,7 @@ export function ViewAttemptPage() {
   const [answers, setAnswers] = useState<QuizAnswerAdminResource[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isGrantingRetry, setIsGrantingRetry] = useState(false)
 
   useEffect(() => {
     if (!id || !attemptId) return
@@ -351,6 +353,23 @@ export function ViewAttemptPage() {
     setAnswers((prev) =>
       prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)),
     )
+  }
+
+  async function handleGrantRetry() {
+    if (!attempt || !id) return
+    setIsGrantingRetry(true)
+    try {
+      await grantRetry(Number(id), attempt.user_id)
+      toast.success("Retry granted", {
+        description: `${attempt.user?.name ?? "The user"} can now retake the quiz.`,
+      })
+    } catch (err) {
+      toast.error("Failed to grant retry", {
+        description: extractError(err),
+      })
+    } finally {
+      setIsGrantingRetry(false)
+    }
   }
 
   const pendingCount = answers.filter(
@@ -440,6 +459,22 @@ export function ViewAttemptPage() {
             <p className="mt-1 text-sm text-muted-foreground">Quiz ID: {attempt.quiz_id}</p>
           </div>
         </div>
+
+        {/* Grant Retry */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleGrantRetry}
+          disabled={isGrantingRetry}
+          className="shrink-0 gap-2 border-orange-500/30 bg-orange-500/10 text-orange-300 hover:border-orange-500/50 hover:bg-orange-500/20 hover:text-orange-200"
+        >
+          {isGrantingRetry ? (
+            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RotateCcwIcon className="h-3.5 w-3.5" />
+          )}
+          {isGrantingRetry ? "Granting…" : "Grant Retry"}
+        </Button>
       </div>
 
       {/* ── Meta stats ─────────────────────────────────────────────────────── */}

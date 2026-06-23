@@ -63,6 +63,41 @@ export interface DepartmentMutationPayload {
   sort_order: number | null
 }
 
+// ─── Filter / flat-list types ─────────────────────────────────────────────────
+
+export interface DepartmentFilters {
+  search?: string
+  parent_id?: number | 'root' | null
+  has_users?: boolean
+}
+
+/** Shape returned by getAll when filters are active (flat paginated) */
+export interface FlatDepartment {
+  id: number
+  name: string
+  slug: string
+  parent_id: number | null
+  parent?: { id: number; name: string } | null
+  users_count: number
+  users: DepartmentUser[]
+  sort_order: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface FilteredDepartmentsMeta {
+  current_page: number
+  last_page: number
+  total: number
+  per_page: number
+}
+
+export interface FilteredDepartmentsResponse {
+  departments: FlatDepartment[]
+  cards: DepartmentCard[]
+  meta: FilteredDepartmentsMeta
+}
+
 // ─── Store State ──────────────────────────────────────────────────────────────
 
 /** Shape of the Zustand departments store */

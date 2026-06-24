@@ -229,10 +229,11 @@ function App() {
           </Route>
 
           {/* Email magic-link landing routes.
-              The backend redirects clicked links to /courses/:id or /audio/:id
-              (carrying ?token=...). AuthProvider consumes the token on bootstrap;
-              here we forward to the real, role-guarded user pages. */}
+              The backend redirects clicked links to /courses/:id, /online-courses/:id
+              or /audio/:id (carrying ?token=...). AuthProvider consumes the token on
+              bootstrap; here we forward to the real, role-guarded user pages. */}
           <Route path="/courses/:id" element={<EmailLinkRedirect section="courses" />} />
+          <Route path="/online-courses/:id" element={<EmailLinkRedirect section="online-courses" />} />
           <Route path="/audio/:id" element={<EmailLinkRedirect section="audio" />} />
 
           {/* Fallbacks */}
@@ -250,7 +251,7 @@ function App() {
  * role-guarded user route (/user/courses/2), preserving the :id. The session
  * token from the link has already been adopted by AuthProvider's bootstrap.
  */
-function EmailLinkRedirect({ section }: { section: "courses" | "audio" }) {
+function EmailLinkRedirect({ section }: { section: "courses" | "online-courses" | "audio" }) {
   const { id } = useParams()
   return <Navigate to={`/user/${section}/${id}`} replace />
 }

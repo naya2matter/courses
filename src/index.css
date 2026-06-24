@@ -460,3 +460,6 @@
   }
 }
 
+/* ─── Rich Text Editor — contenteditable ─────────────────────────────────── */
+/* No external editor library. Styles applied via Tailwind on the component.  */
+

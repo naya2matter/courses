@@ -38,6 +38,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+
 import { useCourse } from "../hook/use-course"
 import type { AvailabilityPayload } from "../types/course.types"
 import { extractCourseErrorMessage, isCanceledError } from "../utils/course-feedback"
@@ -384,14 +386,11 @@ export default function CourseFormPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
-                <textarea
-                  id="description"
+                <Label className="text-sm font-semibold">Description</Label>
+                <RichTextEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={setDescription}
                   placeholder="Brief overview of course syllabus and goals..."
-                  rows={4}
-                  className="w-full rounded-md border border-muted-foreground/20 bg-muted/30 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 resize-none transition-colors"
                 />
               </div>
 

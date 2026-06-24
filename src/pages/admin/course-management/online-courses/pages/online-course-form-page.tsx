@@ -315,39 +315,29 @@ interface VideoOption {
   id: number
   name: string
   duration_seconds?: number | null
+  thumbnail_path?: string | null
+  video_category?: { id: number; name: string } | null
 }
 
 function VideoSearchSelect({
   videoId,
   videoName,
+  selectedCategoryId,
   onChange,
 }: {
   videoId: string
   videoName: string
+  selectedCategoryId: number | null
   onChange: (id: string, name: string, durationSeconds?: number | null) => void
 }) {
   const [query, setQuery] = useState("")
   const [options, setOptions] = useState<VideoOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
 
-  // Fetch categories once when picker first opens
+  // Fetch videos — includes category filter
   useEffect(() => {
-    if (!open || categories.length > 0) return
-    apiClient
-      .get<{ data: { id: number; name: string }[] }>("/admin/video-categories/getAll")
-      .then((res) => setCategories(res.data ?? []))
-      .catch(() => {})
-  }, [open, categories.length])
-
-  // Fetch videos — includes category filter; resets category when picker closes
-  useEffect(() => {
-    if (!open) {
-      if (selectedCategoryId !== null) setSelectedCategoryId(null)
-      return
-    }
+    if (!open) return
     let cancelled = false
     setLoading(true)
     const t = setTimeout(async () => {
@@ -419,42 +409,6 @@ function VideoSearchSelect({
           className="absolute z-30 mt-1 w-full rounded-xl border border-white/10 bg-popover shadow-2xl overflow-hidden"
           onMouseDown={(e) => e.preventDefault()}
         >
-          {/* Category filter — shown once categories have loaded */}
-          {categories.length > 0 && (
-            <div className="flex items-center gap-2 border-b border-white/10 bg-white/3 px-3.5 py-2">
-              <span className="shrink-0 text-[11px] uppercase tracking-wider text-muted-foreground/50">
-                Category
-              </span>
-              <select
-                value={selectedCategoryId ?? ""}
-                onChange={(e) =>
-                  setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)
-                }
-                className="flex-1 bg-transparent text-xs text-muted-foreground outline-none cursor-pointer"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              {selectedCategoryId != null && (
-                <button
-                  type="button"
-                  className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setSelectedCategoryId(null)
-                  }}
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Video results */}
           <div className="max-h-52 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-5">
@@ -469,7 +423,7 @@ function VideoSearchSelect({
                 <button
                   key={v.id}
                   type="button"
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm hover:bg-white/5 transition-colors text-left group"
                   onMouseDown={() => {
                     onChange(String(v.id), v.name, v.duration_seconds ?? null)
                     setOpen(false)
@@ -477,7 +431,12 @@ function VideoSearchSelect({
                 >
                   <PlayCircleIcon className="h-4 w-4 text-indigo-400 shrink-0" />
                   <span className="flex-1 truncate">{v.name}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  {v.video_category && (
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground group-hover:border-white/20">
+                      {v.video_category.name}
+                    </span>
+                  )}
+                  <span className="shrink-0 text-xs text-muted-foreground/50 tabular-nums">
                     #{v.id}
                   </span>
                 </button>
@@ -509,6 +468,18 @@ function ContentEditor({
 }) {
   const isExisting = content.id != null
   const isVideo = content.content_type === "video"
+
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+
+  // Fetch video categories once the row is a video
+  useEffect(() => {
+    if (!isVideo || categories.length > 0) return
+    apiClient
+      .get<{ data: { id: number; name: string }[] }>("/admin/video-categories/getAll")
+      .then((res) => setCategories(res.data ?? []))
+      .catch(() => {})
+  }, [isVideo, categories.length])
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/3 overflow-hidden">
@@ -617,6 +588,29 @@ function ContentEditor({
         {/* Video-specific fields */}
         {isVideo && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Category filter — own line, styled like Type */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-xs">Category</Label>
+              <Select
+                value={selectedCategoryId == null ? "all" : String(selectedCategoryId)}
+                onValueChange={(val) =>
+                  setSelectedCategoryId(val === "all" ? null : Number(val))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-xs">
                 Video <span className="text-destructive">*</span>
@@ -624,6 +618,7 @@ function ContentEditor({
               <VideoSearchSelect
                 videoId={content.video_id}
                 videoName={content.videoName}
+                selectedCategoryId={selectedCategoryId}
                 onChange={(id, name, durationSeconds) =>
                   onChange({
                     video_id: id,

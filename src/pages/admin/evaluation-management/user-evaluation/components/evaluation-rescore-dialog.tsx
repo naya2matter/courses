@@ -1,7 +1,7 @@
 // ─── EvaluationRescoreDialog ──────────────────────────────────────────────────
 // Slide-in sheet for updating scores on an existing evaluation.
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Loader2Icon, RefreshCwIcon } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
 import { getEvaluationById, updateEvaluation } from "../service/evaluation.service"
 import { ScoreRowsEditor } from "./score-rows-editor"
-import type { Evaluation, EvaluationScorePayload } from "../types/evaluation.types"
+import type { Evaluation, EvaluationHistory, EvaluationScorePayload } from "../types/evaluation.types"
 import type { EvaluationType } from "./score-rows-editor"
 
 interface Props {
@@ -43,25 +43,69 @@ export function EvaluationRescoreDialog({
   const [apiError, setApiError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Raw history cached so we can re-map without a second API call when
+  // availableTypes finishes loading after the dialog has already opened.
+  const pendingHistoryRef = useRef<EvaluationHistory[]>([])
+
+  function mapHistoryToScores(history: EvaluationHistory[], types: typeof availableTypes) {
+    return history.flatMap<EvaluationScorePayload>((h) => {
+      const match = types.find(
+        (t) => t.type_name === h.type_name && (!h.config_name || t.config_name === h.config_name),
+      )
+      return match ? [{ evaluation_type_id: match.id, score_given: h.score_given }] : []
+    })
+  }
+
+  // Fetch evaluation detail when the dialog opens
   useEffect(() => {
     if (!open || !evaluation) {
       setScores([])
       setApiError(null)
+      pendingHistoryRef.current = []
       return
     }
     setLoading(true)
     getEvaluationById(evaluation.id)
       .then((detail) => {
-        setScores(
-          (detail.scores ?? []).map((s) => ({
-            evaluation_type_id: s.evaluation_type_id,
-            score_given: s.score_given,
-          })),
-        )
+        // Prefer `scores` if the API returns evaluation_type_id directly
+        if (detail.scores?.length && detail.scores[0].evaluation_type_id) {
+          setScores(
+            detail.scores.map((s) => ({
+              evaluation_type_id: s.evaluation_type_id,
+              score_given: s.score_given,
+            })),
+          )
+          pendingHistoryRef.current = []
+          return
+        }
+
+        // API returns `history` — map using availableTypes
+        const history = detail.history ?? []
+        pendingHistoryRef.current = history
+        const rows = mapHistoryToScores(history, availableTypes)
+        // rows may be [] if availableTypes hasn't loaded yet;
+        // the effect below will re-map once types arrive
+        setScores(rows)
       })
-      .catch(() => setScores([]))
+      .catch(() => {
+        setScores([])
+        pendingHistoryRef.current = []
+      })
       .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, evaluation])
+
+  // Re-map when availableTypes arrive after the dialog has already loaded detail
+  useEffect(() => {
+    if (availableTypes.length > 0 && pendingHistoryRef.current.length > 0) {
+      const rows = mapHistoryToScores(pendingHistoryRef.current, availableTypes)
+      if (rows.length > 0) {
+        setScores(rows)
+        pendingHistoryRef.current = [] // mapped — no need to re-run
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTypes])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

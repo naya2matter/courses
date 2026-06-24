@@ -405,22 +405,16 @@ export function AssignCourseDialog({
           {/* Department */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Department</Label>
-            <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>
-              <SelectTrigger className="h-11 w-full">
-                <SelectValue placeholder="All departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All departments</SelectItem>
-                {departments.map((department) => (
-                  <SelectItem key={department.id} value={String(department.id)}>
-                    {department.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isLoadingOptions && (
-              <p className="text-xs text-muted-foreground">Loading departments…</p>
-            )}
+            <SearchableSelect
+              value={selectedDepartmentId || "all"}
+              onValueChange={(v) => setSelectedDepartmentId(v === "all" ? "" : v)}
+              disabled={isLoadingOptions}
+              placeholder={isLoadingOptions ? "Loading departments…" : "All departments"}
+              searchPlaceholder="Search departments…"
+              triggerClassName="h-11 w-full"
+              pinnedOptions={[{ value: "all", label: "All departments" }]}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            />
           </div>
 
           {/* User */}

@@ -7,7 +7,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -31,9 +30,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   EllipsisVerticalIcon,
-  CircleUserRoundIcon,
-  CreditCardIcon,
-  BellIcon,
   LogOutIcon,
 } from "lucide-react"
 import { useAuth } from "@/context/auth"
@@ -103,25 +99,6 @@ export function NavUser({
                   </div>
                 </div>
               </DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <CircleUserRoundIcon />
-                  Account
-                </DropdownMenuItem>
-
-                <DropdownMenuItem>
-                  <CreditCardIcon />
-                  Billing
-                </DropdownMenuItem>
-
-                <DropdownMenuItem>
-                  <BellIcon />
-                  Notifications
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
 
               <DropdownMenuSeparator />
 

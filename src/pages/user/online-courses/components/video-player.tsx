@@ -12,14 +12,11 @@ import {
   Maximize2Icon,
   SkipBackIcon,
   SkipForwardIcon,
-  GaugeIcon,
   MonitorIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { VideoQuality } from "../types/user-online-courses.types"
-
-const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 function pad(n: number) {
   return String(Math.floor(n)).padStart(2, "0")
@@ -67,8 +64,8 @@ export function VideoPlayer({
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
   const [buffered, setBuffered] = useState(0)
+  const [ccEnabled, setCcEnabled] = useState(true)
 
   const [activeSrc, setActiveSrc] = useState(src)
   const [showQualityMenu, setShowQualityMenu] = useState(false)
@@ -210,15 +207,20 @@ export function VideoPlayer({
       if (wasPlaying) void vid.play()
     })
   }
-  function cycleSpeed() {
-    const el = videoRef.current
-    if (!el) return
-    const idx = PLAYBACK_SPEEDS.indexOf(playbackRate)
-    const next = PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length]
-    el.playbackRate = next
-    setPlaybackRate(next)
-    onSpeedChange()
+  function toggleCC() {
+    setCcEnabled((prev) => {
+      const next = !prev
+      const track = videoRef.current?.textTracks[0]
+      if (track) track.mode = next ? "showing" : "hidden"
+      return next
+    })
   }
+
+  useEffect(() => {
+    const track = videoRef.current?.textTracks[0]
+    if (track) track.mode = ccEnabled ? "showing" : "hidden"
+  }, [ccEnabled, subtitleUrl])
+
   function toggleFullscreen() {
     const node = containerRef.current
     if (!node) return
@@ -330,10 +332,18 @@ export function VideoPlayer({
           </span>
 
           <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={cycleSpeed}
-              className="h-8 gap-1 rounded-full px-2 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white" title="Playback speed">
-              <GaugeIcon className="size-3.5" />{playbackRate}x
-            </Button>
+            {subtitleUrl && (
+              <button
+                type="button"
+                onClick={toggleCC}
+                title={ccEnabled ? "Hide subtitles" : "Show subtitles"}
+                className={`flex h-8 items-center rounded-full px-2.5 text-[11px] font-bold tracking-wide transition hover:bg-white/10 ${
+                  ccEnabled ? "bg-indigo-500/30 text-indigo-300" : "text-white/40 hover:text-white"
+                }`}
+              >
+                CC
+              </button>
+            )}
 
             {qualities && qualities.length > 0 && (
               <div className="relative" data-quality-menu>

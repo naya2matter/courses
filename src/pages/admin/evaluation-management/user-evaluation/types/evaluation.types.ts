@@ -42,9 +42,11 @@ export interface EvaluationScore {
 /** History snapshot row */
 export interface EvaluationHistory {
   id: number
+  evaluation_id?: number
   config_name: string
   type_name: string
   score_given: number
+  max_score?: number
   created_at?: string
 }
 

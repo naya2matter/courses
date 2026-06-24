@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   AlertCircleIcon,
   CalendarClockIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   CircleGaugeIcon,
   ClipboardListIcon,
   EyeIcon,
@@ -371,8 +369,8 @@ export function UserEvaluationsPage() {
         </div>
       )}
 
-      {/* ── Pagination ────────────────────────────────────────────────────────── */}
-      {!isLoading && items.length > 0 && (
+      {/* ── Pagination — only shown when there is more than one page ─────────── */}
+      {!isLoading && items.length > 0 && meta.last_page > 1 && (
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
           <p className="text-xs text-muted-foreground">
             {meta.total > 0
@@ -401,28 +399,26 @@ export function UserEvaluationsPage() {
 
             <Button
               variant="outline"
-              size="icon"
-              className="size-8"
+              size="sm"
+              className="h-8 px-3 text-xs"
               onClick={() => setFilters((prev) => ({ ...prev, page: prev.page - 1 }))}
               disabled={isLoading || meta.current_page <= 1}
-              aria-label="Previous page"
             >
-              <ChevronLeftIcon className="size-4" />
+              Prev
             </Button>
 
-            <span className="min-w-16 text-center text-xs tabular-nums text-muted-foreground">
+            <span className="min-w-14 text-center text-xs tabular-nums text-muted-foreground">
               {meta.current_page} / {meta.last_page}
             </span>
 
             <Button
               variant="outline"
-              size="icon"
-              className="size-8"
+              size="sm"
+              className="h-8 px-3 text-xs"
               onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
               disabled={isLoading || meta.current_page >= meta.last_page}
-              aria-label="Next page"
             >
-              <ChevronRightIcon className="size-4" />
+              Next
             </Button>
           </div>
         </div>

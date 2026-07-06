@@ -36,9 +36,9 @@ function StatCard({
       <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 ${colorClass}`}>
         <Icon className="h-5 w-5" />
       </div>
-      <p className="text-4xl font-semibold tabular-nums text-foreground">
+      <div className="text-4xl font-semibold tabular-nums text-foreground">
         {isLoading ? <Skeleton className="h-10 w-24" /> : value}
-      </p>
+      </div>
       <p className="mt-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
     </div>
   )

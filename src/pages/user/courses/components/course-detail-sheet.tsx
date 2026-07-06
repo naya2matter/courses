@@ -59,6 +59,18 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+function formatDuration(minutes: number | null | undefined): string {
+  if (minutes == null) return "—"
+
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+
+  if (hours === 0) return `${mins}m`
+  if (mins === 0) return `${hours}h`
+
+  return `${hours}h ${mins}m`
+}
+
 const LEVEL_STYLES: Record<string, string> = {
   beginner:     "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
   intermediate: "bg-amber-500/15 text-amber-400 border-amber-500/20",
@@ -372,7 +384,7 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                         Duration
                       </div>
                       <p className="text-sm font-semibold text-white">
-                        {course.duration != null ? `${course.duration}h` : "—"}
+                        {formatDuration(course.duration)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/3 p-3 space-y-1">

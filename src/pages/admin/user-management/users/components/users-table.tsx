@@ -38,14 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import {
   Sheet,
@@ -165,7 +157,6 @@ export function UsersTable({
   // ── Local state ─────────────────────────────────────────────────────────────
   const [searchDraft, setSearchDraft] = useState(filters.search ?? "")
   const searchMounted = useRef(false)
-  const [filterLevelId, setFilterLevelId] = useState("")
   const [userToDelete, setUserToDelete] = useState<UserListResource | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -180,24 +171,17 @@ export function UsersTable({
   const { departments, isLoadingOptions: loadingDepts } = useDepartmentOptions()
   const { levels, isLoadingTierOptions: loadingTiers } = useUserLevelTierOptions()
 
-  const visibleFilterTiers = useMemo(
+  // All tiers flattened, prefixed with level name for disambiguation
+  const allTierOptions = useMemo(
     () =>
-      filterLevelId
-        ? (levels.find((l) => String(l.id) === filterLevelId)?.tiers ?? [])
-            .slice()
-            .sort((a, b) => a.tier_order - b.tier_order)
-        : [],
-    [filterLevelId, levels],
+      levels.flatMap((l) =>
+        l.tiers
+          .slice()
+          .sort((a, b) => a.tier_order - b.tier_order)
+          .map((t) => ({ id: t.id, label: `${l.name} / ${t.tier_name}` })),
+      ),
+    [levels],
   )
-
-  // When levels load, re-hydrate filterLevelId from an existing store tier filter
-  useEffect(() => {
-    if (!levels.length || !filters.user_level_tier_id || filterLevelId) return
-    const level = levels.find((l) =>
-      l.tiers.some((t) => t.id === filters.user_level_tier_id),
-    )
-    if (level) setFilterLevelId(String(level.id))
-  }, [levels, filters.user_level_tier_id, filterLevelId])
 
   // Fetch full user when sheet opens
   useEffect(() => {
@@ -258,12 +242,6 @@ export function UsersTable({
     })
   }
 
-  function handleLevelFilterChange(value: string) {
-    const next = value === NONE ? "" : value
-    setFilterLevelId(next)
-    onFilterChange({ user_level_tier_id: null, page: 1 })
-  }
-
   function handleTierFilter(value: string) {
     onFilterChange({
       user_level_tier_id: value === NONE ? null : Number(value),
@@ -273,7 +251,6 @@ export function UsersTable({
 
   function clearAllFilters() {
     setSearchDraft("")
-    setFilterLevelId("")
     onFilterChange({ search: "", department_id: null, user_level_tier_id: null, page: 1 })
   }
 
@@ -350,51 +327,16 @@ export function UsersTable({
             options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
           />
 
-          <Select
-            value={filterLevelId || NONE}
-            onValueChange={handleLevelFilterChange}
-            disabled={loadingTiers}
-          >
-            <SelectTrigger className="h-8 w-36 text-xs">
-              <SelectValue placeholder="All levels" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={NONE}>All levels</SelectItem>
-                {levels.map((l) => (
-                  <SelectItem key={l.id} value={String(l.id)}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={
-              filters.user_level_tier_id != null
-                ? String(filters.user_level_tier_id)
-                : NONE
-            }
+          <SearchableSelect
+            value={filters.user_level_tier_id != null ? String(filters.user_level_tier_id) : NONE}
             onValueChange={handleTierFilter}
-            disabled={!filterLevelId || visibleFilterTiers.length === 0}
-          >
-            <SelectTrigger className="h-8 w-36 text-xs">
-              <SelectValue
-                placeholder={filterLevelId ? "All tiers" : "Select level first"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={NONE}>All tiers</SelectItem>
-                {visibleFilterTiers.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    {t.tier_name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            disabled={loadingTiers}
+            placeholder="All tiers"
+            searchPlaceholder="Search tiers…"
+            triggerClassName="h-8 w-48 text-xs"
+            pinnedOptions={[{ value: NONE, label: "All tiers" }]}
+            options={allTierOptions.map((t) => ({ value: String(t.id), label: t.label }))}
+          />
 
           {hasActiveFilters && (
             <Button

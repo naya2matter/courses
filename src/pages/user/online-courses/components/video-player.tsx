@@ -51,7 +51,6 @@ export function VideoPlayer({
   onPlay,
   onPause,
   onSeek,
-  onSpeedChange,
   onFullscreen,
   onTimeUpdate,
   onEnded,

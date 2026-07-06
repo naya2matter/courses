@@ -16,7 +16,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
 
 import { PageHeader } from "@/components/user/page-header"

@@ -301,7 +301,7 @@ export function DatePickerField({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={selected} onSelect={handleSelect} initialFocus />
+        <Calendar mode="single" selected={selected} onSelect={handleSelect} />
       </PopoverContent>
     </Popover>
   )
@@ -380,7 +380,7 @@ export function DateTimePickerField({
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="single" selected={selected} onSelect={handleDateSelect} initialFocus />
+          <Calendar mode="single" selected={selected} onSelect={handleDateSelect} />
         </PopoverContent>
       </Popover>
 

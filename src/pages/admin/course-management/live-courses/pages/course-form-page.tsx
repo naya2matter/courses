@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DateTimePickerField, TimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, TimePickerField, DurationPickerField } from "@/components/ui/date-picker"
 import {
   Select,
   SelectContent,
@@ -409,15 +409,13 @@ export default function CourseFormPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="duration" className="text-sm font-semibold">Duration (Minutes)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min={0}
+                  <Label htmlFor="duration" className="text-sm font-semibold">Duration</Label>
+                  <DurationPickerField
                     value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="e.g. 120"
-                    className="bg-muted/30 border-muted-foreground/20 focus:border-primary/50"
+                    onChange={setDuration}
+                    mode="hm"
+                    placeholder="Set duration"
+                    className="bg-muted/30 border-muted-foreground/20"
                   />
                 </div>
               </div>
@@ -562,17 +560,15 @@ export default function CourseFormPage() {
                         <p className="text-[10px] text-muted-foreground/70">Number of weeks this course runs</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`session_duration_minutes_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Duration (min)</Label>
-                        <Input
-                          id={`session_duration_minutes_${index}`}
-                          type="number"
-                          min={1}
+                        <Label htmlFor={`session_duration_minutes_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Duration</Label>
+                        <DurationPickerField
                           value={row.session_duration_minutes}
-                          onChange={(e) => updateAvailRow(index, "session_duration_minutes", e.target.value)}
-                          placeholder="e.g. 90"
+                          onChange={(v) => updateAvailRow(index, "session_duration_minutes", v)}
+                          mode="hm"
+                          placeholder="Set session duration"
                           className="bg-muted/30"
                         />
-                        <p className="text-[10px] text-muted-foreground/70">Duration of each session in minutes</p>
+                        <p className="text-[10px] text-muted-foreground/70">Duration of each session</p>
                       </div>
                     </div>
 
@@ -581,7 +577,7 @@ export default function CourseFormPage() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Time Shifts</p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Shift 1</Label>
+                          <Label className="text-xs text-muted-foreground">Shift 1 <span className="text-muted-foreground/50">(optional)</span></Label>
                           <TimePickerField
                             value={row.session_time_shift_1}
                             onChange={(v) => updateAvailRow(index, "session_time_shift_1", v)}

@@ -264,6 +264,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
               contentId={contentId}
               totalPages={data.pdf_total_pages}
               resumePage={data.progress?.playback_position ?? 0}
+              fileName={data.title}
               onProgress={(pct, done) => setPdfCompletion({ pct, done })}
             />
           </Suspense>

@@ -65,11 +65,10 @@ export function LoginPage() {
       <div className="relative z-10 w-full max-w-100">
         {/* Logo + heading */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-slate-950/70 p-3 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+          <div className="mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-full border border-white/10 bg-slate-950/70 p-4 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
             <img src="/favicon.ico" alt="Logo" className="h-full w-full object-contain" />
           </div>
           <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-indigo-400/80">Nexus Learning</p>
             <h1 className="text-3xl font-bold tracking-tight text-white/90">Welcome Back</h1>
             <p className="text-xs font-medium text-white/40">Enter your credentials to access your workspace.</p>
           </div>
@@ -111,9 +110,6 @@ export function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-xs font-semibold text-white/60">Password</Label>
-                <button className="text-[10px] font-medium text-indigo-400">
-                  Forgot?
-                </button>
               </div>
               <div className="relative group/input">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-400/70 transition-colors group-focus-within/input:text-indigo-400" />
@@ -172,10 +168,6 @@ export function LoginPage() {
             </Button>
           </CardFooter>
         </Card>
-
-        <p className="mt-6 text-center text-[10px] text-white/30">
-          Nexus Learning Systems &copy; 2026. All rights reserved.
-        </p>
       </div>
     </div>
   )

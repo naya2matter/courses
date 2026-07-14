@@ -12,6 +12,7 @@ import {
   AlertCircleIcon,
   ZoomInIcon,
   ZoomOutIcon,
+  DownloadIcon,
 } from "lucide-react"
 
 import "react-pdf/dist/Page/AnnotationLayer.css"
@@ -38,16 +39,18 @@ interface Props {
   contentId: number
   totalPages: number | null
   resumePage: number
+  fileName?: string
   onProgress?: (completionPercentage: number, isCompleted: boolean) => void
 }
 
-export function PdfViewer({ src, courseId, contentId, totalPages, resumePage, onProgress }: Props) {
+export function PdfViewer({ src, courseId, contentId, totalPages, resumePage, fileName, onProgress }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [numPages, setNumPages] = useState<number>(totalPages ?? 0)
   const [pageNumber, setPageNumber] = useState<number>(Math.max(1, Math.floor(resumePage) || 1))
   const [width, setWidth] = useState<number>(800)
   const [scale, setScale] = useState<number>(1)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const viewedRef = useRef<Set<number>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -132,6 +135,31 @@ export function PdfViewer({ src, courseId, contentId, totalPages, resumePage, on
   const pagesViewed = viewedRef.current.size
   const viewedPct = effectiveTotal ? Math.round((pagesViewed / effectiveTotal) * 100) : 0
 
+  const handleDownload = useCallback(async () => {
+    if (isDownloading) return
+    setIsDownloading(true)
+    try {
+      const res = await fetch(src)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const base = (fileName || "document").replace(/[/\\?%*:|"<>]/g, "-").trim()
+      const name = base.toLowerCase().endsWith(".pdf") ? base : `${base}.pdf`
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      // Fall back to opening the signed URL directly in a new tab.
+      window.open(src, "_blank", "noopener,noreferrer")
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [src, fileName, isDownloading])
+
   return (
     <div className="flex flex-col gap-3">
       {/* Toolbar */}
@@ -152,6 +180,16 @@ export function PdfViewer({ src, courseId, contentId, totalPages, resumePage, on
 
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[11px] text-white/40 tabular-nums">{viewedPct}% read</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            title="Download PDF"
+            className="size-8 rounded-full text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40"
+          >
+            {isDownloading ? <Loader2Icon className="size-4 animate-spin" /> : <DownloadIcon className="size-4" />}
+          </Button>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={() => setScale((s) => Math.max(ZOOM_MIN, +(s - ZOOM_STEP).toFixed(2)))}
               className="size-8 rounded-full text-white/70 hover:bg-white/10 hover:text-white" title="Zoom out">

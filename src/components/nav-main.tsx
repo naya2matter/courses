@@ -36,6 +36,7 @@ interface HoverPanelProps {
   currentPath: string
   onMouseEnter: () => void
   onMouseLeave: () => void
+  onNavigate: () => void
 }
 
 function HoverPanel({
@@ -44,6 +45,7 @@ function HoverPanel({
   currentPath,
   onMouseEnter,
   onMouseLeave,
+  onNavigate,
 }: HoverPanelProps) {
   const panelRef = React.useRef<HTMLDivElement>(null)
   const itemRefs = React.useRef<(HTMLAnchorElement | null)[]>([])
@@ -92,6 +94,7 @@ function HoverPanel({
             to={sub.url}
             role="menuitem"
             tabIndex={0}
+            onClick={onNavigate}
             onFocus={() => setFocusedIdx(idx)}
             onKeyDown={(e: React.KeyboardEvent<HTMLAnchorElement>) => handleKeyDown(e, idx)}
             data-slot="sidebar-menu-sub-button"
@@ -129,8 +132,9 @@ export function NavMain({
   items: NavItem[]
   label?: string
 }) {
-  const { state } = useSidebar()
+  const { state, setOpenMobile } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const closeMobile = () => setOpenMobile(false)
   const { pathname } = useLocation()
 
   const isSubActive = (url: string) => {
@@ -254,6 +258,7 @@ export function NavMain({
                               <SidebarMenuSubButton asChild className="!bg-transparent hover:!bg-white/10">
                                 <Link
                                   to={sub.url}
+                                  onClick={closeMobile}
                                   className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors duration-150"
                                   aria-current={subActive ? "page" : undefined}
                                 >
@@ -281,7 +286,7 @@ export function NavMain({
             ) : (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild tooltip={item.title} isActive={isSubActive(item.url)}>
-                  <Link to={item.url}>
+                  <Link to={item.url} onClick={closeMobile}>
                     {item.icon}
                     <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </Link>
@@ -300,6 +305,7 @@ export function NavMain({
           currentPath={pathname}
           onMouseEnter={clearTimers}
           onMouseLeave={closePanel}
+          onNavigate={closeMobile}
         />
       )}
     </>

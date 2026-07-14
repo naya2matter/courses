@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DateTimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, DurationPickerField } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -295,13 +295,12 @@ export function CreateQuizPage() {
               />
             </Field>
 
-            <Field label="Time limit (minutes)" hint="Leave blank for no limit">
-              <Input
-                type="number"
-                min={1}
+            <Field label="Time limit" hint="Leave blank for no limit">
+              <DurationPickerField
                 value={timeLimitMinutes}
-                onChange={(e) => setTimeLimitMinutes(e.target.value)}
-                placeholder="e.g. 30"
+                onChange={setTimeLimitMinutes}
+                mode="hm"
+                placeholder="Set time limit"
                 disabled={isSubmitting}
                 className="h-10"
               />

@@ -90,11 +90,11 @@ function UserNode({
                 className="h-5 gap-1 px-1.5 text-[11px] font-normal"
               >
                 <CheckCircleIcon className="h-2.5 w-2.5" />
-                {user.tier.tier_name}
+                {user.tier.level ? user.tier.level.name : user.tier.tier_name}
                 {user.tier.level && (
                   <span className="text-muted-foreground">
                     {" / "}
-                    {user.tier.level.name}
+                    {user.tier.tier_name}
                   </span>
                 )}
               </Badge>

@@ -18,6 +18,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DurationPickerField } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -401,24 +402,22 @@ export function CreateAudioPage() {
             {/* Duration (optional, in seconds) */}
             <div className="grid gap-1.5">
               <Label htmlFor="audio-duration" className="flex items-center gap-2">
-                Duration (seconds)
+                Duration
                 {durationAutoDetected && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-normal text-indigo-400">
                     <SparklesIcon className="size-3" />Auto-detected
                   </span>
                 )}
               </Label>
-              <Input
-                id="audio-duration"
-                type="number"
-                min={1}
-                placeholder="e.g. 240"
+              <DurationPickerField
                 value={duration}
-                onChange={(e) => { setDuration(e.target.value); setDurationAutoDetected(false) }}
+                onChange={(v) => { setDuration(v); setDurationAutoDetected(false) }}
+                mode="ms"
+                placeholder="Set duration"
                 disabled={submitting}
               />
               <p className="text-xs text-muted-foreground">
-                Total duration in seconds. Leave blank to let the server detect it.
+                Total duration. Leave blank to let the server detect it.
               </p>
             </div>
 

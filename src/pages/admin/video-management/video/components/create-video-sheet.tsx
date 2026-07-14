@@ -476,14 +476,36 @@ export function CreateVideoPanel({
                   </div>
 
                   {isUploading && (
-                    <div className="mt-4 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          Uploading chunk {currentChunk} of {totalChunks}
-                        </span>
-                        <span className="tabular-nums font-medium">{progress}%</span>
+                    <div className="mt-4 space-y-4">
+                      {/* Skeleton preview — shimmer sweep signals the video is actively uploading */}
+                      <div className="shimmer-sweep rounded-2xl border border-white/10 bg-linear-to-br from-white/[0.05] via-white/[0.02] to-transparent p-4">
+                        <div className="flex items-center gap-4">
+                          {/* Thumbnail placeholder */}
+                          <div className="relative flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+                            <FileVideoIcon className="size-7 text-white/20 skeleton-breathe" />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-black/30 to-transparent" />
+                          </div>
+                          {/* Metadata lines */}
+                          <div className="flex-1 space-y-2.5 skeleton-breathe">
+                            <div className="h-3.5 w-3/4 rounded-full bg-white/[0.09]" />
+                            <div className="h-3 w-1/2 rounded-full bg-white/[0.07]" />
+                            <div className="h-3 w-2/3 rounded-full bg-white/[0.06]" />
+                          </div>
+                        </div>
                       </div>
-                      <Progress value={progress} className="h-2 bg-white/10" />
+
+                      {/* Progress */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2Icon className="size-3.5 animate-spin text-indigo-400" />
+                            Uploading chunk {currentChunk} of {totalChunks}
+                          </span>
+                          <span className="tabular-nums font-semibold text-white/80">{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="h-1.5 bg-white/10" />
+                      </div>
+
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-xs text-muted-foreground">
                           The server finalizes the file automatically on the last chunk.

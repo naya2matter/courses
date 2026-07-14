@@ -136,7 +136,7 @@ function FilterBar({ filters, rootDepts, onFilterChange, onClearAll }: FilterBar
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Levels</SelectItem>
-          <SelectItem value="root">Root Only</SelectItem>
+          <SelectItem value="root">Parent Departments</SelectItem>
           {rootDepts.map((d) => (
             <SelectItem key={d.id} value={String(d.id)}>
               {d.name}

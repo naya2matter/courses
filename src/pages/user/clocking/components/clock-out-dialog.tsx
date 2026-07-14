@@ -129,6 +129,14 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
   }
 
   async function handleSubmit() {
+    if (rating === 0) {
+      setError("Please rate the session before clocking out.")
+      return
+    }
+    if (!comment.trim()) {
+      setError("Notes are required before clocking out.")
+      return
+    }
     if (comment.length > 1000) {
       setError("Comment must not exceed 1000 characters.")
       return
@@ -137,8 +145,8 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
     setIsLoading(true)
     try {
       const record = await clockOut({
-        comment: comment.trim() || null,
-        rating: rating > 0 ? rating : undefined,
+        comment: comment.trim(),
+        rating,
       })
       toast.success("Session ended!")
       onClockOut(record)
@@ -167,7 +175,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
           </div>
           <DialogTitle className="text-xl font-semibold text-foreground">End Session</DialogTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Wrap up your session. Add a rating or note before finishing.
+            Wrap up your session. A rating and notes are required before finishing.
           </p>
         </DialogHeader>
 
@@ -193,7 +201,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
           {/* Rating */}
           <div className="space-y-2">
             <label className="block text-center text-xs font-medium text-foreground/55">
-              How was this session?
+              How was this session? <span className="text-red-400">*</span>
             </label>
             <StarRating value={rating} onChange={setRating} disabled={isLoading} />
           </div>
@@ -205,8 +213,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label htmlFor="clock-out-comment" className="text-xs font-medium text-foreground/55">
-                Notes
-                <span className="ml-1.5 text-foreground/25">(optional)</span>
+                Notes <span className="text-red-400">*</span>
               </label>
               <span className={`text-[11px] ${comment.length > 900 ? "text-red-400" : "text-foreground/25"}`}>
                 {comment.length}/1000
@@ -251,7 +258,7 @@ export function ClockOutDialog({ open, clockInTime, onClose, onClockOut }: Clock
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isLoading || rating === 0 || !comment.trim()}
             className="flex-1 bg-red-600 text-foreground transition-all hover:bg-red-500"
           >
             {isLoading ? (

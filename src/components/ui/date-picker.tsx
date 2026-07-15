@@ -458,16 +458,24 @@ export function TimePickerField({
 
 // ─── DurationPickerField ──────────────────────────────────────────────────────
 // Wheel picker for a DURATION quantity — NOT a time-of-day, so no AM/PM.
-//   mode="hm" → [Hours] : [Minutes], value = total MINUTES  (e.g. "120" → 2h 0m)
-//   mode="ms" → [Minutes] : [Seconds], value = total SECONDS (e.g. "90"  → 1m 30s)
+//   mode="hm"  → [Hours] : [Minutes],          value = total MINUTES  (e.g. "120" → 2h 0m)
+//   mode="ms"  → [Minutes] : [Seconds],         value = total SECONDS  (e.g. "90"  → 1m 30s)
+//   mode="hms" → [Hours] : [Minutes] : [Secs],  value = total SECONDS  (e.g. "3661" → 1h 1m 1s)
 // Drop-in for <Input type="number" value={string} onChange={setString} />.
 
-const DUR_HOURS  = Array.from({ length: 100 }, (_, i) => i)  // 0–99  (hm: hours)
+const DUR_HOURS  = Array.from({ length: 100 }, (_, i) => i)  // 0–99  (hours)
 const DUR_MIN60  = Array.from({ length: 60 }, (_, i) => i)   // 0–59  (minutes / seconds)
 const DUR_MIN300 = Array.from({ length: 300 }, (_, i) => i)  // 0–299 (ms: minutes → up to ~5h)
 
+const SEP_STYLE: React.CSSProperties = {
+  width: 10,
+  paddingTop: SPACER_H + (ITEM_H - 20) / 2,
+  alignSelf: "flex-start",
+  height: SPACER_H + ITEM_H,
+}
+
 interface ScrollDurationPickerProps {
-  mode: "hm" | "ms"
+  mode: "hm" | "ms" | "hms"
   value: string
   onChange: (v: string) => void
   disabled?: boolean
@@ -484,15 +492,29 @@ function ScrollDurationPicker({
   const [open, setOpen] = useState(false)
 
   const total = Math.max(0, parseInt(value, 10) || 0)
-  const right = total % 60
+
+  // hms: total seconds, decomposed to h/m/s
+  const hmsH = mode === "hms" ? Math.min(Math.floor(total / 3600), 99) : 0
+  const hmsM = mode === "hms" ? Math.floor((total % 3600) / 60) : 0
+  const hmsS = mode === "hms" ? total % 60 : 0
+
+  // hm/ms: two-column decomposition
+  const right = mode !== "hms" ? total % 60 : 0
   const leftItems = mode === "hm" ? DUR_HOURS : DUR_MIN300
-  const left = Math.min(Math.floor(total / 60), leftItems[leftItems.length - 1])
+  const left = mode !== "hms" ? Math.min(Math.floor(total / 60), leftItems[leftItems.length - 1]) : 0
   const leftLabel = mode === "hm" ? "Hour" : "Min"
   const rightLabel = mode === "hm" ? "Min" : "Sec"
 
-  function emit(l: number, r: number) {
+  function emit2(l: number, r: number) {
     onChange(String(l * 60 + r))
   }
+
+  function emitHms(h: number, m: number, s: number) {
+    onChange(String(h * 3600 + m * 60 + s))
+  }
+
+  const popoverWidth = mode === "hms" ? "w-56" : "w-40"
+  const headerCols = mode === "hms" ? "grid-cols-3" : "grid-cols-2"
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -503,13 +525,23 @@ function ScrollDurationPicker({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-40 overflow-hidden border border-white/10 bg-[#0e0d1f]/95 p-0 shadow-2xl backdrop-blur-xl"
+        className={`${popoverWidth} overflow-hidden border border-white/10 bg-[#0e0d1f]/95 p-0 shadow-2xl backdrop-blur-xl`}
         onInteractOutside={() => setOpen(false)}
       >
         {/* Column headers */}
-        <div className="grid grid-cols-2 border-b border-white/[0.07] bg-white/[0.02] px-1 py-2 text-center">
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{leftLabel}</span>
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{rightLabel}</span>
+        <div className={`grid ${headerCols} border-b border-white/[0.07] bg-white/[0.02] px-1 py-2 text-center`}>
+          {mode === "hms" ? (
+            <>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Hour</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Min</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Sec</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{leftLabel}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{rightLabel}</span>
+            </>
+          )}
         </div>
 
         {/* Drum-roll area */}
@@ -530,25 +562,21 @@ function ScrollDurationPicker({
             aria-hidden
           />
 
-          <ScrollColumn
-            items={leftItems}
-            value={left}
-            onChange={(l) => emit(l, right)}
-          />
-
-          <div
-            className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm"
-            style={{ width: 10, paddingTop: SPACER_H + (ITEM_H - 20) / 2, alignSelf: "flex-start", height: SPACER_H + ITEM_H }}
-            aria-hidden
-          >
-            :
-          </div>
-
-          <ScrollColumn
-            items={DUR_MIN60}
-            value={right}
-            onChange={(r) => emit(left, r)}
-          />
+          {mode === "hms" ? (
+            <>
+              <ScrollColumn items={DUR_HOURS}  value={hmsH} onChange={(h) => emitHms(h, hmsM, hmsS)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60}  value={hmsM} onChange={(m) => emitHms(hmsH, m, hmsS)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60}  value={hmsS} onChange={(s) => emitHms(hmsH, hmsM, s)} />
+            </>
+          ) : (
+            <>
+              <ScrollColumn items={leftItems} value={left} onChange={(l) => emit2(l, right)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60} value={right} onChange={(r) => emit2(left, r)} />
+            </>
+          )}
         </div>
 
         {/* Done button */}
@@ -566,8 +594,18 @@ function ScrollDurationPicker({
   )
 }
 
-function formatDuration(value: string, mode: "hm" | "ms"): string {
+function formatDuration(value: string, mode: "hm" | "ms" | "hms"): string {
   const total = Math.max(0, parseInt(value, 10) || 0)
+  if (mode === "hms") {
+    const h = Math.floor(total / 3600)
+    const m = Math.floor((total % 3600) / 60)
+    const s = total % 60
+    const parts: string[] = []
+    if (h) parts.push(`${h}h`)
+    if (m) parts.push(`${m}m`)
+    if (s || parts.length === 0) parts.push(`${s}s`)
+    return parts.join(" ")
+  }
   const l = Math.floor(total / 60)
   const r = total % 60
   if (mode === "hm") {
@@ -583,7 +621,7 @@ function formatDuration(value: string, mode: "hm" | "ms"): string {
 interface DurationPickerFieldProps {
   value: string | number
   onChange: (v: string) => void
-  mode?: "hm" | "ms"
+  mode?: "hm" | "ms" | "hms"
   placeholder?: string
   disabled?: boolean
   className?: string

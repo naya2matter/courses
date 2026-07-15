@@ -493,7 +493,7 @@ export function EditAudioPage() {
               <DurationPickerField
                 value={duration}
                 onChange={(v) => { setDuration(v); setDurationAutoDetected(false) }}
-                mode="ms"
+                mode="hms"
                 placeholder="Set duration"
                 disabled={submitting}
               />

@@ -1,7 +1,7 @@
 // ─── Online Course Reporting Service ─────────────────────────────────────────
 
 import { apiClient } from "@/lib/api"
-import { downloadCsv, buildExportQuery } from "../../shared/download-csv"
+import { downloadCsv, downloadFile, buildExportQuery, buildFileQuery } from "../../shared/download-csv"
 import type {
   UserCourseDailyFilters,
   DeptCourseDailyFilters,
@@ -49,12 +49,34 @@ export async function getSessionFact(
   return apiClient.get(`/admin/reporting/datasets/session-fact${buildQuery(filters)}`)
 }
 
+/** GET /admin/reporting/datasets/session-fact/{id} — single record (404 if missing). */
+export async function getSessionFactById(id: number): Promise<SessionFactRow> {
+  const res = await apiClient.get<{ data: SessionFactRow }>(
+    `/admin/reporting/datasets/session-fact/${id}`,
+  )
+  return res.data
+}
+
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 export async function getUserPerformance(
   filters: Partial<UserPerfFilters> = {},
 ): Promise<PaginatedResponse<UserPerformanceRow>> {
   return apiClient.get(`/admin/reporting/user-performance${buildQuery(filters)}`)
+}
+
+/**
+ * GET /admin/reporting/user-performance/{id} — single user's performance row.
+ * {id} is the user id. Accepts the same optional filters as the list.
+ */
+export async function getUserPerformanceById(
+  id: number,
+  filters: Partial<UserPerfFilters> = {},
+): Promise<UserPerformanceRow> {
+  const res = await apiClient.get<{ data: UserPerformanceRow }>(
+    `/admin/reporting/user-performance/${id}${buildQuery(filters)}`,
+  )
+  return res.data
 }
 
 export async function getUserCourseProgress(
@@ -85,6 +107,10 @@ export const exportUserPerformance = (f: Partial<UserPerfFilters> = {}) =>
 
 export const exportUserCourseProgress = (f: Partial<UserCourseProgressFilters> = {}) =>
   downloadCsv(`/admin/reporting/export/user-course-progress${buildExportQuery(f as Record<string, unknown>)}`, "user-course-progress.csv")
+
+/** Styled 2-sheet Excel workbook (Completed / Non-Completed KPIs). */
+export const exportUserCourseProgressExcel = (f: Partial<UserCourseProgressFilters> = {}) =>
+  downloadFile(`/admin/reporting/export/user-course-progress-excel${buildFileQuery(f as Record<string, unknown>)}`, "user-course-progress.xlsx")
 
 export const exportDeptEvalPerformance = (f: Partial<DeptEvalFilters> = {}) =>
   downloadCsv(`/admin/reporting/export/evaluation/department-performance${buildExportQuery(f as Record<string, unknown>)}`, "dept-eval-performance.csv")

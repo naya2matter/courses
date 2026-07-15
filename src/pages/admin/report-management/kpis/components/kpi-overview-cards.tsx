@@ -141,10 +141,10 @@ export function KpiOverviewCards({ data, isLoading }: Props) {
               <s.icon className={`size-5 ${s.color}`} />
             </div>
             <div className="min-w-0">
-              <p className={`text-xl font-extrabold tabular-nums leading-none ${s.color}`}>
+              <p className={`text-2xl font-extrabold tabular-nums leading-none ${s.color}`}>
                 {display}
               </p>
-              <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+              <p className="mt-1.5 text-xs font-semibold uppercase tracking-widest text-white/55">
                 {s.label}
               </p>
             </div>

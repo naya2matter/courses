@@ -74,10 +74,11 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   },
 
   /**
-   * Apply new filters and re-fetch from page 1
+   * Apply new filters and re-fetch.
+   * Resets to page 1 only when the caller does not provide an explicit page.
    */
   setFilters: (filters: CourseListFilters) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    const next = { ...get().filters, ...filters, page: filters.page ?? 1 }
     set({ filters: next })
     get().fetchCourses(next)
   },

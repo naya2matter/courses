@@ -7,14 +7,18 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   AlertCircleIcon,
+  ArrowDownNarrowWideIcon,
+  ArrowUpNarrowWideIcon,
   BookOpenIcon,
   ClipboardListIcon,
   ClockIcon,
+  FilterXIcon,
   GraduationCapIcon,
   GridIcon,
   ListIcon,
   Loader2Icon,
   RefreshCwIcon,
+  SearchIcon,
   UserPlusIcon,
   XIcon,
   LockIcon,
@@ -31,6 +35,15 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import MouseTiltCard from "@/components/ui/mouse-tilt-card"
 import { Input } from "@/components/ui/input"
+import { DatePickerField } from "@/components/ui/date-picker"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { PerPageSelect } from "@/components/ui/table-controls"
 
 import { useCourse } from "./hook/use-course"
 import { DeleteCourseDialog } from "./components/delete-course-dialog"
@@ -39,6 +52,16 @@ import { CourseAssignmentsSheet } from "./components/course-assignments-sheet"
 import { CourseDetailsSheet } from "./components/course-details-sheet"
 import { parseAvailabilities } from "./utils/availability"
 import type { CourseResource } from "./types/course.types"
+
+// Sentinel for "no filter" Select options (Radix Select disallows empty values).
+const NONE = "__none__"
+
+// Backend allow-listed sortable columns for GET /admin/courses/getAll.
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "created_at", label: "Created" },
+  { value: "id", label: "ID" },
+]
 
 /**
  * Format duration from minutes to human-readable string
@@ -194,8 +217,9 @@ export default function LiveCoursesPage() {
   // View toggle state (grid or list)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
-  // Search input local state
+  // Search input local state (debounced before hitting the store)
   const [searchValue, setSearchValue] = useState(filters.search || "")
+  const searchMounted = useRef(false)
 
   // Delete dialog target
   const [deleteTarget, setDeleteTarget] = useState<CourseResource | null>(null)
@@ -220,13 +244,79 @@ export default function LiveCoursesPage() {
     toast.error(error)
   }, [error])
 
+  // Debounce search — skip the initial mount so we don't double-fetch
+  useEffect(() => {
+    if (!searchMounted.current) {
+      searchMounted.current = true
+      return
+    }
+    const id = setTimeout(() => {
+      setFilters({ search: searchValue, page: 1 })
+    }, 400)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue])
+
   /**
-   * Handle search input change with debounce
+   * Handle status filter change
    */
-  function handleSearch(value: string) {
-    setSearchValue(value)
-    setFilters({ search: value })
+  function handleStatusFilter(value: string) {
+    setFilters({ status: value === NONE ? undefined : value, page: 1 })
   }
+
+  /**
+   * Handle privacy filter change
+   */
+  function handlePrivacyFilter(value: string) {
+    setFilters({ privacy: value === NONE ? undefined : value, page: 1 })
+  }
+
+  /**
+   * Handle sort column change
+   */
+  function handleSortColumn(value: string) {
+    if (value === NONE) {
+      setFilters({ sort: undefined, direction: undefined, page: 1 })
+      return
+    }
+    setFilters({ sort: value, direction: filters.direction ?? "asc", page: 1 })
+  }
+
+  /**
+   * Toggle sort direction (asc <-> desc). Only meaningful when a sort is set.
+   */
+  function handleToggleDirection() {
+    if (!filters.sort) return
+    setFilters({
+      direction: filters.direction === "asc" ? "desc" : "asc",
+      page: 1,
+    })
+  }
+
+  /**
+   * Clear all active filters
+   */
+  function clearAllFilters() {
+    setSearchValue("")
+    setFilters({
+      search: "",
+      status: undefined,
+      privacy: undefined,
+      sort: undefined,
+      direction: undefined,
+      date_from: "",
+      date_to: "",
+      page: 1,
+    })
+  }
+
+  const hasActiveFilters =
+    !!filters.search ||
+    !!filters.status ||
+    !!filters.privacy ||
+    !!filters.sort ||
+    !!filters.date_from ||
+    !!filters.date_to
 
   /**
    * Get icon for summary cards based on key
@@ -365,35 +455,136 @@ export default function LiveCoursesPage() {
       )}
 
       {/* ─── Filters & View Toggle ───────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search input */}
-        <div className="w-full sm:max-w-md">
-          <Input
-            placeholder="Search courses..."
-            value={searchValue}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full"
-          />
+      <div className="flex flex-col gap-3">
+        {/* Search + view toggle */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Search input */}
+          <div className="relative w-full sm:max-w-md">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search courses..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full pl-9"
+            />
+          </div>
+
+          {/* View toggle buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+            >
+              <GridIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+            >
+              <ListIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* View toggle buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
+        {/* Filter controls row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status */}
+          <Select
+            value={filters.status ? filters.status : NONE}
+            onValueChange={handleStatusFilter}
           >
-            <GridIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>All statuses</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Privacy */}
+          <Select
+            value={filters.privacy ? filters.privacy : NONE}
+            onValueChange={handlePrivacyFilter}
           >
-            <ListIcon className="h-4 w-4" />
-          </Button>
+            <SelectTrigger className="h-8 w-36 text-xs">
+              <SelectValue placeholder="All privacy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>All privacy</SelectItem>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Sort field + direction */}
+          <div className="flex items-center gap-1">
+            <Select
+              value={filters.sort ? filters.sort : NONE}
+              onValueChange={handleSortColumn}
+            >
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Default order</SelectItem>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={handleToggleDirection}
+              disabled={!filters.sort}
+              aria-label={`Sort direction: ${filters.direction === "desc" ? "descending" : "ascending"}`}
+              title={filters.direction === "desc" ? "Descending" : "Ascending"}
+            >
+              {filters.direction === "desc" ? (
+                <ArrowDownNarrowWideIcon className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowUpNarrowWideIcon className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
+
+          {/* Created date range */}
+          <DatePickerField
+            value={filters.date_from ?? ""}
+            onChange={(v) => setFilters({ date_from: v, page: 1 })}
+            placeholder="Created from"
+            className="h-8 w-36 text-xs"
+          />
+          <DatePickerField
+            value={filters.date_to ?? ""}
+            onChange={(v) => setFilters({ date_to: v, page: 1 })}
+            placeholder="Created to"
+            className="h-8 w-36 text-xs"
+          />
+
+          <div className="ml-auto flex items-center gap-2">
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 text-xs text-muted-foreground"
+                onClick={clearAllFilters}
+              >
+                <FilterXIcon className="h-3.5 w-3.5" />
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -728,35 +919,43 @@ export default function LiveCoursesPage() {
       )}
 
       {/* ─── Pagination ──────────────────────────────────────────────────────── */}
-      {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {meta.from} to {meta.to} of {meta.total} courses
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(meta.current_page - 1)}
-              disabled={meta.current_page === 1 || isLoading}
-            >
-              Previous
-            </Button>
-
-            <span className="text-sm">
-              Page {meta.current_page} of {meta.last_page}
-            </span>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(meta.current_page + 1)}
-              disabled={meta.current_page === meta.last_page || isLoading}
-            >
-              Next
-            </Button>
+      {meta && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <PerPageSelect
+              value={filters.per_page ?? 15}
+              onChange={(n) => setFilters({ per_page: n, page: 1 })}
+            />
+            <p className="text-sm text-muted-foreground">
+              Showing {meta.from} to {meta.to} of {meta.total} courses
+            </p>
           </div>
+
+          {meta.last_page > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(meta.current_page - 1)}
+                disabled={meta.current_page === 1 || isLoading}
+              >
+                Previous
+              </Button>
+
+              <span className="text-sm">
+                Page {meta.current_page} of {meta.last_page}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(meta.current_page + 1)}
+                disabled={meta.current_page === meta.last_page || isLoading}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

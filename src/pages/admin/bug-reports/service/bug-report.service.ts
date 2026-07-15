@@ -43,6 +43,18 @@ function buildQuery(filters: BugReportFilters): string {
   if (filters.search?.trim()) {
     params.set("search", filters.search.trim())
   }
+  if (filters.sort) {
+    params.set("sort", filters.sort)
+  }
+  if (filters.direction) {
+    params.set("direction", filters.direction)
+  }
+  if (filters.date_from) {
+    params.set("date_from", filters.date_from)
+  }
+  if (filters.date_to) {
+    params.set("date_to", filters.date_to)
+  }
   if (filters.page != null) {
     params.set("page", String(filters.page))
   }

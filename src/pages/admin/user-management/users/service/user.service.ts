@@ -29,6 +29,21 @@ function buildQuery(filters: UserListFilters): string {
   if (filters.user_level_tier_id != null) {
     params.set("user_level_tier_id", String(filters.user_level_tier_id))
   }
+  if (filters.role) {
+    params.set("role", String(filters.role))
+  }
+  if (filters.sort) {
+    params.set("sort", filters.sort)
+  }
+  if (filters.direction) {
+    params.set("direction", filters.direction)
+  }
+  if (filters.date_from) {
+    params.set("date_from", filters.date_from)
+  }
+  if (filters.date_to) {
+    params.set("date_to", filters.date_to)
+  }
   if (filters.per_page != null) {
     params.set("per_page", String(filters.per_page))
   }

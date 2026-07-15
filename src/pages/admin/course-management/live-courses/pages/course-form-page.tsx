@@ -411,9 +411,9 @@ export default function CourseFormPage() {
                 <div className="space-y-2">
                   <Label htmlFor="duration" className="text-sm font-semibold">Duration</Label>
                   <DurationPickerField
-                    value={duration}
-                    onChange={setDuration}
-                    mode="hm"
+                    value={duration ? String(Math.round(Number(duration) * 60)) : ""}
+                    onChange={(secs) => setDuration(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                    mode="hms"
                     placeholder="Set duration"
                     className="bg-muted/30 border-muted-foreground/20"
                   />
@@ -562,9 +562,9 @@ export default function CourseFormPage() {
                       <div className="space-y-2">
                         <Label htmlFor={`session_duration_minutes_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Duration</Label>
                         <DurationPickerField
-                          value={row.session_duration_minutes}
-                          onChange={(v) => updateAvailRow(index, "session_duration_minutes", v)}
-                          mode="hm"
+                          value={row.session_duration_minutes ? String(Math.round(Number(row.session_duration_minutes) * 60)) : ""}
+                          onChange={(secs) => updateAvailRow(index, "session_duration_minutes", secs ? String(Math.round(Number(secs) / 60)) : "")}
+                          mode="hms"
                           placeholder="Set session duration"
                           className="bg-muted/30"
                         />

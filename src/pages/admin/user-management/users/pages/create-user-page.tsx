@@ -34,6 +34,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select"
 import { isApiError } from "@/lib/api"
 import { createUser } from "../service/user.service"
 import type { CreateUserPayload } from "../types/user.types"
+import { ManagerSlots } from "../components/manager-slots"
 import { useDepartmentOptions } from "../hook/use-department-options"
 import { useUserLevelTierOptions } from "../hook/use-user-level-tier-options"
 
@@ -72,7 +73,7 @@ export function CreateUserPage() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [role, setRole] = useState<"user" | "admin">("user")
   const [departmentId, setDepartmentId] = useState("")
-  const [reportTo, setReportTo] = useState("")
+  const [managerIds, setManagerIds] = useState<number[]>([])
   const [selectedLevelId, setSelectedLevelId] = useState("")
   const [userLevelTierId, setUserLevelTierId] = useState("")
 
@@ -122,7 +123,7 @@ export function CreateUserPage() {
       password_confirmation: passwordConfirmation,
       role,
       department_id: departmentId ? Number(departmentId) : null,
-      report_to: reportTo ? Number(reportTo) : null,
+      manager_ids: managerIds,
       user_level_tier_id: userLevelTierId ? Number(userLevelTierId) : null,
     }
 
@@ -364,27 +365,13 @@ export function CreateUserPage() {
                     </p>
                   </div>
 
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="user-report-to">Reports To</Label>
-                    <SearchableSelect
-                      id="user-report-to"
-                      value={reportTo || NONE_VALUE}
-                      onValueChange={(value) =>
-                        setReportTo(value === NONE_VALUE ? "" : value)
-                      }
-                      disabled={submitting || isLoadingOptions}
-                      placeholder={isLoadingOptions ? "Loading..." : "Select manager"}
-                      searchPlaceholder="Search users…"
-                      triggerClassName="h-9 w-full"
-                      emptyText="No users found"
-                      pinnedOptions={[{ value: NONE_VALUE, label: "No manager" }]}
-                      options={allUsers.map((user) => ({
-                        value: String(user.id),
-                        label: `${user.name} (${user.email})`,
-                        keywords: user.email,
-                      }))}
-                    />
-                  </div>
+                  <ManagerSlots
+                    value={managerIds}
+                    onChange={setManagerIds}
+                    options={allUsers}
+                    disabled={submitting}
+                    isLoading={isLoadingOptions}
+                  />
 
                   <div className="grid gap-1.5">
                     <Label htmlFor="user-level">Level</Label>

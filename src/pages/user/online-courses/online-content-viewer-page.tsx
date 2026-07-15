@@ -17,6 +17,7 @@ import {
   BookOpenIcon,
   DownloadIcon,
   PaperclipIcon,
+  ClockIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -324,6 +325,22 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside className="space-y-4">
+
+        {/* Expected time card — target = video duration × 2 */}
+        {isVideo && data.duration_seconds > 0 && (
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.06] p-5">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+              <ClockIcon className="size-4 text-indigo-400" />Expected Time
+            </h2>
+            <p className="text-sm leading-relaxed text-white/55">
+              You are expected to complete this video within{" "}
+              <span className="font-semibold text-white">
+                {Math.max(1, Math.round((data.duration_seconds * 2) / 60))} minutes
+              </span>
+              .
+            </p>
+          </div>
+        )}
 
         {/* Progress card */}
         <div className="rounded-2xl border border-white/8 bg-card p-5">

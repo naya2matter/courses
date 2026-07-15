@@ -69,6 +69,8 @@ export interface UserListResource {
   department?: UserDepartment | null
   tier?: UserTier | null
   report_to?: UserManager | null
+  /** 1–2 managers this user reports to. Prefer this over the legacy `report_to`. */
+  managers?: UserManager[]
   created_at?: string
 }
 
@@ -86,6 +88,8 @@ export interface UserResource {
   department?: (UserDepartment & { slug?: string }) | null
   tier?: UserTier | null
   manager?: UserManager | null
+  /** 1–2 managers this user reports to. Prefer this over the legacy `manager`. */
+  managers?: UserManager[]
   created_at?: string
   updated_at?: string
 }
@@ -128,6 +132,12 @@ export interface UserListFilters {
   search?: string
   department_id?: number | null
   user_level_tier_id?: number | null
+  role?: Role | ""
+  /** Allow-listed sort column: name | email | created_at */
+  sort?: string
+  direction?: "asc" | "desc"
+  date_from?: string
+  date_to?: string
   per_page?: number
   page?: number
 }
@@ -144,7 +154,10 @@ export interface CreateUserPayload {
   password: string
   password_confirmation: string
   department_id?: number | null
+  /** Legacy single-manager field. Prefer `manager_ids`. */
   report_to?: number | null
+  /** 1–2 manager user ids (max 2, no dupes, cannot include the user itself). */
+  manager_ids?: number[]
   role?: Role
   user_level_tier_id?: number | null
 }
@@ -161,7 +174,12 @@ export interface UpdateUserPayload {
   password?: string | null
   password_confirmation?: string | null
   department_id?: number | null
+  /** Legacy single-manager field. Prefer `manager_ids`. */
   report_to?: number | null
+  /**
+   * 1–2 manager user ids. Omit to leave managers unchanged; send [] to clear.
+   */
+  manager_ids?: number[]
   role?: Role
   user_level_tier_id?: number | null
 }

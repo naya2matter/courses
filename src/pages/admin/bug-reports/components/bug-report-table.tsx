@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { SortableHead, nextSort } from "@/components/ui/table-controls"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -170,15 +171,37 @@ export function BugReportTable({
     if (currentPage < lastPage) onFilterChange({ page: currentPage + 1 })
   }
 
+  // ── Sorting ───────────────────────────────────────────────────────────────
+  function handleSort(column: string) {
+    onFilterChange({ ...nextSort(filters, column), page: 1 })
+  }
+
   // ── Filters helpers ───────────────────────────────────────────────────────
-  const hasActiveFilters = Boolean(filters.search || filters.priority || filters.status)
+  const hasActiveFilters = Boolean(
+    filters.search ||
+      filters.priority ||
+      filters.status ||
+      filters.assigned_to != null ||
+      filters.date_from ||
+      filters.date_to,
+  )
 
   const resultCount = meta
     ? { from: meta.from ?? 0, to: meta.to ?? 0, total: meta.total ?? 0 }
     : null
 
   function clearAll() {
-    onFilterChange({ search: undefined, priority: undefined, status: undefined, page: 1 })
+    onFilterChange({
+      search: undefined,
+      priority: undefined,
+      status: undefined,
+      assigned_to: undefined,
+      date_from: undefined,
+      date_to: undefined,
+      sort: undefined,
+      direction: undefined,
+      page: 1,
+    })
     setAssignedFilter("all")
   }
 
@@ -201,12 +224,30 @@ export function BugReportTable({
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[220px]">Title</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Status</TableHead>
+              <SortableHead
+                label="Priority"
+                column="priority"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+              />
+              <SortableHead
+                label="Status"
+                column="status"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+              />
               <TableHead>Reported By</TableHead>
               <TableHead>Assigned To</TableHead>
               <TableHead className="hidden xl:table-cell">Page URL</TableHead>
-              <TableHead>Created</TableHead>
+              <SortableHead
+                label="Created"
+                column="created_at"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+              />
               <TableHead className="hidden lg:table-cell">Resolved</TableHead>
               <TableHead className="w-10" />
             </TableRow>

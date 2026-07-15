@@ -7,12 +7,11 @@ import { toast } from "sonner"
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  GridIcon,
   LayersIcon,
-  ListIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PerPageSelect } from "@/components/ui/table-controls"
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog"
 import { isApiError } from "@/lib/api"
 import { deleteOnlineCourse } from "../service/online-course.service"
@@ -120,44 +119,28 @@ export function OnlineCourseGrid({
     : null
 
   function clearAll() {
-    onFilterChange({ search: undefined, status: undefined, page: 1 })
+    onFilterChange({
+      search: undefined,
+      status: undefined,
+      date_from: undefined,
+      date_to: undefined,
+      page: 1,
+    })
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
-      {/* Filters + view toggle row */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <OnlineCourseFiltersToolbar
-          filters={filters}
-          resultCount={resultCount}
-          onFilterChange={onFilterChange}
-          onClearAll={clearAll}
-        />
-
-        {/* View toggle */}
-        <div className="flex items-center gap-1.5 self-end sm:self-auto">
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setViewMode("grid")}
-            aria-label="Grid view"
-          >
-            <GridIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-          >
-            <ListIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      {/* Filters + view toggle */}
+      <OnlineCourseFiltersToolbar
+        filters={filters}
+        resultCount={resultCount}
+        onFilterChange={onFilterChange}
+        onClearAll={clearAll}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
 
       {/* Loading */}
       {isLoading && (
@@ -173,7 +156,7 @@ export function OnlineCourseGrid({
           <div>
             <p className="font-semibold text-muted-foreground">No courses found</p>
             <p className="text-sm text-muted-foreground/60 mt-0.5">
-              {filters.search || filters.status
+              {filters.search || filters.status || filters.date_from || filters.date_to
                 ? "Try clearing your filters"
                 : "No online courses have been created yet"}
             </p>
@@ -212,31 +195,40 @@ export function OnlineCourseGrid({
       )}
 
       {/* Pagination */}
-      {!isLoading && meta && meta.last_page > 1 && (
+      {!isLoading && meta && (
         <div className="flex items-center justify-between border-t border-white/8 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={prevPage}
-            disabled={currentPage <= 1 || isLoading}
-          >
-            <ChevronLeftIcon className="h-4 w-4 mr-1" />
-            Previous
-          </Button>
+          <PerPageSelect
+            value={filters.per_page ?? 15}
+            onChange={(n) => onFilterChange({ per_page: n, page: 1 })}
+          />
 
-          <span className="text-sm text-muted-foreground tabular-nums">
-            Page {currentPage} of {lastPage}
-          </span>
+          {meta.last_page > 1 && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={prevPage}
+                disabled={currentPage <= 1 || isLoading}
+              >
+                <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextPage}
-            disabled={currentPage >= lastPage || isLoading}
-          >
-            Next
-            <ChevronRightIcon className="h-4 w-4 ml-1" />
-          </Button>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                Page {currentPage} of {lastPage}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={nextPage}
+                disabled={currentPage >= lastPage || isLoading}
+              >
+                Next
+                <ChevronRightIcon className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

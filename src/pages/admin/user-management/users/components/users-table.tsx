@@ -39,6 +39,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import { DatePickerField } from "@/components/ui/date-picker"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { SortableHead, PerPageSelect, nextSort } from "@/components/ui/table-controls"
 import {
   Sheet,
   SheetContent,
@@ -249,9 +258,28 @@ export function UsersTable({
     })
   }
 
+  function handleRoleFilter(value: string) {
+    onFilterChange({
+      role: value === NONE ? "" : (value as UserListResource["role"]),
+      page: 1,
+    })
+  }
+
+  function handleSort(column: string) {
+    onFilterChange({ ...nextSort(filters, column), page: 1 })
+  }
+
   function clearAllFilters() {
     setSearchDraft("")
-    onFilterChange({ search: "", department_id: null, user_level_tier_id: null, page: 1 })
+    onFilterChange({
+      search: "",
+      department_id: null,
+      user_level_tier_id: null,
+      role: "",
+      date_from: "",
+      date_to: "",
+      page: 1,
+    })
   }
 
   async function handleConfirmDelete() {
@@ -273,7 +301,10 @@ export function UsersTable({
   const hasActiveFilters =
     !!filters.search ||
     filters.department_id != null ||
-    filters.user_level_tier_id != null
+    filters.user_level_tier_id != null ||
+    !!filters.role ||
+    !!filters.date_from ||
+    !!filters.date_to
 
   const currentPage = meta?.current_page ?? 1
   const lastPage = meta?.last_page ?? 1
@@ -338,17 +369,46 @@ export function UsersTable({
             options={allTierOptions.map((t) => ({ value: String(t.id), label: t.label }))}
           />
 
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 text-xs text-muted-foreground"
-              onClick={clearAllFilters}
-            >
-              <FilterXIcon className="h-3.5 w-3.5" />
-              Clear filters
-            </Button>
-          )}
+          <Select
+            value={filters.role ? String(filters.role) : NONE}
+            onValueChange={handleRoleFilter}
+          >
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue placeholder="All roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>All roles</SelectItem>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <DatePickerField
+            value={filters.date_from ?? ""}
+            onChange={(v) => onFilterChange({ date_from: v, page: 1 })}
+            placeholder="Joined from"
+            className="h-8 w-36 text-xs"
+          />
+          <DatePickerField
+            value={filters.date_to ?? ""}
+            onChange={(v) => onFilterChange({ date_to: v, page: 1 })}
+            placeholder="Joined to"
+            className="h-8 w-36 text-xs"
+          />
+
+          <div className="ml-auto flex items-center gap-2">
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 text-xs text-muted-foreground"
+                onClick={clearAllFilters}
+              >
+                <FilterXIcon className="h-3.5 w-3.5" />
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -357,11 +417,24 @@ export function UsersTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-70">User</TableHead>
+              <SortableHead
+                label="User"
+                column="name"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+                className="w-70"
+              />
               <TableHead>Role</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Tier / Level</TableHead>
-              <TableHead>Joined</TableHead>
+              <SortableHead
+                label="Joined"
+                column="created_at"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+              />
               <TableHead className="w-36 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -492,31 +565,39 @@ export function UsersTable({
       </div>
 
       {/* ── Pagination ─────────────────────────────────────────────────────── */}
-      {meta && lastPage > 1 && (
+      {meta && (
         <div className="flex items-center justify-between gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 1 || isLoading}
-            onClick={() => goToPage(currentPage - 1)}
-            className="gap-1.5"
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-            Previous
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Page {currentPage} of {lastPage}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= lastPage || isLoading}
-            onClick={() => goToPage(currentPage + 1)}
-            className="gap-1.5"
-          >
-            Next
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
+          <PerPageSelect
+            value={filters.per_page ?? 15}
+            onChange={(n) => onFilterChange({ per_page: n, page: 1 })}
+          />
+          {lastPage > 1 && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1 || isLoading}
+                onClick={() => goToPage(currentPage - 1)}
+                className="gap-1.5"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                Previous
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage} of {lastPage}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= lastPage || isLoading}
+                onClick={() => goToPage(currentPage + 1)}
+                className="gap-1.5"
+              >
+                Next
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -622,12 +703,25 @@ export function UsersTable({
                 />
                 <DetailRow
                   icon={<UserCogIcon className="h-4 w-4" />}
-                  label="Manager"
-                  value={
-                    sheetUser.manager
-                      ? `${sheetUser.manager.name} (#${sheetUser.manager.id})`
-                      : "—"
-                  }
+                  label="Managers"
+                  value={(() => {
+                    const managers =
+                      sheetUser.managers && sheetUser.managers.length > 0
+                        ? sheetUser.managers
+                        : sheetUser.manager
+                          ? [sheetUser.manager]
+                          : []
+                    if (managers.length === 0) return "—"
+                    return (
+                      <div className="flex flex-wrap gap-1.5">
+                        {managers.map((m) => (
+                          <Badge key={m.id} variant="secondary" className="font-normal">
+                            {m.name} (#{m.id})
+                          </Badge>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 />
                 <DetailRow
                   icon={<LayersIcon className="h-4 w-4" />}

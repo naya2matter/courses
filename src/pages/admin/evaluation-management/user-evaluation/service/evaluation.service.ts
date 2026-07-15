@@ -18,7 +18,13 @@ import type {
   AssignedCourse,
   UserAssignedCoursesResponse,
   CourseType,
+  PaginationMeta,
 } from "../types/evaluation.types"
+
+export interface EvaluationsPage {
+  evaluations: Evaluation[]
+  meta: PaginationMeta | null
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,10 +39,12 @@ function buildQuery(params: Record<string, string | number | undefined>): string
   return s ? `?${s}` : ""
 }
 
-function unwrapList(res: EvaluationListResponse | Evaluation[]): Evaluation[] {
-  if (Array.isArray(res)) return res
-  if (res && "data" in res && Array.isArray(res.data)) return res.data
-  return []
+function unwrapList(res: EvaluationListResponse | Evaluation[]): EvaluationsPage {
+  if (Array.isArray(res)) return { evaluations: res, meta: null }
+  if (res && "data" in res && Array.isArray(res.data)) {
+    return { evaluations: res.data, meta: res.meta ?? null }
+  }
+  return { evaluations: [], meta: null }
 }
 
 function unwrapDetail(res: EvaluationDetailResponse | EvaluationDetail): EvaluationDetail {
@@ -62,14 +70,19 @@ function unwrapUsers(
  */
 export async function getEvaluations(
   filters?: Partial<EvaluationFilters>,
-): Promise<Evaluation[]> {
+): Promise<EvaluationsPage> {
   const query = buildQuery({
+    search: filters?.search || undefined,
     course_type: filters?.course_type || undefined,
     department_id: filters?.department_id || undefined,
     user_id: filters?.user_id || undefined,
     performance_level: filters?.performance_level || undefined,
+    sort: filters?.sort || undefined,
+    direction: filters?.direction || undefined,
     start_date: filters?.start_date || undefined,
     end_date: filters?.end_date || undefined,
+    per_page: filters?.per_page || undefined,
+    page: filters?.page || undefined,
   })
   const res = await apiClient.get<EvaluationListResponse | Evaluation[]>(
     `/admin/evaluations/getAll${query}`,

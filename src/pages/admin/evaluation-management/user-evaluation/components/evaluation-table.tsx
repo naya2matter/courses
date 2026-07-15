@@ -17,12 +17,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SortableHead } from "@/components/ui/table-controls"
 import { PerformanceLevelBadge } from "./performance-level-badge"
 import type { Evaluation } from "../types/evaluation.types"
 
 interface Props {
   evaluations: Evaluation[]
   isLoading: boolean
+  sort?: string
+  direction?: "asc" | "desc"
+  onSort?: (column: string) => void
   onView: (ev: Evaluation) => void
   onRescore: (ev: Evaluation) => void
   onDelete: (ev: Evaluation) => void
@@ -37,7 +41,18 @@ function formatDate(d?: string | null): string {
   }
 }
 
-export function EvaluationTable({ evaluations, isLoading, onView, onRescore, onDelete }: Props) {
+export function EvaluationTable({
+  evaluations,
+  isLoading,
+  sort,
+  direction,
+  onSort,
+  onView,
+  onRescore,
+  onDelete,
+}: Props) {
+  // Fallback no-op keeps SortableHead happy if the parent omits onSort.
+  const handleSort = onSort ?? (() => {})
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -66,9 +81,31 @@ export function EvaluationTable({ evaluations, isLoading, onView, onRescore, onD
             <TableHead className="text-white/60">Department</TableHead>
             <TableHead className="text-white/60">Type</TableHead>
             <TableHead className="text-white/60">Course</TableHead>
-            <TableHead className="text-white/60 text-right">Score</TableHead>
-            <TableHead className="text-white/60">Performance</TableHead>
-            <TableHead className="text-white/60">Created</TableHead>
+            <SortableHead
+              label="Score"
+              column="total_score"
+              sort={sort}
+              direction={direction}
+              onSort={handleSort}
+              align="right"
+              className="text-white/60"
+            />
+            <SortableHead
+              label="Performance"
+              column="performance_level"
+              sort={sort}
+              direction={direction}
+              onSort={handleSort}
+              className="text-white/60"
+            />
+            <SortableHead
+              label="Created"
+              column="created_at"
+              sort={sort}
+              direction={direction}
+              onSort={handleSort}
+              className="text-white/60"
+            />
             <TableHead className="text-white/60">Updated</TableHead>
             <TableHead className="text-white/60 text-right">Actions</TableHead>
           </TableRow>

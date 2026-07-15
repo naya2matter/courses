@@ -1729,9 +1729,9 @@ export default function OnlineCourseFormPage() {
                   Estimated Duration
                 </Label>
                 <DurationPickerField
-                  value={estimatedDuration}
-                  onChange={setEstimatedDuration}
-                  mode="hm"
+                  value={estimatedDuration ? String(Math.round(Number(estimatedDuration) * 60)) : ""}
+                  onChange={(secs) => setEstimatedDuration(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                  mode="hms"
                   placeholder="Set estimated duration"
                 />
               </div>

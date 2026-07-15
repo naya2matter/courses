@@ -1011,9 +1011,9 @@ export function EditQuizPage() {
 
             <Field label="Time limit" hint="Leave blank for no limit">
               <DurationPickerField
-                value={timeLimitMinutes}
-                onChange={setTimeLimitMinutes}
-                mode="hm"
+                value={timeLimitMinutes ? String(Math.round(Number(timeLimitMinutes) * 60)) : ""}
+                onChange={(secs) => setTimeLimitMinutes(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                mode="hms"
                 placeholder="Set time limit"
                 disabled={isSubmitting}
                 className="h-10"

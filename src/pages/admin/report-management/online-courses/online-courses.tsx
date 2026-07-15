@@ -6,6 +6,7 @@ import {
   AwardIcon,
   Building2Icon,
   DownloadIcon,
+  FileSpreadsheetIcon,
   ListChecksIcon,
   Loader2Icon,
   RefreshCwIcon,
@@ -37,7 +38,8 @@ import { UserCourseProgressTable } from "./components/user-course-progress-table
 import { DeptEvalPanel } from "./components/dept-eval-panel"
 import {
   exportUserCourseDaily, exportDeptCourseDaily, exportSessionFact,
-  exportUserPerformance, exportUserCourseProgress, exportDeptEvalPerformance,
+  exportUserPerformance, exportUserCourseProgress, exportUserCourseProgressExcel,
+  exportDeptEvalPerformance,
 } from "./service/online-report.service"
 
 type TabKey = "ucd" | "dcd" | "sf" | "up" | "ucp" | "de"
@@ -73,6 +75,8 @@ function FilterBar({
   onRefresh,
   onExport,
   onClear,
+  onExportExcel,
+  isExportingExcel,
 }: {
   children: React.ReactNode
   activeCount: number
@@ -81,6 +85,9 @@ function FilterBar({
   onRefresh: () => void
   onExport: () => void
   onClear: () => void
+  /** Optional secondary export (e.g. styled .xlsx). Renders an extra button. */
+  onExportExcel?: () => void
+  isExportingExcel?: boolean
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/8 bg-card/40 px-3 py-2.5">
@@ -121,6 +128,19 @@ function FilterBar({
             : <DownloadIcon className="size-3" />}
           Export CSV
         </Button>
+        {onExportExcel && (
+          <Button
+            variant="outline" size="sm"
+            onClick={onExportExcel}
+            disabled={isExportingExcel}
+            className="h-7 gap-1.5 border-emerald-500/20 bg-emerald-500/10 px-2.5 text-xs text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+          >
+            {isExportingExcel
+              ? <Loader2Icon className="size-3 animate-spin" />
+              : <FileSpreadsheetIcon className="size-3" />}
+            Export Excel
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -177,6 +197,19 @@ export default function ReportOnlineCoursesPage() {
   } = useOnlineReport()
 
   const [exporting, setExporting] = useState<TabKey | null>(null)
+  const [exportingExcel, setExportingExcel] = useState(false)
+
+  async function handleExportExcel() {
+    setExportingExcel(true)
+    try {
+      await exportUserCourseProgressExcel(ucpFilters)
+      toast.success("Excel downloaded.")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed.")
+    } finally {
+      setExportingExcel(false)
+    }
+  }
 
   async function handleExport(key: TabKey) {
     setExporting(key)
@@ -348,6 +381,8 @@ export default function ReportOnlineCoursesPage() {
             onRefresh={refetchUcp}
             onExport={() => handleExport("ucp")}
             onClear={() => setUcpFilters(DEFAULT_UCP)}
+            onExportExcel={handleExportExcel}
+            isExportingExcel={exportingExcel}
           >
             <DateRange
               from={ucpFilters.date_from ?? ""} to={ucpFilters.date_to ?? ""}

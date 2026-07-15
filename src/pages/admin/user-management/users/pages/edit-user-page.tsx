@@ -41,6 +41,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select"
 import { isApiError } from "@/lib/api"
 import { getUserById, updateUser } from "../service/user.service"
 import type { UpdateUserPayload } from "../types/user.types"
+import { ManagerSlots } from "../components/manager-slots"
 import { useDepartmentOptions } from "../hook/use-department-options"
 import { useUserLevelTierOptions } from "../hook/use-user-level-tier-options"
 
@@ -76,7 +77,7 @@ export function EditUserPage() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [role, setRole] = useState<"admin" | "user">("user")
   const [departmentId, setDepartmentId] = useState("")
-  const [reportTo, setReportTo] = useState("")
+  const [managerIds, setManagerIds] = useState<number[]>([])
   const [selectedLevelId, setSelectedLevelId] = useState("")
   const [userLevelTierId, setUserLevelTierId] = useState("")
 
@@ -120,7 +121,14 @@ export function EditUserPage() {
         setEmail(user.email ?? "")
         setRole((user.role as "admin" | "user") ?? "user")
         setDepartmentId(user.department?.id ? String(user.department.id) : "")
-        setReportTo(user.manager?.id ? String(user.manager.id) : "")
+        // Prefer the new managers[] array; fall back to the legacy single manager.
+        const managerList =
+          user.managers && user.managers.length > 0
+            ? user.managers.map((m) => m.id)
+            : user.manager?.id
+              ? [user.manager.id]
+              : []
+        setManagerIds(managerList.slice(0, 2))
         if (user.tier) {
           setUserLevelTierId(String(user.tier.id))
           setSelectedLevelId(user.tier.level?.id ? String(user.tier.level.id) : "")
@@ -180,7 +188,7 @@ export function EditUserPage() {
       email: email.trim(),
       role,
       department_id: departmentId ? Number(departmentId) : null,
-      report_to: reportTo ? Number(reportTo) : null,
+      manager_ids: managerIds,
       user_level_tier_id: userLevelTierId ? Number(userLevelTierId) : null,
     }
 
@@ -434,27 +442,14 @@ export function EditUserPage() {
                     />
                   </div>
 
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="user-report-to">Reports To</Label>
-                    <SearchableSelect
-                      id="user-report-to"
-                      value={reportTo || NONE_VALUE}
-                      onValueChange={(value) =>
-                        setReportTo(value === NONE_VALUE ? "" : value)
-                      }
-                      disabled={submitting || isLoadingUser || isLoadingOptions}
-                      placeholder={isLoadingOptions ? "Loading..." : "Select manager"}
-                      searchPlaceholder="Search users…"
-                      triggerClassName="h-9 w-full"
-                      emptyText="No users found"
-                      pinnedOptions={[{ value: NONE_VALUE, label: "No manager" }]}
-                      options={allUsers.map((user) => ({
-                        value: String(user.id),
-                        label: `${user.name} (${user.email})`,
-                        keywords: user.email,
-                      }))}
-                    />
-                  </div>
+                  <ManagerSlots
+                    value={managerIds}
+                    onChange={setManagerIds}
+                    options={allUsers}
+                    excludeUserId={userId}
+                    disabled={submitting || isLoadingUser}
+                    isLoading={isLoadingOptions}
+                  />
 
                   <div className="grid gap-1.5">
                     <Label htmlFor="user-level">Level</Label>

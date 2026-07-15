@@ -71,6 +71,12 @@ export interface CourseListFilters {
   search?: string
   level_id?: number
   status?: string
+  privacy?: string
+  /** Allow-listed sort column: name | created_at | id */
+  sort?: string
+  direction?: "asc" | "desc"
+  date_from?: string
+  date_to?: string
 }
 
 /**

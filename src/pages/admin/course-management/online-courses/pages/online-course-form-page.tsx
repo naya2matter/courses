@@ -969,15 +969,12 @@ function ModuleEditor({
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Estimated Duration (minutes, optional)
-                </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="e.g. 60"
+                <Label className="text-xs">Estimated Duration (optional)</Label>
+                <DurationPickerField
                   value={mod.estimated_duration}
-                  onChange={(e) => onChange({ estimated_duration: e.target.value })}
+                  onChange={(mins) => onChange({ estimated_duration: mins })}
+                  mode="hm"
+                  placeholder="Set duration"
                 />
               </div>
               <div className="flex flex-wrap gap-5">

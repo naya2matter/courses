@@ -23,7 +23,7 @@ export const DEFAULT_REG_FILTERS: RegistrationFilters = {
   date_from: "", date_to: "", department_id: "", course_id: "", status: "", page: 1, per_page: 15,
 }
 export const DEFAULT_ATT_FILTERS: AttendanceFilters = {
-  date_from: "", date_to: "", department_id: "", course_id: "", page: 1, per_page: 15,
+  date_from: "", date_to: "", department_id: "", course_id: "", search: "", page: 1, per_page: 15,
 }
 export const DEFAULT_COMP_FILTERS: CompletionFilters = {
   date_from: "", date_to: "", department_id: "", course_id: "", page: 1, per_page: 15,

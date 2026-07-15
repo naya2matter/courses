@@ -34,6 +34,7 @@ export interface CourseRegistration {
 
 export interface AttendanceFilters extends CommonFilters {
   course_id?: string | number | "general"
+  search?: string
 }
 
 export interface AttendanceRecord {

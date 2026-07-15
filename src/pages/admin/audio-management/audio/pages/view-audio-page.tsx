@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeftIcon,
@@ -15,6 +15,9 @@ import {
   RefreshCwIcon,
   HashIcon,
   CalendarClockIcon,
+  PauseIcon,
+  PlayIcon,
+  Volume2Icon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -55,6 +58,94 @@ function pctValue(value?: number | string | null): number {
   if (value == null) return 0
   const num = typeof value === "number" ? value : Number(value)
   return Number.isFinite(num) ? Math.max(0, Math.min(100, num)) : 0
+}
+
+// ── Custom audio player ───────────────────────────────────────────────────────
+
+function AudioPlayer({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(1)
+
+  function toggle() {
+    const a = audioRef.current
+    if (!a) return
+    isPlaying ? a.pause() : a.play()
+  }
+
+  function fmtTime(s: number) {
+    if (!Number.isFinite(s)) return "0:00"
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec.toString().padStart(2, "0")}`
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0 text-white hover:bg-white/10"
+        onClick={toggle}
+        aria-label={isPlaying ? "Pause" : "Play"}
+      >
+        {isPlaying
+          ? <PauseIcon className="h-4 w-4" />
+          : <PlayIcon className="h-4 w-4" />}
+      </Button>
+
+      <div className="flex flex-1 items-center gap-2">
+        <span className="min-w-[36px] text-xs tabular-nums text-muted-foreground">
+          {fmtTime(currentTime)}
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={duration || 1}
+          step={0.1}
+          value={currentTime}
+          onChange={(e) => {
+            const t = Number(e.target.value)
+            if (audioRef.current) audioRef.current.currentTime = t
+            setCurrentTime(t)
+          }}
+          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/15 accent-indigo-500 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-400"
+        />
+        <span className="min-w-[36px] text-right text-xs tabular-nums text-muted-foreground">
+          {fmtTime(duration)}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <Volume2Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={(e) => {
+            const v = Number(e.target.value)
+            setVolume(v)
+            if (audioRef.current) audioRef.current.volume = v
+          }}
+          className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-white/15 accent-indigo-500"
+        />
+      </div>
+    </div>
+  )
 }
 
 // Compact stat tile
@@ -326,22 +417,22 @@ export function ViewAudioPage() {
                     </Alert>
                   )}
                   {streamUrl && (
-                    <div className="flex items-center gap-2">
-                      <audio controls src={streamUrl} className="h-10 w-full max-w-md rounded-lg" />
+                    <div className="space-y-2">
+                      <AudioPlayer src={streamUrl} />
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
+                        size="sm"
+                        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:bg-white/5"
                         onClick={() => {
                           setStreamUrl("")
                           setStreamError(null)
                           setStreamReloadCount((v) => v + 1)
                         }}
                         disabled={isLoadingStream}
-                        aria-label="Reload stream"
                       >
-                        <RefreshCwIcon className={`h-4 w-4 ${isLoadingStream ? "animate-spin" : ""}`} />
+                        <RefreshCwIcon className={`h-3.5 w-3.5 ${isLoadingStream ? "animate-spin" : ""}`} />
+                        Reload stream
                       </Button>
                     </div>
                   )}

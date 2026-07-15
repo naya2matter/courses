@@ -1,6 +1,6 @@
 // ─── Admin Live Courses Report Page ──────────────────────────────────────────
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   CheckCircle2Icon,
   ClipboardListIcon,
@@ -8,12 +8,14 @@ import {
   DownloadIcon,
   Loader2Icon,
   RefreshCwIcon,
+  SearchIcon,
   SlidersHorizontalIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DatePickerField } from "@/components/ui/date-picker"
 import {
@@ -165,6 +167,17 @@ export default function ReportLiveCoursesPage() {
   } = useLiveReport()
 
   const [exporting, setExporting] = useState<ExportKey | null>(null)
+  const [attSearch, setAttSearch] = useState("")
+  const attSearchDebRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleAttSearch(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    setAttSearch(v)
+    if (attSearchDebRef.current) clearTimeout(attSearchDebRef.current)
+    attSearchDebRef.current = setTimeout(() => {
+      setAttFilters((prev) => ({ ...prev, search: v.trim(), page: 1 }))
+    }, 400)
+  }
 
   async function handleExport(key: ExportKey) {
     setExporting(key)
@@ -263,8 +276,20 @@ export default function ReportLiveCoursesPage() {
             isExporting={exporting === "attendance"}
             onRefresh={refetchAtt}
             onExport={() => handleExport("attendance")}
-            onClear={() => setAttFilters(DEFAULT_ATT_FILTERS)}
+            onClear={() => { setAttSearch(""); setAttFilters(DEFAULT_ATT_FILTERS) }}
           >
+            <div className="relative flex flex-col gap-0.5">
+              <Label className="text-[10px] text-white/35">Search</Label>
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={attSearch}
+                  onChange={handleAttSearch}
+                  placeholder="User name or email…"
+                  className="h-7 w-44 border-white/10 bg-white/5 pl-7 text-xs text-white placeholder:text-white/30"
+                />
+              </div>
+            </div>
             <DateRange
               from={attFilters.date_from ?? ""} to={attFilters.date_to ?? ""}
               onFrom={(v) => setAttFilters({ ...attFilters, date_from: v, page: 1 })}

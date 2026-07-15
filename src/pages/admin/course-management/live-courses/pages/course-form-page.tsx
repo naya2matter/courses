@@ -475,7 +475,10 @@ export default function CourseFormPage() {
                     </div>
 
                     <div className="space-y-3 mb-5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operating Days</Label>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDaysIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operating Days</Label>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {DAYS_OF_WEEK.map((day) => {
                           const isSelected = row.days_of_week.includes(day)

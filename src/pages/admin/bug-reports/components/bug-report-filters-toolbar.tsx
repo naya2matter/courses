@@ -96,21 +96,22 @@ export function BugReportFiltersToolbar({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative w-full sm:max-w-xs">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search title or description…"
-            className="pl-9"
-            value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitSearch()
-            }}
-          />
-        </div>
+      {/* Row 1: Search */}
+      <div className="relative w-full sm:max-w-sm">
+        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Search title or description…"
+          className="pl-9"
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitSearch()
+          }}
+        />
+      </div>
 
+      {/* Row 2: Filter controls */}
+      <div className="flex flex-wrap items-center gap-2">
         {/* Priority */}
         <Select
           value={filters.priority ?? "all"}
@@ -121,7 +122,7 @@ export function BugReportFiltersToolbar({
             })
           }
         >
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
@@ -143,7 +144,7 @@ export function BugReportFiltersToolbar({
             })
           }
         >
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -160,7 +161,7 @@ export function BugReportFiltersToolbar({
           value={assignedFilter}
           onValueChange={(v) => onAssignedFilterChange(v as AssignedFilter)}
         >
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Assigned" />
           </SelectTrigger>
           <SelectContent>
@@ -181,7 +182,7 @@ export function BugReportFiltersToolbar({
           }
           placeholder="Assigned to"
           searchPlaceholder="Search users…"
-          triggerClassName="h-9 w-44 text-sm"
+          triggerClassName="w-44"
           pinnedOptions={[{ value: ALL_ASSIGNEES, label: "All assignees" }]}
           options={users.map((u) => ({
             value: String(u.id),
@@ -195,13 +196,13 @@ export function BugReportFiltersToolbar({
           value={filters.date_from ?? ""}
           onChange={(v) => onFilterChange({ date_from: v || undefined, page: 1 })}
           placeholder="Created from"
-          className="h-9 w-36 text-sm"
+          className="w-40"
         />
         <DatePickerField
           value={filters.date_to ?? ""}
           onChange={(v) => onFilterChange({ date_to: v || undefined, page: 1 })}
           placeholder="Created to"
-          className="h-9 w-36 text-sm"
+          className="w-40"
         />
 
         <div className="ml-auto flex items-center gap-2">
@@ -209,7 +210,6 @@ export function BugReportFiltersToolbar({
             value={filters.per_page ?? DEFAULT_PER_PAGE}
             onChange={(n) => onFilterChange({ per_page: n, page: 1 })}
           />
-          {/* Clear */}
           {hasActive && (
             <Button
               variant="ghost"

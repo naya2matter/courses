@@ -7,6 +7,7 @@ import {
   Loader2Icon,
   AlertCircleIcon,
   XIcon,
+  ExternalLinkIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,16 @@ export function BugReportsPageContent() {
           <Button onClick={() => setCreateOpen(true)} className="w-fit">
             <PlusIcon className="mr-2 h-4 w-4" />
             New Bug Report
+          </Button>
+          <Button variant="outline" asChild className="w-fit">
+            <a
+              href="https://tasks.rdexperts.tech/support-ticket"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLinkIcon className="mr-2 h-4 w-4" />
+              Create Support Ticket
+            </a>
           </Button>
           <Button
             variant="outline"

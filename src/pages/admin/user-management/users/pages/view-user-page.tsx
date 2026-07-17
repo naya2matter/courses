@@ -175,8 +175,25 @@ export function ViewUserPage() {
               />
               <DetailRow
                 icon={<UserCogIcon className="h-4 w-4" />}
-                label="Manager"
-                value={user.manager ? `${user.manager.name} (#${user.manager.id})` : "—"}
+                label="Managers"
+                value={(() => {
+                  const managers =
+                    user.managers && user.managers.length > 0
+                      ? user.managers
+                      : user.manager
+                        ? [user.manager]
+                        : []
+                  if (managers.length === 0) return "—"
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {managers.map((m) => (
+                        <Badge key={m.id} variant="secondary" className="font-normal">
+                          {m.name} (#{m.id})
+                        </Badge>
+                      ))}
+                    </div>
+                  )
+                })()}
               />
               <DetailRow icon={<LayersIcon className="h-4 w-4" />} label="Tier / Level" value={tierText} />
               <DetailRow

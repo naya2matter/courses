@@ -47,7 +47,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { DateTimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, DurationPickerField } from "@/components/ui/date-picker"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -969,15 +969,12 @@ function ModuleEditor({
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Estimated Duration (minutes, optional)
-                </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="e.g. 60"
+                <Label className="text-xs">Estimated Duration (optional)</Label>
+                <DurationPickerField
                   value={mod.estimated_duration}
-                  onChange={(e) => onChange({ estimated_duration: e.target.value })}
+                  onChange={(mins) => onChange({ estimated_duration: mins })}
+                  mode="hm"
+                  placeholder="Set duration"
                 />
               </div>
               <div className="flex flex-wrap gap-5">
@@ -1726,15 +1723,13 @@ export default function OnlineCourseFormPage() {
               {/* Estimated Duration */}
               <div className="space-y-1.5">
                 <Label htmlFor="course-duration">
-                  Estimated Duration (minutes)
+                  Estimated Duration
                 </Label>
-                <Input
-                  id="course-duration"
-                  type="number"
-                  min={1}
-                  placeholder="e.g. 120"
-                  value={estimatedDuration}
-                  onChange={(e) => setEstimatedDuration(e.target.value)}
+                <DurationPickerField
+                  value={estimatedDuration ? String(Math.round(Number(estimatedDuration) * 60)) : ""}
+                  onChange={(secs) => setEstimatedDuration(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                  mode="hms"
+                  placeholder="Set estimated duration"
                 />
               </div>
 

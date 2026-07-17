@@ -2,7 +2,7 @@
 // Orchestrator: filters toolbar, desktop table, mobile cards, pagination,
 // and all dialogs/drawers for the blog management feature.
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -21,12 +21,10 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  SortableHead,
+  PerPageSelect,
+  nextSort,
+} from "@/components/ui/table-controls"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,13 +41,12 @@ import {
 } from "@/components/ui/tooltip"
 import { useNavigate } from "react-router-dom"
 import type { BlogPost, BlogPostFilters, PaginationMeta } from "../types/blog.types"
-import { BlogFiltersToolbar, type MediaFilter } from "./blog-filters-toolbar"
+import { BlogFiltersToolbar } from "./blog-filters-toolbar"
 import { BlogStatusBadge } from "./shared/blog-status-badge"
 import { BlogMediaBadge } from "./shared/blog-media-badge"
 import { BlogPostMobileCard } from "./blog-post-mobile-card"
 import { DeleteBlogPostDialog } from "./delete-blog-post-dialog"
 import { ToggleStatusDialog } from "./toggle-status-dialog"
-import type { BlogPostStatus } from "../types/blog.types"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,39 +106,28 @@ export function BlogPostTable({
   onMutated,
 }: BlogPostTableProps) {
   const navigate = useNavigate()
-  // ── Client-side filters ────────────────────────────────────────────────────
-  const [searchValue, setSearchValue] = useState("")
-  const [statusFilter, setStatusFilter] = useState<BlogPostStatus | "all">("all")
-  const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all")
 
-  const displayedItems = useMemo(() => {
-    return items.filter((p) => {
-      // Search: title / excerpt / (description not in list shape)
-      if (searchValue) {
-        const q = searchValue.toLowerCase()
-        const match =
-          p.title.toLowerCase().includes(q) ||
-          (p.excerpt ?? "").toLowerCase().includes(q) ||
-          p.slug.toLowerCase().includes(q)
-        if (!match) return false
-      }
-      // Status filter
-      if (statusFilter !== "all" && p.status !== statusFilter) return false
-      // Media filter
-      if (mediaFilter === "text" && p.has_media) return false
-      if (mediaFilter === "video" && p.media_type !== "Video") return false
-      if (mediaFilter === "audio" && p.media_type !== "Audio") return false
-      return true
-    })
-  }, [items, searchValue, statusFilter, mediaFilter])
-
+  // ── Server-driven filters ──────────────────────────────────────────────────
+  // Search, status, sort, date range, and pagination are all applied by the
+  // backend via onFilterChange — nothing is filtered client-side here.
   const hasActiveFilters =
-    !!searchValue || statusFilter !== "all" || mediaFilter !== "all"
+    !!filters.search ||
+    !!filters.status ||
+    !!filters.date_from ||
+    !!filters.date_to
 
   function clearAll() {
-    setSearchValue("")
-    setStatusFilter("all")
-    setMediaFilter("all")
+    onFilterChange({
+      search: "",
+      status: "",
+      date_from: "",
+      date_to: "",
+      page: 1,
+    })
+  }
+
+  function handleSort(column: string) {
+    onFilterChange({ ...nextSort(filters, column), page: 1 })
   }
 
   // ── Pagination ─────────────────────────────────────────────────────────────
@@ -185,15 +171,7 @@ export function BlogPostTable({
   return (
     <div className="space-y-4">
       {/* Filters toolbar */}
-      <BlogFiltersToolbar
-        searchValue={searchValue}
-        statusFilter={statusFilter}
-        mediaFilter={mediaFilter}
-        onSearchChange={setSearchValue}
-        onStatusChange={setStatusFilter}
-        onMediaChange={setMediaFilter}
-        onClearAll={clearAll}
-      />
+      <BlogFiltersToolbar filters={filters} onFilterChange={onFilterChange} />
 
       {/* ── Desktop table ─────────────────────────────────────────────────── */}
       <div className="hidden md:block rounded-lg border bg-card overflow-x-auto">
@@ -201,14 +179,36 @@ export function BlogPostTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-14">Thumb</TableHead>
-              <TableHead className="min-w-50">Title</TableHead>
+              <SortableHead
+                label="Title"
+                column="title"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+                className="min-w-50"
+              />
               <TableHead className="hidden lg:table-cell min-w-35">Slug</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Media</TableHead>
               <TableHead className="hidden xl:table-cell">Author</TableHead>
               <TableHead className="w-16 text-right">Likes</TableHead>
               <TableHead className="w-20 text-right">Comments</TableHead>
-              <TableHead className="hidden lg:table-cell">Published</TableHead>
+              <SortableHead
+                label="Published"
+                column="published_at"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+                className="hidden lg:table-cell"
+              />
+              <SortableHead
+                label="Created"
+                column="created_at"
+                sort={filters.sort}
+                direction={filters.direction}
+                onSort={handleSort}
+                className="hidden xl:table-cell"
+              />
               <TableHead className="hidden xl:table-cell">Updated</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -248,12 +248,15 @@ export function BlogPostTable({
                   <TableCell className="hidden xl:table-cell">
                     <Skeleton className="h-4 w-20" />
                   </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))
-            ) : displayedItems.length === 0 ? (
+            ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11}>
+                <TableCell colSpan={12}>
                   <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
                     <FileTextIcon className="h-8 w-8 opacity-30" />
                     <p className="text-sm">
@@ -270,7 +273,7 @@ export function BlogPostTable({
                 </TableCell>
               </TableRow>
             ) : (
-              displayedItems.map((post) => (
+              items.map((post) => (
                 <TableRow
                   key={post.id}
                   className="cursor-pointer"
@@ -342,6 +345,11 @@ export function BlogPostTable({
                     {formatDate(post.published_at)}
                   </TableCell>
 
+                  {/* Created At */}
+                  <TableCell className="hidden xl:table-cell text-sm text-muted-foreground whitespace-nowrap">
+                    {formatDate(post.created_at)}
+                  </TableCell>
+
                   {/* Updated At */}
                   <TableCell className="hidden xl:table-cell text-sm text-muted-foreground whitespace-nowrap">
                     {formatDate(post.updated_at)}
@@ -391,7 +399,7 @@ export function BlogPostTable({
           Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full rounded-xl" />
           ))
-        ) : displayedItems.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
             <FileTextIcon className="h-8 w-8 opacity-30" />
             <p className="text-sm">
@@ -406,7 +414,7 @@ export function BlogPostTable({
             )}
           </div>
         ) : (
-          displayedItems.map((post) => (
+          items.map((post) => (
             <BlogPostMobileCard
               key={post.id}
               post={post}
@@ -429,19 +437,10 @@ export function BlogPostTable({
               : null}
         </span>
         <div className="flex items-center gap-2">
-          <Select
-            value={String(filters.per_page ?? 15)}
-            onValueChange={(v) => onFilterChange({ per_page: Number(v), page: 1 })}
-          >
-            <SelectTrigger className="h-8 w-24 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 15, 25, 50].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PerPageSelect
+            value={filters.per_page ?? 15}
+            onChange={(n) => onFilterChange({ per_page: n, page: 1 })}
+          />
           {meta && lastPage > 1 && (
             <>
               <span className="text-xs tabular-nums">{currentPage} / {lastPage}</span>

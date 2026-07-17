@@ -88,6 +88,7 @@ export function RatingSection({
 
   async function handleSubmit() {
     if (rating === 0) return
+    if (!feedback.trim()) return
     setIsSubmitting(true)
     setError(null)
     try {
@@ -179,7 +180,7 @@ export function RatingSection({
 
       <div className="space-y-1.5">
         <p className="text-xs text-white/50 font-medium">
-          Feedback <span className="text-white/25">(optional, max 1000 characters)</span>
+          Feedback <span className="text-red-400 ml-0.5">*</span> <span className="text-white/25">(max 1000 characters)</span>
         </p>
         <Textarea
           value={feedback}
@@ -205,7 +206,7 @@ export function RatingSection({
 
       <Button
         onClick={handleSubmit}
-        disabled={rating === 0 || isSubmitting}
+        disabled={rating === 0 || !feedback.trim() || isSubmitting}
         className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl h-10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (

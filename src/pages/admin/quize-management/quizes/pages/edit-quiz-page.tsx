@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DateTimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, DurationPickerField } from "@/components/ui/date-picker"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
@@ -1009,13 +1009,12 @@ export function EditQuizPage() {
               />
             </Field>
 
-            <Field label="Time limit (minutes)" hint="Leave blank for no limit">
-              <Input
-                type="number"
-                min={1}
-                value={timeLimitMinutes}
-                onChange={(e) => setTimeLimitMinutes(e.target.value)}
-                placeholder="e.g. 30"
+            <Field label="Time limit" hint="Leave blank for no limit">
+              <DurationPickerField
+                value={timeLimitMinutes ? String(Math.round(Number(timeLimitMinutes) * 60)) : ""}
+                onChange={(secs) => setTimeLimitMinutes(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                mode="hms"
+                placeholder="Set time limit"
                 disabled={isSubmitting}
                 className="h-10"
               />

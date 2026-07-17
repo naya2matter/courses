@@ -291,9 +291,10 @@ export default function ViewCoursePage() {
 
                 {/* Description */}
                 {currentCourse.description && (
-                  <p className="text-lg sm:text-xl text-white/80 leading-relaxed font-light mt-1 max-w-3xl">
-                    {currentCourse.description}
-                  </p>
+                  <div
+                    className="text-lg sm:text-xl text-white/80 leading-relaxed font-light mt-1 max-w-3xl prose prose-invert [&_p]:mb-2 [&_strong]:text-white [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: currentCourse.description }}
+                  />
                 )}
               </div>
             </div>

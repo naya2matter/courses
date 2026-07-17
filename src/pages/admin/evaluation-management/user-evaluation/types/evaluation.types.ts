@@ -74,10 +74,22 @@ export interface EvaluationDetail extends Evaluation {
   history?: EvaluationHistory[]
 }
 
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+export interface PaginationMeta {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+  from: number | null
+  to: number | null
+}
+
 // ── API response envelopes ────────────────────────────────────────────────────
 
 export interface EvaluationListResponse {
   data: Evaluation[]
+  meta?: PaginationMeta
 }
 
 export interface EvaluationDetailResponse {
@@ -126,6 +138,11 @@ export interface EvaluationFilters {
   performance_level: string
   start_date: string
   end_date: string
+  /** Allow-listed sort column: created_at | total_score | performance_level */
+  sort?: string
+  direction?: "asc" | "desc"
+  per_page?: number
+  page?: number
 }
 
 // ── Users with courses (for evaluation form) ──────────────────────────────────

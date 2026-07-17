@@ -71,7 +71,9 @@ export const useBlogStore = create<BlogState>((set, get) => ({
   },
 
   setFilters: (filters: Partial<BlogPostFilters>) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    // Merge incoming filters; reset to page 1 for any filter change unless the
+    // caller explicitly provides a page (e.g. pagination prev/next).
+    const next = { ...get().filters, ...filters, page: filters.page ?? 1 }
     set({ filters: next })
     get().fetchBlogPosts(next)
   },

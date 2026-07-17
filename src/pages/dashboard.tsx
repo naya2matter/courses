@@ -257,7 +257,7 @@ export function Dashboard(props: DashboardProps) {
                       : "text-muted-foreground hover:text-white/80"
                   }`}
                 >
-                  {tab === "offline" ? "Offline Courses" : "Online Courses"}
+                  {tab === "offline" ? "Live Courses" : "Online Courses"}
                 </button>
               ))}
             </div>

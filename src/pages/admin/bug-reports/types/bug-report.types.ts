@@ -114,6 +114,11 @@ export interface BugReportFilters {
   priority?: BugReportPriority
   assigned_to?: number
   search?: string
+  /** Allow-listed sort column: created_at | status | priority */
+  sort?: string
+  direction?: "asc" | "desc"
+  date_from?: string
+  date_to?: string
   page?: number
   per_page?: number
 }

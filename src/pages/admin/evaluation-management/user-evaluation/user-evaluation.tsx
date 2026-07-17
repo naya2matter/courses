@@ -2,8 +2,9 @@
 // Admin CRUD page for user evaluations.
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { RefreshCwIcon, PlusIcon, LayersIcon, AlertCircleIcon, BellIcon } from "lucide-react"
+import { RefreshCwIcon, PlusIcon, LayersIcon, AlertCircleIcon, BellIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { nextSort, PerPageSelect } from "@/components/ui/table-controls"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getEvaluationConfigs } from "@/pages/admin/evaluation-management/configurations/service/evaluation-config.service"
 import type { EvaluationConfig } from "@/pages/admin/evaluation-management/configurations/types/evaluation-config.types"
@@ -21,6 +22,8 @@ import { EvaluationNotificationComposeDialog } from "@/pages/admin/evaluation-ma
 import type { Evaluation, EvaluationFilters } from "./types/evaluation.types"
 import type { EvaluationType } from "./components/score-rows-editor"
 
+const DEFAULT_PER_PAGE = 20
+
 const DEFAULT_FILTERS: EvaluationFilters = {
   search: "",
   course_type: "",
@@ -29,43 +32,48 @@ const DEFAULT_FILTERS: EvaluationFilters = {
   performance_level: "",
   start_date: "",
   end_date: "",
+  sort: undefined,
+  direction: undefined,
+  per_page: DEFAULT_PER_PAGE,
+  page: 1,
 }
 
 export default function UserEvaluationPage() {
   const [filters, setFilters] = useState<EvaluationFilters>(DEFAULT_FILTERS)
 
-  // Server-side filters (exclude search — handled client-side)
+  // All filters (including search, sort, pagination) are sent to the server.
   const serverFilters = useMemo(
     () => ({
+      search: filters.search,
       course_type: filters.course_type,
       department_id: filters.department_id,
       user_id: filters.user_id,
       performance_level: filters.performance_level,
+      sort: filters.sort,
+      direction: filters.direction,
       start_date: filters.start_date,
       end_date: filters.end_date,
+      per_page: filters.per_page,
+      page: filters.page,
     }),
     [
+      filters.search,
       filters.course_type,
       filters.department_id,
       filters.user_id,
       filters.performance_level,
+      filters.sort,
+      filters.direction,
       filters.start_date,
       filters.end_date,
+      filters.per_page,
+      filters.page,
     ],
   )
 
-  const { evaluations, isLoading, error, refetch, clearError } = useEvaluations(serverFilters)
-
-  // Client-side search filter
-  const displayedEvaluations = useMemo(() => {
-    const term = filters.search.toLowerCase().trim()
-    if (!term) return evaluations
-    return evaluations.filter((ev) => {
-      const userName = (ev.user?.name ?? "").toLowerCase()
-      const courseName = (ev.course?.name ?? "").toLowerCase()
-      return userName.includes(term) || courseName.includes(term)
-    })
-  }, [evaluations, filters.search])
+  const { evaluations, meta, isLoading, error, refetch, clearError } = useEvaluations(serverFilters)
+  const currentPage = meta?.current_page ?? filters.page ?? 1
+  const lastPage = meta?.last_page ?? 1
 
   // Load evaluation types from configs — used in score rows editor
   const [availableTypes, setAvailableTypes] = useState<EvaluationType[]>([])
@@ -97,8 +105,14 @@ export default function UserEvaluationPage() {
   const [detailTarget, setDetailTarget] = useState<Evaluation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Evaluation | null>(null)
 
+  // Merge the patch into current filters and reset to page 1 unless the caller
+  // passes an explicit page (mirrors the Users store's setFilters behavior).
   function handleFilterChange(patch: Partial<EvaluationFilters>) {
-    setFilters((prev) => ({ ...prev, ...patch }))
+    setFilters((prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }))
+  }
+
+  function handleSort(column: string) {
+    handleFilterChange({ ...nextSort(filters, column) })
   }
 
   function handleClearFilters() {
@@ -165,7 +179,7 @@ export default function UserEvaluationPage() {
       )}
 
       {/* Summary cards */}
-      <EvaluationSummaryCards evaluations={displayedEvaluations} isLoading={isLoading} />
+      <EvaluationSummaryCards evaluations={evaluations} isLoading={isLoading} />
 
       {/* Filters */}
       <EvaluationFiltersToolbar
@@ -176,12 +190,60 @@ export default function UserEvaluationPage() {
 
       {/* Table */}
       <EvaluationTable
-        evaluations={displayedEvaluations}
+        evaluations={evaluations}
         isLoading={isLoading}
+        sort={filters.sort}
+        direction={filters.direction}
+        onSort={handleSort}
         onView={(ev) => setDetailTarget(ev)}
         onRescore={(ev) => setRescoreTarget(ev)}
         onDelete={(ev) => setDeleteTarget(ev)}
       />
+
+      {/* Pagination */}
+      {!isLoading && meta && (
+        <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <PerPageSelect
+              value={filters.per_page ?? DEFAULT_PER_PAGE}
+              onChange={(n) => handleFilterChange({ per_page: n })}
+              options={[10, 20, 50, 100]}
+            />
+            <span>
+              {meta.from != null && meta.to != null
+                ? `Showing ${meta.from}–${meta.to} of ${meta.total}`
+                : `${meta.total} evaluations`}
+            </span>
+          </div>
+          {lastPage > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 border-white/10 bg-white/5"
+                onClick={() => handleFilterChange({ page: currentPage - 1 })}
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                <span className="sr-only">Previous page</span>
+              </Button>
+              <span className="tabular-nums">
+                Page {currentPage} of {lastPage}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 border-white/10 bg-white/5"
+                onClick={() => handleFilterChange({ page: currentPage + 1 })}
+                disabled={currentPage >= lastPage}
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+                <span className="sr-only">Next page</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dialogs + Drawers */}
       <EvaluationFormDialog

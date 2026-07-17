@@ -17,6 +17,9 @@ import type {
 
 const DEFAULT_PER_PAGE = 15
 
+// Monotonically increasing counter — only the latest fetch writes to the store.
+let fetchSeq = 0
+
 export const useQuizAssignmentStore = create<QuizAssignmentState>((set, get) => ({
   items: [],
   meta: null,
@@ -25,13 +28,16 @@ export const useQuizAssignmentStore = create<QuizAssignmentState>((set, get) => 
   filters: { page: 1, per_page: DEFAULT_PER_PAGE },
 
   fetchAssignments: async (filters?: QuizAssignmentListFilters) => {
+    const mySeq = ++fetchSeq
     const mergedFilters = filters ? { ...get().filters, ...filters } : get().filters
     set({ isLoading: true, error: null, filters: mergedFilters })
 
     try {
       const response = await getAllQuizAssignments(mergedFilters)
+      if (mySeq !== fetchSeq) return // stale response — a newer fetch has started
       set({ items: response.data, meta: response.meta, isLoading: false })
     } catch (err) {
+      if (mySeq !== fetchSeq) return
       if (err instanceof DOMException && err.name === "AbortError") {
         set({ isLoading: false })
         return

@@ -4,10 +4,11 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { isApiError } from "@/lib/api"
 import { getEvaluations } from "../service/evaluation.service"
-import type { Evaluation, EvaluationFilters } from "../types/evaluation.types"
+import type { Evaluation, EvaluationFilters, PaginationMeta } from "../types/evaluation.types"
 
 export interface UseEvaluationsResult {
   evaluations: Evaluation[]
+  meta: PaginationMeta | null
   isLoading: boolean
   error: string | null
   refetch: () => Promise<void>
@@ -16,6 +17,7 @@ export interface UseEvaluationsResult {
 
 export function useEvaluations(filters: Partial<EvaluationFilters>): UseEvaluationsResult {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -28,8 +30,9 @@ export function useEvaluations(filters: Partial<EvaluationFilters>): UseEvaluati
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getEvaluations(filters)
-      setEvaluations(data)
+      const page = await getEvaluations(filters)
+      setEvaluations(page.evaluations)
+      setMeta(page.meta)
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setIsLoading(false)
@@ -47,12 +50,17 @@ export function useEvaluations(filters: Partial<EvaluationFilters>): UseEvaluati
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    filters.search,
     filters.course_type,
     filters.department_id,
     filters.user_id,
     filters.performance_level,
+    filters.sort,
+    filters.direction,
     filters.start_date,
     filters.end_date,
+    filters.per_page,
+    filters.page,
   ])
 
   useEffect(() => {
@@ -64,6 +72,7 @@ export function useEvaluations(filters: Partial<EvaluationFilters>): UseEvaluati
 
   return {
     evaluations,
+    meta,
     isLoading,
     error,
     refetch: fetchEvaluations,

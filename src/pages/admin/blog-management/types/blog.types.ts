@@ -176,13 +176,27 @@ export interface BlogPostPayload {
 // ── Filter params ─────────────────────────────────────────────────────────────
 
 /**
- * Query parameters accepted by GET /admin/blog-posts.
+ * Query parameters accepted by GET /admin/blog-posts/getAll.
  * All fields are optional — omitting them returns page 1 with the
  * default server per_page value.
+ *
+ * These params are authoritative on the server: search, status, sort,
+ * date range, and pagination are all applied backend-side.
  */
 export interface BlogPostFilters {
   page?: number
   per_page?: number
+  /** Free-text search — matches title, excerpt, and author name. */
+  search?: string
+  /** Field filter. Empty string clears the filter. */
+  status?: BlogPostStatus | ""
+  /** Allow-listed sort column: title | created_at | published_at */
+  sort?: string
+  direction?: "asc" | "desc"
+  /** ISO date (YYYY-MM-DD) lower bound on created_at. */
+  date_from?: string
+  /** ISO date (YYYY-MM-DD) upper bound on created_at. */
+  date_to?: string
 }
 
 // ── Error types ───────────────────────────────────────────────────────────────

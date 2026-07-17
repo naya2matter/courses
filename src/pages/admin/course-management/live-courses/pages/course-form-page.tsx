@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DateTimePickerField, TimePickerField } from "@/components/ui/date-picker"
+import { DateTimePickerField, TimePickerField, DurationPickerField } from "@/components/ui/date-picker"
 import {
   Select,
   SelectContent,
@@ -409,15 +409,13 @@ export default function CourseFormPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="duration" className="text-sm font-semibold">Duration (Minutes)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min={0}
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="e.g. 120"
-                    className="bg-muted/30 border-muted-foreground/20 focus:border-primary/50"
+                  <Label htmlFor="duration" className="text-sm font-semibold">Duration</Label>
+                  <DurationPickerField
+                    value={duration ? String(Math.round(Number(duration) * 60)) : ""}
+                    onChange={(secs) => setDuration(secs ? String(Math.round(Number(secs) / 60)) : "")}
+                    mode="hms"
+                    placeholder="Set duration"
+                    className="bg-muted/30 border-muted-foreground/20"
                   />
                 </div>
               </div>
@@ -477,7 +475,10 @@ export default function CourseFormPage() {
                     </div>
 
                     <div className="space-y-3 mb-5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operating Days</Label>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDaysIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operating Days</Label>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {DAYS_OF_WEEK.map((day) => {
                           const isSelected = row.days_of_week.includes(day)
@@ -562,17 +563,15 @@ export default function CourseFormPage() {
                         <p className="text-[10px] text-muted-foreground/70">Number of weeks this course runs</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`session_duration_minutes_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Duration (min)</Label>
-                        <Input
-                          id={`session_duration_minutes_${index}`}
-                          type="number"
-                          min={1}
-                          value={row.session_duration_minutes}
-                          onChange={(e) => updateAvailRow(index, "session_duration_minutes", e.target.value)}
-                          placeholder="e.g. 90"
+                        <Label htmlFor={`session_duration_minutes_${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Duration</Label>
+                        <DurationPickerField
+                          value={row.session_duration_minutes ? String(Math.round(Number(row.session_duration_minutes) * 60)) : ""}
+                          onChange={(secs) => updateAvailRow(index, "session_duration_minutes", secs ? String(Math.round(Number(secs) / 60)) : "")}
+                          mode="hms"
+                          placeholder="Set session duration"
                           className="bg-muted/30"
                         />
-                        <p className="text-[10px] text-muted-foreground/70">Duration of each session in minutes</p>
+                        <p className="text-[10px] text-muted-foreground/70">Duration of each session</p>
                       </div>
                     </div>
 
@@ -581,7 +580,7 @@ export default function CourseFormPage() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Time Shifts</p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Shift 1</Label>
+                          <Label className="text-xs text-muted-foreground">Shift 1 <span className="text-muted-foreground/50">(optional)</span></Label>
                           <TimePickerField
                             value={row.session_time_shift_1}
                             onChange={(v) => updateAvailRow(index, "session_time_shift_1", v)}

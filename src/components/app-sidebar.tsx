@@ -40,7 +40,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <img
                 src={faviconUrl}
                 alt="The Development Zone"
-                className="size-12 group-data-[collapsible=icon]:size-8 transition-all rounded-md object-contain"
+                className="size-16 group-data-[collapsible=icon]:size-8 transition-all rounded-md object-contain"
               />
             </div>
             <div className="text-center group-data-[collapsible=icon]:hidden">

@@ -38,6 +38,11 @@ function buildQuery(filters: CourseListFilters): string {
   if (filters.per_page != null) params.set("per_page", String(filters.per_page))
   if (filters.level_id != null) params.set("level_id", String(filters.level_id))
   if (filters.status?.trim()) params.set("status", filters.status.trim())
+  if (filters.privacy?.trim()) params.set("privacy", filters.privacy.trim())
+  if (filters.sort) params.set("sort", filters.sort)
+  if (filters.direction) params.set("direction", filters.direction)
+  if (filters.date_from) params.set("date_from", filters.date_from)
+  if (filters.date_to) params.set("date_to", filters.date_to)
 
   const qs = params.toString()
   return qs ? `?${qs}` : ""

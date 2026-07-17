@@ -118,10 +118,7 @@ export async function submitCourseRating(
   rating: number,
   feedback?: string | null,
 ): Promise<CourseRegistration> {
-  const body: Record<string, unknown> = { rating }
-  if (feedback != null && feedback.trim() !== "") {
-    body.feedback = feedback.trim()
-  }
+  const body: Record<string, unknown> = { rating, feedback: (feedback ?? "").trim() }
   const res = await apiClient.post<CourseRegistrationResource | CourseRegistration>(
     `/user/courses/submitRating/${courseId}`,
     body,

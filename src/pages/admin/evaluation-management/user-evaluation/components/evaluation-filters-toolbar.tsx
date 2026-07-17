@@ -1,7 +1,7 @@
 // ─── EvaluationFiltersToolbar ─────────────────────────────────────────────────
 // Flat filter bar matching the "all pages" style.
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { CalendarIcon, FilterXIcon, SearchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
+import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
+import type { Department } from "@/pages/admin/user-management/departments/types/department.types"
 import type { EvaluationFilters } from "../types/evaluation.types"
+
+const ALL = "__all__"
+
+/** Recursively flatten the department tree into a single list. */
+function flattenDepartmentTree(nodes: Department[]): Department[] {
+  const items: Department[] = []
+  for (const node of nodes) {
+    items.push(node)
+    if (node.children?.length) items.push(...flattenDepartmentTree(node.children))
+  }
+  return items
+}
 
 interface Props {
   filters: EvaluationFilters
@@ -116,13 +131,22 @@ function DatePickerButton({
 
 export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [departments, setDepartments] = useState<Department[]>([])
 
+  // Load departments once for the department filter.
+  useEffect(() => {
+    getAllDepartments()
+      .then(({ departments }) => setDepartments(flattenDepartmentTree(departments)))
+      .catch(() => setDepartments([]))
+  }, [])
+
+  // Debounced search (400ms) — matches on user name / email server-side.
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       onFilterChange({ search: value })
-    }, 300)
+    }, 400)
   }
 
   const hasFilters =
@@ -141,7 +165,7 @@ export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: P
         <div className="relative w-full sm:max-w-sm">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by user or course name…"
+            placeholder="Search by user name or email…"
             defaultValue={filters.search}
             onChange={handleSearchChange}
             className="pl-9"
@@ -151,6 +175,19 @@ export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: P
 
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Department (by name) */}
+        <SearchableSelect
+          value={filters.department_id || ALL}
+          onValueChange={(v) =>
+            onFilterChange({ department_id: v === ALL ? "" : v })
+          }
+          placeholder="All departments"
+          searchPlaceholder="Search departments…"
+          triggerClassName="h-8 w-44 text-xs"
+          pinnedOptions={[{ value: ALL, label: "All departments" }]}
+          options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+        />
+
         {/* Course type */}
         <Select
           value={filters.course_type || "__all__"}
@@ -207,7 +244,7 @@ export function EvaluationFiltersToolbar({ filters, onFilterChange, onClear }: P
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 text-xs text-muted-foreground"
+            className="ml-auto h-8 gap-1.5 text-xs text-muted-foreground"
             onClick={onClear}
           >
             <FilterXIcon className="h-3.5 w-3.5" />

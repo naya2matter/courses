@@ -316,9 +316,10 @@ export function CourseDetailsSheet({
             <div className="space-y-2">
               <h2 className="text-xl font-semibold leading-snug">{course.name}</h2>
               {course.description && (
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {course.description}
-                </p>
+                <div
+                  className="text-sm leading-relaxed text-muted-foreground prose prose-sm prose-invert max-w-none [&_p]:mb-2 [&_strong]:text-white/80 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"
+                  dangerouslySetInnerHTML={{ __html: course.description }}
+                />
               )}
             </div>
 

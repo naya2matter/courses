@@ -100,6 +100,9 @@ export interface UserPerformanceRow {
   in_progress_courses: number
   completion_rate: number           // 0-100, computed by Resource
   avg_progress: number              // 0-100
+  progress: number                  // 0-100, average course progress
+  learning_time: string             // human string, e.g. "3h 20m"
+  learning_time_seconds: number     // raw seconds
   sessions_count: number
   total_active_seconds: number      // seconds
   avg_attention: number             // 0-100

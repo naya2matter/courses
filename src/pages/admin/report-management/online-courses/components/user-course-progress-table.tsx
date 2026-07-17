@@ -67,7 +67,7 @@ export function UserCourseProgressTable({ data, meta, isLoading, error, page, on
               style={{ width: `${Math.min(r.progress_percentage, 100)}%` }}
             />
           </div>
-          <span className="text-[11px] tabular-nums text-white/50">{Number(r.progress_percentage).toFixed(0)}%</span>
+          <span className="text-xs tabular-nums text-white/50">{Number(r.progress_percentage).toFixed(0)}%</span>
         </div>
       </TableCell>
       <TableCell className="text-right text-white/60 tabular-nums text-sm">
@@ -75,10 +75,10 @@ export function UserCourseProgressTable({ data, meta, isLoading, error, page, on
       </TableCell>
       <TableCell>
         <div className="flex flex-col gap-1">
-          <Badge variant="outline" className={`w-fit rounded-full text-[10px] capitalize ${STATUS_CFG[r.status] ?? ""}`}>
+          <Badge variant="outline" className={`w-fit rounded-full text-xs capitalize ${STATUS_CFG[r.status] ?? ""}`}>
             {r.status.replace("_", " ")}
           </Badge>
-          <Badge variant="outline" className={`w-fit rounded-full text-[10px] capitalize ${SCORE_CFG[r.score_band] ?? ""}`}>
+          <Badge variant="outline" className={`w-fit rounded-full text-xs capitalize ${SCORE_CFG[r.score_band] ?? ""}`}>
             {r.score_band}
           </Badge>
         </div>
@@ -88,7 +88,7 @@ export function UserCourseProgressTable({ data, meta, isLoading, error, page, on
           <div>
             <div className="text-white/70">{fmtDate(r.course_deadline)}</div>
             {r.days_overdue > 0 && (
-              <div className="text-[11px] font-semibold text-rose-400">{r.days_overdue}d overdue</div>
+              <div className="text-xs font-semibold text-rose-400">{r.days_overdue}d overdue</div>
             )}
           </div>
         ) : (
@@ -96,7 +96,7 @@ export function UserCourseProgressTable({ data, meta, isLoading, error, page, on
         )}
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className={`rounded-full text-[10px] capitalize ${COMPLIANCE_CFG[r.compliance_status] ?? ""}`}>
+        <Badge variant="outline" className={`rounded-full text-xs capitalize ${COMPLIANCE_CFG[r.compliance_status] ?? ""}`}>
           {r.compliance_status.replace("_", " ")}
         </Badge>
       </TableCell>

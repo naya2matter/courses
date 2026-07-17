@@ -101,7 +101,13 @@ export const useOnlineCourseStore = create<OnlineCourseState>((set, get) => ({
   // ── Set filters + re-fetch ──────────────────────────────────────────────────
 
   setFilters: (filters: Partial<OnlineCourseFilters>) => {
-    const next: OnlineCourseFilters = { ...get().filters, ...filters, page: 1 }
+    // Reset to page 1 only when the caller does not provide an explicit page,
+    // so pagination controls that pass a page still work.
+    const next: OnlineCourseFilters = {
+      ...get().filters,
+      ...filters,
+      page: filters.page ?? 1,
+    }
     set({ filters: next })
     get().fetchCourses(next)
   },

@@ -48,7 +48,7 @@ export function ReportTableShell({
   return (
     <div className="space-y-3">
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <Table>
+        <Table className="text-sm">
           <TableHeader>
             <TableRow className="border-white/8 hover:bg-transparent">
               {cols.map((c) => (

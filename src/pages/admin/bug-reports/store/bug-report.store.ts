@@ -71,7 +71,9 @@ export const useBugReportStore = create<BugReportState>((set, get) => ({
   },
 
   setFilters: (filters: BugReportFilters) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    // Reset to page 1 whenever a filter changes, unless the caller passed an
+    // explicit page (e.g. pagination controls).
+    const next = { ...get().filters, ...filters, page: filters.page ?? 1 }
     set({ filters: next })
     get().fetchBugReports(next)
   },

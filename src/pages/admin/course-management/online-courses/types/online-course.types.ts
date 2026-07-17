@@ -137,6 +137,11 @@ export interface OnlineCourseFilters {
   per_page?: number
   search?: string
   status?: OnlineCourseStatus
+  /** Allow-listed sort column: name | created_at */
+  sort?: string
+  direction?: "asc" | "desc"
+  date_from?: string
+  date_to?: string
 }
 
 // ── Reorder modules ───────────────────────────────────────────────────────────

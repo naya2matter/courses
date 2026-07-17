@@ -455,3 +455,208 @@ export function TimePickerField({
     </ScrollTimePicker>
   )
 }
+
+// ─── DurationPickerField ──────────────────────────────────────────────────────
+// Wheel picker for a DURATION quantity — NOT a time-of-day, so no AM/PM.
+//   mode="hm"  → [Hours] : [Minutes],          value = total MINUTES  (e.g. "120" → 2h 0m)
+//   mode="ms"  → [Minutes] : [Seconds],         value = total SECONDS  (e.g. "90"  → 1m 30s)
+//   mode="hms" → [Hours] : [Minutes] : [Secs],  value = total SECONDS  (e.g. "3661" → 1h 1m 1s)
+// Drop-in for <Input type="number" value={string} onChange={setString} />.
+
+const DUR_HOURS  = Array.from({ length: 100 }, (_, i) => i)  // 0–99  (hours)
+const DUR_MIN60  = Array.from({ length: 60 }, (_, i) => i)   // 0–59  (minutes / seconds)
+const DUR_MIN300 = Array.from({ length: 300 }, (_, i) => i)  // 0–299 (ms: minutes → up to ~5h)
+
+const SEP_STYLE: React.CSSProperties = {
+  width: 10,
+  paddingTop: SPACER_H + (ITEM_H - 20) / 2,
+  alignSelf: "flex-start",
+  height: SPACER_H + ITEM_H,
+}
+
+interface ScrollDurationPickerProps {
+  mode: "hm" | "ms" | "hms"
+  value: string
+  onChange: (v: string) => void
+  disabled?: boolean
+  children: React.ReactNode
+}
+
+function ScrollDurationPicker({
+  mode,
+  value,
+  onChange,
+  disabled,
+  children,
+}: ScrollDurationPickerProps) {
+  const [open, setOpen] = useState(false)
+
+  const total = Math.max(0, parseInt(value, 10) || 0)
+
+  // hms: total seconds, decomposed to h/m/s
+  const hmsH = mode === "hms" ? Math.min(Math.floor(total / 3600), 99) : 0
+  const hmsM = mode === "hms" ? Math.floor((total % 3600) / 60) : 0
+  const hmsS = mode === "hms" ? total % 60 : 0
+
+  // hm/ms: two-column decomposition
+  const right = mode !== "hms" ? total % 60 : 0
+  const leftItems = mode === "hm" ? DUR_HOURS : DUR_MIN300
+  const left = mode !== "hms" ? Math.min(Math.floor(total / 60), leftItems[leftItems.length - 1]) : 0
+  const leftLabel = mode === "hm" ? "Hour" : "Min"
+  const rightLabel = mode === "hm" ? "Min" : "Sec"
+
+  function emit2(l: number, r: number) {
+    onChange(String(l * 60 + r))
+  }
+
+  function emitHms(h: number, m: number, s: number) {
+    onChange(String(h * 3600 + m * 60 + s))
+  }
+
+  const popoverWidth = mode === "hms" ? "w-56" : "w-40"
+  const headerCols = mode === "hms" ? "grid-cols-3" : "grid-cols-2"
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild disabled={disabled}>
+        {children}
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className={`${popoverWidth} overflow-hidden border border-white/10 bg-[#0e0d1f]/95 p-0 shadow-2xl backdrop-blur-xl`}
+        onInteractOutside={() => setOpen(false)}
+      >
+        {/* Column headers */}
+        <div className={`grid ${headerCols} border-b border-white/[0.07] bg-white/[0.02] px-1 py-2 text-center`}>
+          {mode === "hms" ? (
+            <>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Hour</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Min</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">Sec</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{leftLabel}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/40">{rightLabel}</span>
+            </>
+          )}
+        </div>
+
+        {/* Drum-roll area */}
+        <div className="relative flex">
+          <div
+            className="pointer-events-none absolute inset-x-2 z-10 rounded-lg bg-indigo-500/[0.08] ring-1 ring-inset ring-indigo-500/20"
+            style={{ top: SPACER_H, height: ITEM_H }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-20"
+            style={{ height: SPACER_H, background: "linear-gradient(to bottom, #0e0d1f 30%, transparent)" }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-20"
+            style={{ height: SPACER_H, background: "linear-gradient(to top, #0e0d1f 30%, transparent)" }}
+            aria-hidden
+          />
+
+          {mode === "hms" ? (
+            <>
+              <ScrollColumn items={DUR_HOURS}  value={hmsH} onChange={(h) => emitHms(h, hmsM, hmsS)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60}  value={hmsM} onChange={(m) => emitHms(hmsH, m, hmsS)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60}  value={hmsS} onChange={(s) => emitHms(hmsH, hmsM, s)} />
+            </>
+          ) : (
+            <>
+              <ScrollColumn items={leftItems} value={left} onChange={(l) => emit2(l, right)} />
+              <div className="flex shrink-0 select-none items-center justify-center text-muted-foreground/25 text-sm" style={SEP_STYLE} aria-hidden>:</div>
+              <ScrollColumn items={DUR_MIN60} value={right} onChange={(r) => emit2(left, r)} />
+            </>
+          )}
+        </div>
+
+        {/* Done button */}
+        <div className="border-t border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="w-full rounded-md bg-indigo-500/15 py-1.5 text-[11px] font-semibold tracking-wide text-indigo-300 ring-1 ring-inset ring-indigo-500/25 transition-colors hover:bg-indigo-500/25 hover:text-indigo-200"
+          >
+            Done
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function formatDuration(value: string, mode: "hm" | "ms" | "hms"): string {
+  const total = Math.max(0, parseInt(value, 10) || 0)
+  if (mode === "hms") {
+    const h = Math.floor(total / 3600)
+    const m = Math.floor((total % 3600) / 60)
+    const s = total % 60
+    const parts: string[] = []
+    if (h) parts.push(`${h}h`)
+    if (m) parts.push(`${m}m`)
+    if (s || parts.length === 0) parts.push(`${s}s`)
+    return parts.join(" ")
+  }
+  const l = Math.floor(total / 60)
+  const r = total % 60
+  if (mode === "hm") {
+    if (l && r) return `${l}h ${r}m`
+    if (l) return `${l}h`
+    return `${r}m`
+  }
+  if (l && r) return `${l}m ${r}s`
+  if (l) return `${l}m`
+  return `${r}s`
+}
+
+interface DurationPickerFieldProps {
+  value: string | number
+  onChange: (v: string) => void
+  mode?: "hm" | "ms" | "hms"
+  placeholder?: string
+  disabled?: boolean
+  className?: string
+}
+
+export function DurationPickerField({
+  value,
+  onChange,
+  mode = "hm",
+  placeholder = "Set duration",
+  disabled,
+  className,
+}: DurationPickerFieldProps) {
+  const strValue = value == null ? "" : String(value)
+  const hasValue = strValue !== "" && (parseInt(strValue, 10) || 0) > 0
+  const label = hasValue ? formatDuration(strValue, mode) : placeholder
+
+  return (
+    <ScrollDurationPicker mode={mode} value={strValue} onChange={onChange} disabled={disabled}>
+      <button
+        type="button"
+        disabled={disabled}
+        className={cn(
+          "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors",
+          "hover:bg-muted/30 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          !hasValue && "text-muted-foreground/60",
+          className,
+        )}
+      >
+        <ClockIcon className="size-3.5 shrink-0 text-indigo-400/70" />
+        <span className={cn("tabular-nums", hasValue ? "text-foreground" : "text-muted-foreground/55")}>
+          {label}
+        </span>
+      </button>
+    </ScrollDurationPicker>
+  )
+}

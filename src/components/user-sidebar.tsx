@@ -86,7 +86,7 @@ export function UserSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
               <img
                 src={faviconUrl}
                 alt="The Development Zone"
-                className="size-12 rounded-md object-contain transition-all group-data-[collapsible=icon]:size-8"
+                className="size-16 rounded-md object-contain transition-all group-data-[collapsible=icon]:size-8"
               />
             </div>
             <div className="text-center group-data-[collapsible=icon]:hidden">

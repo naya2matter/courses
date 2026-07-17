@@ -357,6 +357,43 @@
     animation: float-stat 4s ease-in-out infinite;
   }
 
+  /* ─── Skeleton shimmer sweep (upload loader) ───────────────────────────── */
+  @keyframes shimmer-sweep {
+    100% { transform: translateX(100%); }
+  }
+
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .shimmer-sweep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.07) 45%,
+      rgba(129, 140, 248, 0.14) 55%,
+      transparent 78%
+    );
+    animation: shimmer-sweep 1.9s ease-in-out infinite;
+  }
+
+  /* Soft breathing pulse for skeleton bars */
+  @keyframes skeleton-breathe {
+    0%, 100% { opacity: 0.55; }
+    50%       { opacity: 1; }
+  }
+
+  .skeleton-breathe {
+    animation: skeleton-breathe 2.2s ease-in-out infinite;
+  }
+
   /* ─── Hero image 3-D lift ───────────────────────────────────────────────── */
   @keyframes hero-lift {
     0%, 100% { transform: translateY(-8px) rotate(-1deg); }

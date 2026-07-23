@@ -73,9 +73,9 @@ export function BlogDetailHero({ post, formatDate }: BlogDetailHeroProps) {
               className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white"
               aria-hidden="true"
             >
-              {post.author.name.charAt(0).toUpperCase()}
+              {(post.author?.name ?? "?").charAt(0).toUpperCase()}
             </span>
-            <span className="font-medium text-white/70">{post.author.name}</span>
+            <span className="font-medium text-white/70">{post.author?.name ?? "Unknown author"}</span>
           </span>
           <span className="flex items-center gap-1.5">
             <CalendarIcon className="size-3.5 shrink-0" aria-hidden="true" />

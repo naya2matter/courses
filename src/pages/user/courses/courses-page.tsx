@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { isApiError } from "@/lib/api"
+import { stripHtml } from "@/lib/utils"
 
 import { PageHeader } from "@/components/user/page-header"
 
@@ -121,7 +122,7 @@ function CourseCard({ course, onClick, registration }: { course: Course; onClick
 
           {course.description && (
             <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-white/45">
-              {course.description}
+              {stripHtml(course.description)}
             </p>
           )}
 
@@ -139,7 +140,7 @@ function CourseCard({ course, onClick, registration }: { course: Course; onClick
               <div className="flex items-end justify-between text-[11px] font-medium text-white/55">
                 <span className="flex items-center gap-1.5">
                   <CalendarIcon className="size-3.5 text-white/35" />
-                  Upcoming Batches
+                  Upcoming Dates
                 </span>
                 <span className="font-semibold text-white/75">{fillPercent}% filled</span>
               </div>
@@ -170,7 +171,7 @@ function CourseCard({ course, onClick, registration }: { course: Course; onClick
               )}
               <span className="flex items-center gap-1.5">
                 <CalendarIcon className="size-3.5 text-white/30" />
-                {activeAvs.length} batch{activeAvs.length !== 1 ? "es" : ""}
+                {activeAvs.length} date{activeAvs.length !== 1 ? "s" : ""}
               </span>
             </div>
             <span className={`font-semibold ${hasSpotsAvailable ? "text-emerald-400" : "text-amber-400"}`}>
@@ -375,7 +376,7 @@ export function UserCoursesPage() {
           </div>
           <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3 space-y-0.5">
             <p className="text-[11px] text-white/40 flex items-center gap-1.5">
-              <CalendarIcon className="size-3.5" /> Active Batches
+              <CalendarIcon className="size-3.5" /> Active Dates
             </p>
             <p className="text-xl font-bold text-white">{activeBatches}</p>
           </div>

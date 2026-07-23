@@ -362,10 +362,10 @@ export function UsersTable({
             value={filters.user_level_tier_id != null ? String(filters.user_level_tier_id) : NONE}
             onValueChange={handleTierFilter}
             disabled={loadingTiers}
-            placeholder="All tiers"
-            searchPlaceholder="Search tiers…"
+            placeholder="All levels"
+            searchPlaceholder="Search levels…"
             triggerClassName="h-8 w-48 text-xs"
-            pinnedOptions={[{ value: NONE, label: "All tiers" }]}
+            pinnedOptions={[{ value: NONE, label: "All levels" }]}
             options={allTierOptions.map((t) => ({ value: String(t.id), label: t.label }))}
           />
 

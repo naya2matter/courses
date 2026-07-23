@@ -179,12 +179,12 @@ export function DepartmentSheet({
               value={parentId}
               onValueChange={setParentId}
               disabled={submitting}
-              placeholder="None (root department)"
+              placeholder="None (no parent department)"
               searchPlaceholder="Search departments…"
               triggerClassName="w-full"
               emptyText="No departments found"
-              /* Allow clearing parent — makes this a root department */
-              pinnedOptions={[{ value: "none", label: "None (root department)" }]}
+              /* Allow clearing parent — makes this a top-level department */
+              pinnedOptions={[{ value: "none", label: "None (no parent department)" }]}
               options={parentOptions.map((d) => ({
                 value: String(d.id),
                 label: d.name,

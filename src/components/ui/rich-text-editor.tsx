@@ -93,7 +93,10 @@ export function RichTextEditor({
   minHeight = 160,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const lastHtmlRef = useRef(value)
+  // Sentinel start value so the first sync always writes the initial value into
+  // the DOM (e.g. an existing description loaded on the Edit page). Seeding this
+  // with `value` would make the mount effect no-op and leave the editor blank.
+  const lastHtmlRef = useRef<string | null>(null)
   const [fmt, setFmt] = useState<FmtState>(queryFmt)
   const [isEmpty, setIsEmpty] = useState(() => isEffectivelyEmpty(value))
 

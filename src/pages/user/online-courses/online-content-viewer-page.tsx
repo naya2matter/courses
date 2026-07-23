@@ -9,6 +9,7 @@ import {
   Loader2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   PlayCircleIcon,
   FileTextIcon,
   CheckCircle2Icon,
@@ -28,7 +29,7 @@ import { isApiError } from "@/lib/api"
 import { useDynamicBreadcrumb } from "@/context/breadcrumb"
 
 import { openContent, formatDuration, downloadAttachment } from "./service/user-online-courses.service"
-import type { ContentViewerData } from "./types/user-online-courses.types"
+import type { ContentViewerData, SessionEndData } from "./types/user-online-courses.types"
 import { useLearningSession } from "./hooks/use-learning-session"
 import { VideoPlayer } from "./components/video-player"
 
@@ -71,11 +72,18 @@ function ProgressRing({ pct, done, label }: { pct: number; done: boolean; label:
 
 // ── Attention score helpers ───────────────────────────────────────────────────
 
+// Watched-percentage at which a video counts as complete (mirrors the backend).
+const VIDEO_DONE_PCT = 95
+
+// Persist the last video session result per content item so the "Session results"
+// card stays visible when the learner leaves and returns (e.g. Previous → back).
+const sessionResultKey = (contentId: number) => `pne-session-result-${contentId}`
+
 function attentionMeta(score: number) {
-  if (score >= 90) return { label: "Excellent", barCls: "bg-emerald-500", textCls: "text-emerald-400" }
-  if (score >= 70) return { label: "Good",      barCls: "bg-indigo-500",  textCls: "text-indigo-300"  }
-  if (score >= 50) return { label: "Average",   barCls: "bg-amber-500",   textCls: "text-amber-400"   }
-  return              { label: "Low focus",   barCls: "bg-red-500",     textCls: "text-red-400"     }
+  if (score >= 90) return { label: "Excellent", barCls: "bg-emerald-500", textCls: "text-emerald-400", desc: "You stayed highly focused throughout — very little skipping, pausing, or time away from the video." }
+  if (score >= 70) return { label: "Good",      barCls: "bg-indigo-500",  textCls: "text-indigo-300",  desc: "Solid focus with only a few interruptions. Try to keep distractions to a minimum next time." }
+  if (score >= 50) return { label: "Average",   barCls: "bg-amber-500",   textCls: "text-amber-400",   desc: "Your focus dipped during parts of the video — some skipping or time away from the page." }
+  return              { label: "Low focus",   barCls: "bg-red-500",     textCls: "text-red-400",     desc: "A lot of skipping, pausing, or time away from the video. Rewatch the key parts to get the most out of it." }
 }
 
 // ── Inner viewer (remounted per content item) ─────────────────────────────────
@@ -86,6 +94,17 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pdfCompletion, setPdfCompletion] = useState<{ pct: number; done: boolean } | null>(null)
+  // Last saved session result for this content (Viewer remounts per contentId,
+  // so a lazy initializer reads the right one once on mount).
+  const [persistedResult] = useState<SessionEndData | null>(() => {
+    try {
+      const raw = localStorage.getItem(sessionResultKey(contentId))
+      return raw ? (JSON.parse(raw) as SessionEndData) : null
+    } catch {
+      return null
+    }
+  })
+  const [resultExpanded, setResultExpanded] = useState(false)
   const hasToastedRef = useRef(false)
 
   useEffect(() => {
@@ -138,6 +157,27 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
       toast.success("Document completed!", { description: "You've read all the pages. Well done!" })
     }
   }, [pdfCompletion?.done])
+
+  // Live completion: the moment the learner reaches 95% watched, notify them and
+  // unlock the next item — no need to finish 100% or refresh the page.
+  useEffect(() => {
+    if (isVideo && session.liveContentPct >= VIDEO_DONE_PCT && !hasToastedRef.current) {
+      hasToastedRef.current = true
+      toast.success("Video complete!", {
+        description: "You can now continue to the next item.",
+      })
+    }
+  }, [isVideo, session.liveContentPct])
+
+  // Persist the live session result to storage so the card can be restored on a
+  // later visit. Write-only sync to an external system (no local state update).
+  useEffect(() => {
+    if (session.result) {
+      try {
+        localStorage.setItem(sessionResultKey(contentId), JSON.stringify(session.result))
+      } catch { /* ignore quota / privacy-mode errors */ }
+    }
+  }, [session.result, contentId])
 
   const goTo = useCallback(
     (id: number) => navigate(`/user/online-courses/${courseId}/content/${id}`),
@@ -203,11 +243,16 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     ? Math.round(session.result.course_progress_percentage)
     : savedPct
 
+  // A video is "done" once watched ≥95% live (unlocks immediately, no refresh),
+  // or the backend/session already recorded completion.
   const contentDone = isVideo
-    ? (session.result?.content_completed ?? alreadyCompleted)
+    ? (session.result?.content_completed || alreadyCompleted || contentPct >= VIDEO_DONE_PCT)
     : (pdfCompletion?.done ?? alreadyCompleted)
 
-  const attn = session.result ? attentionMeta(session.result.attention_score) : null
+  // Prefer the live result; fall back to the persisted one so the card survives
+  // navigating away and back to an already-completed video.
+  const shownResult = session.result ?? persistedResult
+  const attn = shownResult ? attentionMeta(shownResult.attention_score) : null
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_296px]">
@@ -291,7 +336,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
                 if (!contentDone) {
                   toast.warning("Finish this content first", {
                     description: isVideo
-                      ? "Watch to at least 95% to unlock the next item."
+                      ? "Finish watching this video to unlock the next item."
                       : "Read through all pages to unlock the next item.",
                   })
                   return
@@ -364,7 +409,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
             ) : (
               <p className="max-w-[180px] text-center text-[11px] leading-relaxed text-white/35">
                 {isVideo
-                  ? "Watch to 95% to mark this video complete."
+                  ? "Finish watching this video to mark it complete."
                   : "Turn through every page to complete this document."}
               </p>
             )}
@@ -419,21 +464,31 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
           </div>
         )}
 
-        {/* Session summary — appears after video session ends */}
-        {isVideo && session.result && attn && (
+        {/* Session summary — shown after a video session ends, and again on return.
+            Click the header to expand a breakdown of the focus score. */}
+        {isVideo && shownResult && attn && (
           <div className="rounded-2xl border border-white/8 bg-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white/80">
+            <button
+              type="button"
+              onClick={() => setResultExpanded((v) => !v)}
+              aria-expanded={resultExpanded}
+              className="flex w-full items-center gap-2 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+            >
               <GaugeIcon className="size-4 text-indigo-400" />Session results
-            </h2>
+              <span className="ml-auto flex items-center gap-1 text-[11px] font-normal text-white/35">
+                {resultExpanded ? "Hide" : "Details"}
+                <ChevronDownIcon className={`size-4 transition-transform ${resultExpanded ? "rotate-180" : ""}`} />
+              </span>
+            </button>
 
-            <div className="flex items-center gap-4">
+            <div className="mt-4 flex items-center gap-4">
               <div className={`flex size-[60px] shrink-0 flex-col items-center justify-center rounded-2xl border-2 ${
-                session.result.attention_score >= 70
+                shownResult.attention_score >= 70
                   ? "border-indigo-500/30 bg-indigo-500/10"
                   : "border-white/10 bg-white/5"
               }`}>
                 <span className={`text-[22px] font-black tabular-nums leading-none ${attn.textCls}`}>
-                  {session.result.attention_score}
+                  {shownResult.attention_score}
                 </span>
                 <span className="text-[8px] uppercase tracking-wider text-white/25">/ 100</span>
               </div>
@@ -442,7 +497,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
                   <TrophyIcon className="size-3.5 text-amber-400" />{attn.label}
                 </p>
                 <p className="text-xs text-white/40">
-                  {session.result.content_completed
+                  {shownResult.content_completed
                     ? "Content marked complete ✓"
                     : "Keep watching to complete"}
                 </p>
@@ -454,7 +509,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${attn.barCls}`}
-                  style={{ width: `${session.result.attention_score}%` }}
+                  style={{ width: `${shownResult.attention_score}%` }}
                 />
               </div>
               <div className="flex justify-between text-[9px] text-white/20">
@@ -462,6 +517,37 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
                 <span>Excellent</span>
               </div>
             </div>
+
+            {/* Expanded breakdown */}
+            {resultExpanded && (
+              <div className="mt-4 space-y-3 border-t border-white/6 pt-4">
+                <p className="text-xs leading-relaxed text-white/50">{attn.desc}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">Focus score</p>
+                    <p className={`text-sm font-semibold tabular-nums ${attn.textCls}`}>{shownResult.attention_score}/100</p>
+                  </div>
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">Course progress</p>
+                    <p className="text-sm font-semibold tabular-nums text-white/80">{coursePct}%</p>
+                  </div>
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">This video</p>
+                    <p className={`text-sm font-semibold ${shownResult.content_completed ? "text-emerald-400" : "text-white/70"}`}>
+                      {shownResult.content_completed ? "Completed" : "In progress"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/30">Rating</p>
+                    <p className={`text-sm font-semibold ${attn.textCls}`}>{attn.label}</p>
+                  </div>
+                </div>
+                <p className="text-[11px] leading-relaxed text-white/30">
+                  Your focus score reflects how consistently you watched — pausing, skipping ahead, or
+                  leaving the tab lowers it.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </aside>

@@ -22,7 +22,9 @@ function buildQuery(filters: Record<string, unknown>): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filters)) {
     if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value))
+      // Laravel's `boolean` validation rule only accepts 1/0/"1"/"0" — not
+      // "true"/"false" — so serialize booleans as "1"/"0" (e.g. is_suspicious).
+      params.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value))
     }
   }
   const qs = params.toString()

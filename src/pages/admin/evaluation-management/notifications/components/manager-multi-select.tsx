@@ -19,6 +19,8 @@ interface ManagerMultiSelectProps {
   selectedIds: number[]
   onChange: (ids: number[]) => void
   error?: string | null
+  /** When set, only users in this department are loaded (server-side filter). */
+  departmentId?: number | null
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -27,6 +29,7 @@ export function ManagerMultiSelect({
   selectedIds,
   onChange,
   error,
+  departmentId = null,
 }: ManagerMultiSelectProps) {
   const [users, setUsers] = useState<UserListResource[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -38,7 +41,7 @@ export function ManagerMultiSelect({
     setIsLoading(true)
     setLoadError(null)
 
-    getAllUsers({ per_page: 100 })
+    getAllUsers({ per_page: 100, ...(departmentId ? { department_id: departmentId } : {}) })
       .then((res) => {
         if (!cancelled) setUsers(res.data ?? [])
       })
@@ -56,7 +59,7 @@ export function ManagerMultiSelect({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [departmentId])
 
   const filtered = users.filter((u) => {
     const term = search.trim().toLowerCase()

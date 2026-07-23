@@ -46,7 +46,7 @@ interface ClockInDialogProps {
 }
 
 export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) {
-  const [courseId, setCourseId] = useState<string>("none")
+  const [courseId, setCourseId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [courses, setCourses] = useState<CourseSimple[]>([])
@@ -73,22 +73,21 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
 
   function handleClose() {
     if (isLoading) return
-    setCourseId("none")
+    setCourseId("")
     setError(null)
     onClose()
   }
 
   async function handleSubmit() {
     setError(null)
-    let parsedCourseId: number | null = null
-    if (courseId !== "none") {
-      const num = parseInt(courseId, 10)
-      if (isNaN(num) || num <= 0) return
-      parsedCourseId = num
+    const num = parseInt(courseId, 10)
+    if (isNaN(num) || num <= 0) {
+      setError("Please select a course before clocking in.")
+      return
     }
     setIsLoading(true)
     try {
-      const record = await clockIn({ course_id: parsedCourseId })
+      const record = await clockIn({ course_id: num })
       toast.success("Session started!")
       onClockIn(record)
       handleClose()
@@ -116,7 +115,7 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
           </div>
           <DialogTitle className="text-xl font-semibold text-foreground">Start Session</DialogTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Optionally link this session to one of your courses.
+            Choose the course this session is for to get started.
           </p>
         </DialogHeader>
 
@@ -133,7 +132,7 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
             <label className="flex items-center gap-1.5 text-xs font-medium text-foreground/55">
               <BookOpenIcon className="h-3.5 w-3.5" />
               Course
-              <span className="ml-auto text-foreground/25">optional</span>
+              <span className="ml-auto text-red-400">required</span>
             </label>
 
             <Select value={courseId} onValueChange={setCourseId} disabled={isLoading || loadingCourses}>
@@ -141,16 +140,13 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
                 {loadingCourses ? (
                   <span className="flex items-center gap-2 text-foreground/40">
                     <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                    Loading courses�
+                    Loading courses…
                   </span>
                 ) : (
-                  <SelectValue placeholder="No specific course" />
+                  <SelectValue placeholder="Select a course" />
                 )}
               </SelectTrigger>
               <SelectContent className="border-border bg-[#16132e] text-foreground">
-                <SelectItem value="none" className="focus:bg-white/8 focus:text-foreground">
-                  No specific course
-                </SelectItem>
                 {courses.map((course) => (
                   <SelectItem
                     key={course.id}
@@ -162,6 +158,13 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
                 ))}
               </SelectContent>
             </Select>
+
+            {/* No enrolled courses — user cannot start a session */}
+            {!loadingCourses && courses.length === 0 && (
+              <p className="text-xs text-amber-400/80">
+                You have no enrolled courses yet. Enroll in a course first to start a session.
+              </p>
+            )}
 
             {/* Selected course preview */}
             {selectedCourse && (
@@ -186,8 +189,8 @@ export function ClockInDialog({ open, onClose, onClockIn }: ClockInDialogProps) 
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading}
-            className="flex-1 bg-indigo-600 text-foreground transition-all hover:bg-indigo-500"
+            disabled={isLoading || !courseId}
+            className="flex-1 bg-indigo-600 text-foreground transition-all hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? (
               <>

@@ -251,7 +251,7 @@ function CourseStatsCard({ course }: { course: Course }) {
         <div className="rounded-xl border border-white/8 bg-white/3 p-3 space-y-0.5">
           <div className="flex items-center gap-1.5 text-[11px] text-white/40">
             <CalendarIcon className="size-3.5" />
-            Batches
+            Dates
           </div>
           <p className="text-sm font-semibold text-white">{activeAvs.length} active</p>
         </div>
@@ -281,7 +281,7 @@ function CourseEnrollCard({
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-white">Enroll in this Course</h3>
         <p className="text-xs text-white/40">
-          Select an available batch to get started.
+          Select an available date to get started.
         </p>
       </div>
       <EnrollSection
@@ -661,8 +661,8 @@ export function CourseDetailPage() {
                   {(course.availabilities?.length ?? 0) > 0 && (
                     <span className="flex items-center gap-1.5">
                       <CalendarIcon className="size-3.5 text-white/25" />
-                      {course.availabilities.length} batch
-                      {course.availabilities.length !== 1 ? "es" : ""}
+                      {course.availabilities.length} date
+                      {course.availabilities.length !== 1 ? "s" : ""}
                     </span>
                   )}
                   <span className="flex items-center gap-1.5">
@@ -686,9 +686,10 @@ export function CourseDetailPage() {
                     <BookOpenIcon className="size-3.5 text-indigo-400 shrink-0" />
                     About this Course
                   </h2>
-                  <p className="text-sm text-white/55 leading-relaxed">
-                    {course.description}
-                  </p>
+                  <div
+                    className="text-sm text-white/55 leading-relaxed prose prose-invert max-w-none [&_p]:mb-2 [&_strong]:text-white [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: course.description }}
+                  />
                 </section>
               )}
 
@@ -709,7 +710,7 @@ export function CourseDetailPage() {
                     className="text-sm font-semibold text-white/70 flex items-center gap-2"
                   >
                     <CalendarIcon className="size-3.5 text-indigo-400 shrink-0" />
-                    Scheduled Batches
+                    Scheduled Dates
                     <span className="text-xs font-normal text-white/30">
                       ({course.availabilities?.length ?? 0})
                     </span>
@@ -724,7 +725,7 @@ export function CourseDetailPage() {
                   ) : (
                     <div className="rounded-2xl border border-white/8 bg-white/2 p-8 flex flex-col items-center gap-3 text-center">
                       <CalendarIcon className="size-8 text-white/15" />
-                      <p className="text-sm text-white/35">No batches scheduled yet.</p>
+                      <p className="text-sm text-white/35">No dates scheduled yet.</p>
                     </div>
                   )}
                 </section>

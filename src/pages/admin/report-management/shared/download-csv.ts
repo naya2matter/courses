@@ -29,7 +29,8 @@ export function buildExportQuery(filters: Record<string, unknown>): string {
   for (const [key, value] of Object.entries(filters)) {
     if (PAGINATION_KEYS.has(key)) continue
     if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value))
+      // Booleans as "1"/"0" — Laravel's `boolean` rule rejects "true"/"false".
+      params.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value))
     }
   }
   return `?${params.toString()}`
@@ -46,7 +47,8 @@ export function buildFileQuery(filters: Record<string, unknown>): string {
   for (const [key, value] of Object.entries(filters)) {
     if (PAGINATION_KEYS.has(key)) continue
     if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value))
+      // Booleans as "1"/"0" — Laravel's `boolean` rule rejects "true"/"false".
+      params.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value))
     }
   }
   const qs = params.toString()

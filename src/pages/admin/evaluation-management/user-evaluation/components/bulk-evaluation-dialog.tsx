@@ -262,6 +262,7 @@ export function BulkEvaluationDialog({ open, onOpenChange, availableTypes, onSuc
       setResult(res)
       toast.success(`Done — ${res.created} created, ${res.updated} updated, ${res.failed} failed.`)
       onSuccess()
+      onOpenChange(false)
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return
       let msg = "Bulk create failed."

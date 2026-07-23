@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom"
 import { useAuth } from "@/context/auth"
 import { Role } from "@/types/auth"
+import { FullPageLoader } from "@/components/full-page-loader"
 
 interface ProtectedRouteProps {
   requiredRole: Role
@@ -15,7 +16,7 @@ export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
   const { user, isAuthenticated, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
-    return null
+    return <FullPageLoader />
   }
 
   if (!isAuthenticated) {

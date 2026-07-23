@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   LayersIcon,
   CheckCircle2Icon,
+  HelpCircleIcon,
   XCircleIcon,
   LockIcon,
   PlayCircleIcon,
@@ -64,6 +65,9 @@ function getStatusLabel(quiz: UserQuizListItem): {
   if (attempt.submitted_at == null) {
     return { label: "In Progress", variant: "default", icon: <ClockIcon className="size-3" /> }
   }
+  if (quiz.user_result_pending) {
+    return { label: "Under Review", variant: "secondary", icon: <HelpCircleIcon className="size-3" /> }
+  }
   if (attempt.passed === true) {
     return { label: "Passed", variant: "default", icon: <CheckCircle2Icon className="size-3" /> }
   }
@@ -89,9 +93,11 @@ function StatusBadge({ status }: { status: ReturnType<typeof getStatusLabel> }) 
         ? "bg-rose-500/10 text-rose-300 border-rose-500/20"
         : status.label === "In Progress"
           ? "bg-violet-500/10 text-violet-300 border-violet-500/20"
-          : status.label === "Completed"
-            ? "bg-sky-500/10 text-sky-300 border-sky-500/20"
-            : "bg-white/8 text-white/50 border-white/10"
+          : status.label === "Under Review"
+            ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+            : status.label === "Completed"
+              ? "bg-sky-500/10 text-sky-300 border-sky-500/20"
+              : "bg-white/8 text-white/50 border-white/10"
   return (
     <span
       aria-label={`Status: ${status.label}`}

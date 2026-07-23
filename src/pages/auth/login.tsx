@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/auth"
 import { Role } from "@/types/auth"
 import { isApiError } from "@/lib/api"
+import { FullPageLoader } from "@/components/full-page-loader"
+import faviconUrl from "@/assets/favicon.svg"
 
 export function LoginPage() {
-  const { signIn, isAuthenticated, user } = useAuth()
+  const { signIn, isAuthenticated, user, isBootstrapping } = useAuth()
   const navigate = useNavigate()
 
   const [email, setEmail] = useState("")
@@ -54,6 +56,12 @@ export function LoginPage() {
     if (e.key === "Enter") handleSignIn()
   }
 
+  // While the session is still hydrating on a hard refresh, show the loader
+  // instead of briefly flashing the login form before the redirect fires.
+  if (isBootstrapping) {
+    return <FullPageLoader />
+  }
+
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center overflow-hidden px-4 text-white">
       {/* Background glow */}
@@ -66,7 +74,7 @@ export function LoginPage() {
         {/* Logo + heading */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-full border border-white/10 bg-slate-950/70 p-4 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-            <img src="/favicon.ico" alt="Logo" className="h-full w-full object-contain" />
+            <img src={faviconUrl} alt="The Development Zone" className="h-full w-full object-contain" />
           </div>
           <div className="space-y-1.5">
             <h1 className="text-3xl font-bold tracking-tight text-white/90">Welcome Back</h1>

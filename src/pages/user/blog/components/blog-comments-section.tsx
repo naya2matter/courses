@@ -67,12 +67,13 @@ function CommentCard({
   deleteError,
   onDelete,
 }: CommentCardProps) {
-  const colorClass = AVATAR_COLORS[comment.author.id % AVATAR_COLORS.length]
+  const authorName = comment.author?.name ?? "Unknown user"
+  const colorClass = AVATAR_COLORS[(comment.author?.id ?? 0) % AVATAR_COLORS.length]
 
   return (
     <article
       className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-white/[0.1]"
-      aria-label={`Comment by ${comment.author.name}`}
+      aria-label={`Comment by ${authorName}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -81,14 +82,14 @@ function CommentCard({
             className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${colorClass}`}
             aria-hidden="true"
           >
-            {initials(comment.author.name)}
+            {initials(authorName)}
           </div>
 
           {/* Name + date */}
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="text-sm font-semibold text-white">
-                {comment.author.name}
+                {authorName}
               </span>
               {isOwn && (
                 <Badge className="border-sky-500/30 bg-sky-500/10 px-1.5 py-0 text-[10px] text-sky-400">

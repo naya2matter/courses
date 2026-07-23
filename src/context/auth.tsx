@@ -65,8 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((resource) => setUser(resourceToAuthUser(resource)))
       .catch((err: Error) => {
         if (err.name === "AbortError") return
-        // Token is invalid or expired — clear storage
+        // Token is invalid or expired — clear storage and session state
         apiClient.clearToken()
+        setUser(null)
       })
       .finally(() => {
         // Skip state update if this effect was cleaned up (StrictMode unmount)

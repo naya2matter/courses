@@ -1,0 +1,14 @@
+# Serve .mjs (ES module) files as JavaScript so the browser will run them
+# (fixes the PDF worker "non-JavaScript MIME type text/plain" error).
+<IfModule mod_mime.c>
+    AddType application/javascript .mjs
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+</IfModule>

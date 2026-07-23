@@ -44,7 +44,14 @@ function extractError(err: unknown): string {
   return "An unexpected error occurred."
 }
 
-export function useOnlineReport() {
+export type OnlineReportTab = "ucd" | "dcd" | "sf" | "up" | "ucp" | "de"
+
+/**
+ * Only the active tab's dataset is fetched (on open and whenever its filters
+ * change). This avoids firing all six heavy report queries at once on mount —
+ * the load storm that made the page intermittently "fail to fetch".
+ */
+export function useOnlineReport(activeTab: OnlineReportTab) {
   const [ucdFilters, setUcdFilters] = useState<UserCourseDailyFilters>(DEFAULT_UCD)
   const [ucd, setUcd] = useState(makeSlice<UserCourseDailyRow>())
   const fetchUcd = useCallback(async (f: UserCourseDailyFilters) => {
@@ -58,7 +65,7 @@ export function useOnlineReport() {
       setUcd((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchUcd(ucdFilters) }, [ucdFilters, fetchUcd])
+  useEffect(() => { if (activeTab === "ucd") fetchUcd(ucdFilters) }, [activeTab, ucdFilters, fetchUcd])
 
   const [dcdFilters, setDcdFilters] = useState<DeptCourseDailyFilters>(DEFAULT_DCD)
   const [dcd, setDcd] = useState(makeSlice<DeptCourseDailyRow>())
@@ -73,7 +80,7 @@ export function useOnlineReport() {
       setDcd((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchDcd(dcdFilters) }, [dcdFilters, fetchDcd])
+  useEffect(() => { if (activeTab === "dcd") fetchDcd(dcdFilters) }, [activeTab, dcdFilters, fetchDcd])
 
   const [sfFilters, setSfFilters] = useState<SessionFactFilters>(DEFAULT_SF)
   const [sf, setSf] = useState(makeSlice<SessionFactRow>())
@@ -88,7 +95,7 @@ export function useOnlineReport() {
       setSf((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchSf(sfFilters) }, [sfFilters, fetchSf])
+  useEffect(() => { if (activeTab === "sf") fetchSf(sfFilters) }, [activeTab, sfFilters, fetchSf])
 
   const [upFilters, setUpFilters] = useState<UserPerfFilters>(DEFAULT_UP)
   const [up, setUp] = useState(makeSlice<UserPerformanceRow>())
@@ -103,7 +110,7 @@ export function useOnlineReport() {
       setUp((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchUp(upFilters) }, [upFilters, fetchUp])
+  useEffect(() => { if (activeTab === "up") fetchUp(upFilters) }, [activeTab, upFilters, fetchUp])
 
   const [ucpFilters, setUcpFilters] = useState<UserCourseProgressFilters>(DEFAULT_UCP)
   const [ucp, setUcp] = useState(makeSlice<UserCourseProgressRow>())
@@ -118,7 +125,7 @@ export function useOnlineReport() {
       setUcp((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchUcp(ucpFilters) }, [ucpFilters, fetchUcp])
+  useEffect(() => { if (activeTab === "ucp") fetchUcp(ucpFilters) }, [activeTab, ucpFilters, fetchUcp])
 
   const [deFilters, setDeFilters] = useState<DeptEvalFilters>(DEFAULT_DE)
   const [de, setDe] = useState<{ data: DeptEvalData | null; isLoading: boolean; error: string | null }>(
@@ -135,7 +142,7 @@ export function useOnlineReport() {
       setDe((p) => ({ ...p, isLoading: false, error: msg }))
     }
   }, [])
-  useEffect(() => { fetchDe(deFilters) }, [deFilters, fetchDe])
+  useEffect(() => { if (activeTab === "de") fetchDe(deFilters) }, [activeTab, deFilters, fetchDe])
 
   return {
     ucd, ucdFilters, setUcdFilters, setUcdPage: (p: number) => setUcdFilters((f) => ({ ...f, page: p })), refetchUcd: () => fetchUcd(ucdFilters),

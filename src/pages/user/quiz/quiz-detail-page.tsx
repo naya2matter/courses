@@ -4,6 +4,7 @@ import {
   ArrowLeftIcon,
   AlertCircleIcon,
   CheckCircle2Icon,
+  HelpCircleIcon,
   ClockIcon,
   TrophyIcon,
   LayersIcon,
@@ -72,28 +73,33 @@ const SHOW_ANSWERS_LABELS: Record<string, string> = {
   always: "Always shown",
 }
 
-// ── Question preview row ──────────────────────────────────────────────────────
+// ── Question type summary ─────────────────────────────────────────────────────
+// Compact overview: how many questions of each type, without revealing the
+// question text or point breakdown before the quiz starts.
 
-function QuestionRow({ q, index }: { q: UserQuizQuestion; index: number }) {
+function QuestionTypeSummary({ questions }: { questions: UserQuizQuestion[] }) {
+  const counts = questions.reduce<Record<string, number>>((acc, q) => {
+    acc[q.type] = (acc[q.type] ?? 0) + 1
+    return acc
+  }, {})
+  const order = ["radio", "checkbox", "text"]
+  const types = Object.keys(counts).sort((a, b) => order.indexOf(a) - order.indexOf(b))
   return (
-    <div className="flex items-start gap-3 py-3.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border border-indigo-500/20 bg-indigo-500/10 text-xs font-bold text-indigo-400">
-        {index + 1}
-      </div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <p className="text-sm font-medium leading-snug text-white/80">{q.question_text}</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[11px] font-medium text-white/40">
-            {QUESTION_ICONS[q.type]}
-            {QUESTION_LABELS[q.type] ?? q.type}
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      {types.map((type) => (
+        <div
+          key={type}
+          className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-3"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+            {QUESTION_ICONS[type]}
           </span>
-          {q.points != null && (
-            <span className="inline-flex rounded-full border border-amber-500/15 bg-amber-500/8 px-2 py-0.5 text-[11px] font-semibold text-amber-400/80">
-              {q.points} pt{q.points !== 1 ? "s" : ""}
-            </span>
-          )}
+          <div className="min-w-0">
+            <p className="text-lg font-bold leading-none tabular-nums text-white">{counts[type]}</p>
+            <p className="mt-1 truncate text-[11px] text-white/45">{QUESTION_LABELS[type] ?? type}</p>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   )
 }
@@ -205,8 +211,11 @@ export function QuizDetailPage() {
   const overdue = isOverdue(quiz?.deadline)
   const totalPoints =
     quiz?.questions?.reduce((s, q) => s + (q.points ?? 0), 0) ?? null
+  // Remaining = configured max minus attempts already used. null = unlimited.
   const attemptsLeft =
-    quiz?.max_attempts != null ? quiz.max_attempts : null
+    quiz?.max_attempts != null
+      ? Math.max(0, quiz.max_attempts - (quiz.attempts_count ?? 0))
+      : null
 
   return (
     <div className="space-y-6">
@@ -274,32 +283,46 @@ export function QuizDetailPage() {
             )}
           </div>
 
-          {/* ── Pass/Fail banner ─────────────────────────────────────────── */}
-          {quiz.user_passed != null && (
+          {/* ── Result banner (Under Review / Passed / Failed) ───────────────── */}
+          {(quiz.user_result_pending || quiz.user_passed != null) && (
             <div
               className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
-                quiz.user_passed
-                  ? "border-emerald-500/20 bg-emerald-500/8"
-                  : "border-rose-500/20 bg-rose-500/8"
+                quiz.user_result_pending
+                  ? "border-amber-500/20 bg-amber-500/8"
+                  : quiz.user_passed
+                    ? "border-emerald-500/20 bg-emerald-500/8"
+                    : "border-rose-500/20 bg-rose-500/8"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                {quiz.user_passed ? (
+                {quiz.user_result_pending ? (
+                  <HelpCircleIcon className="size-5 shrink-0 text-amber-400" />
+                ) : quiz.user_passed ? (
                   <CheckCircle2Icon className="size-5 shrink-0 text-emerald-400" />
                 ) : (
                   <XCircleIcon className="size-5 shrink-0 text-rose-400" />
                 )}
-                <span className={`font-semibold ${quiz.user_passed ? "text-emerald-300" : "text-rose-300"}`}>
-                  {quiz.user_passed ? "Passed" : "Failed"}
+                <span
+                  className={`font-semibold ${
+                    quiz.user_result_pending
+                      ? "text-amber-300"
+                      : quiz.user_passed
+                        ? "text-emerald-300"
+                        : "text-rose-300"
+                  }`}
+                >
+                  {quiz.user_result_pending ? "Under Review" : quiz.user_passed ? "Passed" : "Failed"}
                 </span>
                 {quiz.user_total_score != null && (
                   <span className="text-sm text-white/45">
-                    · Score: {quiz.user_total_score} pts
+                    · Score: {quiz.user_total_score} pts{quiz.user_result_pending ? " so far" : ""}
                   </span>
                 )}
               </div>
               <p className="text-xs text-white/40">
-                Your result is recorded and available here.
+                {quiz.user_result_pending
+                  ? "Some answers are awaiting manual grading — your final result may change."
+                  : "Your result is recorded and available here."}
               </p>
             </div>
           )}
@@ -335,13 +358,18 @@ export function QuizDetailPage() {
                 value={`${totalPoints} pts`}
               />
             )}
-            {quiz.max_attempts != null && (
-              <InfoChip
-                icon={<LayersIcon className="size-3.5" />}
-                label="Max Attempts"
-                value={`${quiz.max_attempts} attempt${quiz.max_attempts !== 1 ? "s" : ""}`}
-              />
-            )}
+            <InfoChip
+              icon={<LayersIcon className="size-3.5" />}
+              label={quiz.max_attempts != null ? "Attempts Left" : "Attempts Made"}
+              value={
+                quiz.max_attempts != null
+                  ? `${attemptsLeft} of ${quiz.max_attempts}`
+                  : `${quiz.attempts_count ?? 0} · Unlimited`
+              }
+              highlight={
+                quiz.max_attempts != null && attemptsLeft === 0 ? "text-red-400" : undefined
+              }
+            />
             {quiz.show_correct_answers && (
               <InfoChip
                 icon={<EyeOffIcon className="size-3.5" />}
@@ -382,10 +410,8 @@ export function QuizDetailPage() {
                   </span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="divide-y divide-white/5 px-5 py-0">
-                {quiz.questions.map((q, i) => (
-                  <QuestionRow key={q.id} q={q} index={i} />
-                ))}
+              <CardContent className="px-5 py-4">
+                <QuestionTypeSummary questions={quiz.questions} />
               </CardContent>
             </Card>
           )}

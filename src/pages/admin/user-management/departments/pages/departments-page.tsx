@@ -57,7 +57,7 @@ function SummaryCards({ cards, isLoading }: { cards: DepartmentCard[]; isLoading
         ? cards
         : [
             { key: "total_departments", title: "Total Departments", value: 0 },
-            { key: "root_departments", title: "Root Departments", value: 0 },
+            { key: "root_departments", title: "Parent Departments", value: 0 },
             { key: "users_with_department", title: "Users With Department", value: 0 },
           ]
       ).map((card) => (

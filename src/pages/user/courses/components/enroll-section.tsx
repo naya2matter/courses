@@ -120,7 +120,7 @@ export function EnrollSection({ courseId, availabilities, onEnrolled }: EnrollSe
     return (
       <div className="rounded-2xl border border-white/8 bg-white/3 p-5 flex flex-col items-center gap-3 text-center">
         <CalendarIcon className="size-8 text-white/20" />
-        <p className="text-sm text-white/50 font-medium">No open batches</p>
+        <p className="text-sm text-white/50 font-medium">No open dates</p>
         <p className="text-xs text-white/30">
           All available sessions are either full or not yet open for enrollment.
         </p>
@@ -246,7 +246,7 @@ export function EnrollSection({ courseId, availabilities, onEnrolled }: EnrollSe
             Enrolling…
           </>
         ) : (
-          "Enroll in selected batch"
+          "Enroll in selected date"
         )}
       </Button>
     </div>

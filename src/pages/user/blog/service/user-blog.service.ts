@@ -18,6 +18,8 @@ import type {
   PublicBlogFeedResponse,
   PublicBlogDetailResponse,
   PublicBlogFilters,
+  PublicBlogAuthorsResponse,
+  BlogAuthor,
   BlogLikeResponse,
   BlogCommentResponse,
 } from "../types/user-blog.types"
@@ -82,6 +84,7 @@ export async function getPublicBlogPosts(
   const params = new URLSearchParams()
   if (filters.page != null) params.set("page", String(filters.page))
   if (filters.per_page != null) params.set("per_page", String(filters.per_page))
+  if (filters.author_id != null) params.set("author_id", String(filters.author_id))
   const qs = params.toString()
 
   try {
@@ -91,6 +94,21 @@ export async function getPublicBlogPosts(
   } catch (err) {
     if (isCanceled(err)) return EMPTY_FEED
     throw err
+  }
+}
+
+/**
+ * GET /user/blog-posts/authors
+ *
+ * Distinct authors who have published posts — powers the author filter dropdown.
+ * Returns an empty list on cancellation or failure (the filter simply hides).
+ */
+export async function getBlogAuthors(): Promise<BlogAuthor[]> {
+  try {
+    const res = await apiClient.get<PublicBlogAuthorsResponse>("/user/blog-posts/authors")
+    return Array.isArray(res.data) ? res.data : []
+  } catch {
+    return []
   }
 }
 

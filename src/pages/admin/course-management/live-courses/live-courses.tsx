@@ -113,6 +113,20 @@ function getLevelLabel(level: CourseResource["level"]): string {
   return typeof level === "string" ? level : level.name
 }
 
+// Descriptions are rich HTML (from the admin editor). On compact cards we show a
+// plain-text excerpt instead of rendering markup, so tags never leak into the UI.
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return ""
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 function getAvailabilityMetrics(availabilities: unknown) {
   const parsed = parseAvailabilities(availabilities)
 
@@ -705,7 +719,7 @@ export default function LiveCoursesPage() {
                         {course.level ? `Level: ${getLevelLabel(course.level)}` : " "}
                       </p>
                       <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-white/65">
-                        {course.description || " "}
+                        {stripHtml(course.description) || " "}
                       </p>
                     </div>
 
@@ -807,7 +821,7 @@ export default function LiveCoursesPage() {
                           </h3>
                           {course.description && (
                             <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                              {course.description}
+                              {stripHtml(course.description)}
                             </p>
                           )}
                           <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">

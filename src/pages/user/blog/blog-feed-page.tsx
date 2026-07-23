@@ -23,8 +23,8 @@ import { isApiError } from "@/lib/api"
 
 import { PageHeader } from "@/components/user/page-header"
 
-import { getPublicBlogPosts } from "./service/user-blog.service"
-import type { PaginationMeta, PublicBlogPost } from "./types/user-blog.types"
+import { getPublicBlogPosts, getBlogAuthors } from "./service/user-blog.service"
+import type { PaginationMeta, PublicBlogPost, BlogAuthor } from "./types/user-blog.types"
 
 import {
   BlogFiltersToolbar,
@@ -32,6 +32,7 @@ import {
 } from "./components/blog-filters-toolbar"
 import { BlogEditorialCard } from "./components/blog-post-card"
 import { BlogMediaBadge } from "./components/blog-media-badge"
+import { blogReadCta } from "./blog-cta"
 import { BlogTagBadge } from "./components/blog-tag-badge"
 
 // ── Default pagination meta ───────────────────────────────────────────────────
@@ -126,7 +127,7 @@ function TopHighlightCard({ post }: { post: PublicBlogPost }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4 text-[11px] text-white/40">
-              <span className="font-medium text-white/55">{post.author.name}</span>
+              <span className="font-medium text-white/55">{post.author?.name ?? "Unknown author"}</span>
               <span className="flex items-center gap-1">
                 <CalendarIcon className="size-3" />
                 {formatDate(post.published_at)}
@@ -146,8 +147,8 @@ function TopHighlightCard({ post }: { post: PublicBlogPost }) {
               variant="ghost"
               className="shrink-0 gap-1.5 rounded-lg px-3 text-xs text-white/50 hover:bg-white/8 hover:text-white"
             >
-              <Link to={`/user/blog/${post.slug}`} aria-label={`Read: ${post.title}`}>
-                Read Article
+              <Link to={`/user/blog/${post.slug}`} aria-label={`${blogReadCta(post.media_type)}: ${post.title}`}>
+                {blogReadCta(post.media_type)}
                 <ArrowRightIcon className="size-3" />
               </Link>
             </Button>
@@ -226,21 +227,27 @@ export function UserBlogFeedPage() {
   const [mediaType, setMediaType] = useState<MediaTypeFilter>("all")
   const [authorId, setAuthorId] = useState("all")
 
-  // ── Derived: unique authors from current page ────────────────────────────────
-  const authors = useMemo(() => {
-    const map = new Map<number, string>()
-    items.forEach((p) => map.set(p.author.id, p.author.name))
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [items])
+  // ── Authors (all published-post authors, for the filter dropdown) ─────────────
+  const [authors, setAuthors] = useState<BlogAuthor[]>([])
 
-  // ── Data fetching ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let active = true
+    getBlogAuthors().then((list) => {
+      if (active) setAuthors(list)
+    })
+    return () => { active = false }
+  }, [])
+
+  // ── Data fetching (author filter is applied server-side) ──────────────────────
   const fetchFeed = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const res = await getPublicBlogPosts({ page, per_page: perPage })
+      const res = await getPublicBlogPosts({
+        page,
+        per_page: perPage,
+        author_id: authorId === "all" ? null : Number(authorId),
+      })
       setItems(Array.isArray(res.data) ? res.data : [])
       setMeta({
         current_page: res.meta?.current_page ?? page,
@@ -263,7 +270,7 @@ export function UserBlogFeedPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, perPage])
+  }, [page, perPage, authorId])
 
   useEffect(() => {
     void fetchFeed()
@@ -284,20 +291,27 @@ export function UserBlogFeedPage() {
         if (mediaType === "Video" && p.media_type !== "Video") return false
         if (mediaType === "Audio" && p.media_type !== "Audio") return false
       }
-      if (authorId !== "all" && String(p.author.id) !== authorId) return false
+      // Author is filtered server-side (see fetchFeed).
       return true
     })
-  }, [items, search, mediaType, authorId])
+  }, [items, search, mediaType])
 
   const highlightPost = filteredItems[0] ?? null
   const gridPosts = filteredItems.slice(1)
   const hasActiveFilters = search.trim().length > 0 || mediaType !== "all" || authorId !== "all"
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
+  // Author filtering is server-side, so changing it must reset to page 1.
+  function handleAuthorChange(v: string) {
+    setAuthorId(v)
+    setPage(1)
+  }
+
   function handleClearFilters() {
     setSearch("")
     setMediaType("all")
     setAuthorId("all")
+    setPage(1)
   }
 
   function handlePrevPage() {
@@ -354,7 +368,7 @@ export function UserBlogFeedPage() {
           authors={authors}
           onSearchChange={setSearch}
           onMediaTypeChange={setMediaType}
-          onAuthorChange={setAuthorId}
+          onAuthorChange={handleAuthorChange}
           onClear={handleClearFilters}
           resultCount={filteredItems.length}
           totalCount={items.length}

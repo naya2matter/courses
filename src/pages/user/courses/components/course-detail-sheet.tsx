@@ -366,14 +366,17 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                     value="mine"
                     className="rounded-lg text-xs font-medium py-1.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-white/50 hover:text-white/80 transition-all"
                   >
-                    Mine
+                    Enrolled
                   </TabsTrigger>
                 </TabsList>
 
                 {/* ── Overview tab ─────────────────────────────────────────── */}
                 <TabsContent value="overview" className="space-y-5 mt-0">
                   {course.description && (
-                    <p className="text-sm text-white/60 leading-relaxed">{course.description}</p>
+                    <div
+                      className="text-sm text-white/60 leading-relaxed prose prose-invert max-w-none [&_p]:mb-2 [&_strong]:text-white [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                      dangerouslySetInnerHTML={{ __html: course.description }}
+                    />
                   )}
 
                   {/* Stats grid */}
@@ -390,10 +393,10 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                     <div className="rounded-xl border border-white/10 bg-white/3 p-3 space-y-1">
                       <div className="flex items-center gap-1.5 text-[11px] text-white/40">
                         <CalendarIcon className="size-3.5" />
-                        Availabilities
+                        Available Dates
                       </div>
                       <p className="text-sm font-semibold text-white">
-                        {course.availabilities?.length ?? 0} batch{course.availabilities?.length !== 1 ? "es" : ""}
+                        {course.availabilities?.length ?? 0} date{course.availabilities?.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/3 p-3 space-y-1">
@@ -416,14 +419,14 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                     </div>
                   </div>
 
-                  {/* Batches list */}
+                  {/* Available dates list */}
                   {course.availabilities?.length > 0 && (
                     <>
                       <Separator className="bg-white/10" />
                       <div className="space-y-3">
                         <h3 className="text-sm font-semibold text-white/80 flex items-center gap-2">
                           <CalendarIcon className="size-4 text-indigo-400" />
-                          Scheduled Batches ({course.availabilities.length})
+                          Scheduled Dates ({course.availabilities.length})
                         </h3>
                         <div className="space-y-3">
                           {course.availabilities.map((av) => (
@@ -437,7 +440,7 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                   {course.availabilities?.length === 0 && (
                     <div className="rounded-xl border border-white/10 bg-white/3 p-6 text-center space-y-2">
                       <CalendarIcon className="size-8 text-white/20 mx-auto" />
-                      <p className="text-sm text-white/40">No scheduled batches yet.</p>
+                      <p className="text-sm text-white/40">No scheduled dates yet.</p>
                     </div>
                   )}
 
@@ -453,7 +456,7 @@ export function CourseDetailSheet({ courseId, open, onClose }: CourseDetailSheet
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                       <CalendarIcon className="size-4 text-indigo-400" />
-                      Choose a Batch
+                      Choose a Date
                     </h3>
                     <p className="text-xs text-white/40">
                       Select an open session below and confirm your enrollment.

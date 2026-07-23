@@ -70,7 +70,7 @@ function EnrollmentCard({ reg }: { reg: CourseRegistration }) {
               {reg.course?.name ?? `Course #${reg.course_id}`}
             </p>
             <p className="text-[11px] text-white/35">
-              Batch #{reg.course_availability_id}
+              Date #{reg.course_availability_id}
             </p>
           </div>
         </div>
@@ -224,7 +224,7 @@ export function MyEnrollmentsPanel() {
         <div className="rounded-2xl border border-white/8 bg-white/3 p-8 flex flex-col items-center gap-3 text-center">
           <BookOpenIcon className="size-9 text-white/15" />
           <p className="text-sm text-white/40 font-medium">No enrollments yet</p>
-          <p className="text-xs text-white/25">Enroll in a course batch above to get started.</p>
+          <p className="text-xs text-white/25">Enroll in an available date above to get started.</p>
         </div>
       )}
 

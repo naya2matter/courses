@@ -15,7 +15,6 @@ import {
   CalendarIcon,
   StarIcon,
   BookOpenCheckIcon,
-  MinusCircleIcon,
   HelpCircleIcon,
 } from "lucide-react"
 
@@ -95,15 +94,25 @@ function ScoreRing({
   total,
   passed,
   threshold,
+  pending = false,
 }: {
   score: number | null
   total: number | null
   passed: boolean | null
   threshold?: number | null
+  pending?: boolean
 }) {
   const pct = total && total > 0 ? Math.round(((score ?? 0) / total) * 100) : 0
   const circumference = 2 * Math.PI * 54
-  const scoreTone = passed === true ? "text-emerald-300" : passed === false ? "text-red-300" : "text-white/70"
+  // While any answer is under review the pass/fail result isn't final — show a
+  // neutral "Under Review" state instead of a definitive Passed / Not Passed.
+  const state: "pass" | "fail" | "pending" =
+    pending ? "pending" : passed === true ? "pass" : passed === false ? "fail" : "pending"
+  const ringColor = state === "pass" ? "#10b981" : state === "fail" ? "#ef4444" : "#f59e0b"
+  const scoreTextCls =
+    state === "pass" ? "text-emerald-400" : state === "fail" ? "text-red-400" : "text-amber-400"
+  const scoreTone =
+    state === "pass" ? "text-emerald-300" : state === "fail" ? "text-red-300" : "text-amber-300/80"
 
   return (
     <div className="flex flex-col items-center gap-4 py-4">
@@ -122,7 +131,7 @@ function ScoreRing({
             cy="70"
             r="54"
             fill="none"
-            stroke={passed ? "#10b981" : "#ef4444"}
+            stroke={ringColor}
             strokeWidth="12"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -130,38 +139,38 @@ function ScoreRing({
             className="transition-all duration-700"
           />
         </svg>
-        {passed === true && (
+        {state === "pass" && (
           <div className="absolute size-25 rounded-full bg-emerald-400/10 blur-xl pointer-events-none" />
         )}
         <div className="absolute flex flex-col items-center">
-          <span
-            className={`text-3xl font-bold tabular-nums ${
-              passed ? "text-emerald-400" : "text-red-400"
-            }`}
-          >
-            {pct}%
-          </span>
-          <span className="text-xs text-white/40 mt-0.5">score</span>
+          <span className={`text-3xl font-bold tabular-nums ${scoreTextCls}`}>{pct}%</span>
+          <span className="text-xs text-white/40 mt-0.5">{state === "pending" ? "so far" : "score"}</span>
         </div>
       </div>
 
       <div className="flex flex-col items-center gap-1 text-center">
-        {passed === true ? (
+        {state === "pass" ? (
           <div className="flex items-center gap-2 text-emerald-400">
             <CheckCircle2Icon className="size-5" />
             <span className="text-lg font-bold">Passed!</span>
           </div>
-        ) : passed === false ? (
+        ) : state === "fail" ? (
           <div className="flex items-center gap-2 text-red-400">
             <XCircleIcon className="size-5" />
             <span className="text-lg font-bold">Not Passed</span>
           </div>
         ) : (
-          <span className="text-white/50 text-sm">Pending Review</span>
+          <div className="flex flex-col items-center gap-1 text-amber-400">
+            <div className="flex items-center gap-2">
+              <HelpCircleIcon className="size-5" />
+              <span className="text-lg font-bold">Under Review</span>
+            </div>
+            <span className="text-[11px] text-amber-300/60">Final result pending manual grading</span>
+          </div>
         )}
         {total != null && (
           <p className={`text-sm ${scoreTone}`}>
-            {score ?? 0} / {total} points
+            {score ?? 0} / {total} points{state === "pending" ? " so far" : ""}
           </p>
         )}
         {threshold != null && (
@@ -172,20 +181,30 @@ function ScoreRing({
   )
 }
 
+// ── Answer status ──────────────────────────────────────────────────────────────
+// The backend always returns is_correct for auto-graded (choice) questions and
+// leaves it null for open-text answers awaiting manual grading. So null (or
+// missing) = "Under Review"; otherwise it's a definitive correct / wrong.
+function answerStatus(answer: UserQuizAnswer): "correct" | "wrong" | "pending" {
+  if (answer.is_correct == null) return "pending"
+  return answer.is_correct ? "correct" : "wrong"
+}
+
 // ── Answer card ────────────────────────────────────────────────────────────────
 
 function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }) {
   const [expanded, setExpanded] = useState(false)
   const q = answer.question
-  const isCorrect = answer.is_correct
-  const isPending = isCorrect === null && answer.graded_at === null
+  const status = answerStatus(answer)
+  const isCorrect = status === "correct"
+  const isWrong = status === "wrong"
+  const isPending = status === "pending"
 
-  const borderColor =
-    isCorrect === true
-      ? "border-emerald-500/25 bg-emerald-500/5"
-      : isCorrect === false
-        ? "border-red-500/25 bg-red-500/5"
-        : "border-white/8 bg-white/2"
+  const borderColor = isCorrect
+    ? "border-emerald-500/25 bg-emerald-500/5"
+    : isWrong
+      ? "border-red-500/25 bg-red-500/5"
+      : "border-amber-500/20 bg-amber-500/5"
 
   const correctAnswerArr = q?.correct_answer
   const showCorrectAnswer = Array.isArray(correctAnswerArr) && correctAnswerArr.length > 0
@@ -211,21 +230,25 @@ function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }
               )}
               {q?.points != null && (
                 <span className="text-xs text-white/35">
-                  {answer.points_earned ?? 0} / {q.points} pts
+                  {isPending ? `Pending · ${q.points} pts` : `${answer.points_earned ?? 0} / ${q.points} pts`}
                 </span>
               )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {isCorrect === true ? (
-            <CheckCircle2Icon className="size-5 text-emerald-400" />
-          ) : isCorrect === false ? (
-            <XCircleIcon className="size-5 text-red-400" />
-          ) : isPending ? (
-            <HelpCircleIcon className="size-5 text-amber-400" aria-label="Pending manual grading" />
+          {isCorrect ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+              <CheckCircle2Icon className="size-3.5" /> Correct
+            </span>
+          ) : isWrong ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400">
+              <XCircleIcon className="size-3.5" /> Incorrect
+            </span>
           ) : (
-            <MinusCircleIcon className="size-5 text-white/30" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400">
+              <HelpCircleIcon className="size-3.5" /> Under Review
+            </span>
           )}
           {(showCorrectAnswer || q?.correct_answer_explanation) && (
             <button
@@ -244,9 +267,9 @@ function AnswerCard({ answer, index }: { answer: UserQuizAnswer; index: number }
         <div
           className={`
             rounded-lg border px-3 py-2 text-sm
-            ${isCorrect === true
+            ${isCorrect
               ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-300/80"
-              : isCorrect === false
+              : isWrong
                 ? "border-red-500/20 bg-red-500/8 text-red-300/80"
                 : "border-white/8 bg-white/5 text-white/60"
             }
@@ -349,9 +372,9 @@ export function QuizResultPage() {
   const answers = attempt?.answers ?? []
   const achievedScore = attempt?.total_score ?? attempt?.score ?? null
   const totalPoints = attempt?.total_points ?? quiz?.total_points ?? null
-  const correctCount = answers.filter((a) => a.is_correct === true).length
-  const wrongCount = answers.filter((a) => a.is_correct === false).length
-  const pendingCount = answers.filter((a) => a.is_correct === null).length
+  const correctCount = answers.filter((a) => answerStatus(a) === "correct").length
+  const wrongCount = answers.filter((a) => answerStatus(a) === "wrong").length
+  const pendingCount = answers.filter((a) => answerStatus(a) === "pending").length
   const submittedAt = attempt?.submitted_at ?? attempt?.completed_at
   const duration = formatDurationMinutes(attempt?.started_at, submittedAt)
 
@@ -425,11 +448,13 @@ export function QuizResultPage() {
           {/* Score section */}
           <Card
             className={`rounded-2xl border ${
-              attempt.passed === true
-                ? "border-emerald-500/20 bg-emerald-500/4"
-                : attempt.passed === false
-                  ? "border-rose-500/20 bg-rose-500/4"
-                  : "border-white/8 bg-white/2"
+              pendingCount > 0
+                ? "border-amber-500/20 bg-amber-500/4"
+                : attempt.passed === true
+                  ? "border-emerald-500/20 bg-emerald-500/4"
+                  : attempt.passed === false
+                    ? "border-rose-500/20 bg-rose-500/4"
+                    : "border-white/8 bg-white/2"
             }`}
           >
             <CardContent className="py-8">
@@ -438,6 +463,7 @@ export function QuizResultPage() {
                 total={totalPoints}
                 passed={attempt.passed ?? null}
                 threshold={quiz?.pass_threshold}
+                pending={pendingCount > 0}
               />
             </CardContent>
           </Card>
@@ -524,7 +550,7 @@ export function QuizResultPage() {
           {pendingCount > 0 && (
             <Alert className="border-amber-500/30 bg-amber-500/8">
               <HelpCircleIcon className="size-4 text-amber-400" />
-              <AlertTitle className="text-amber-400">Manual Grading Pending</AlertTitle>
+              <AlertTitle className="text-amber-400">Answers Under Review</AlertTitle>
               <AlertDescription className="text-amber-300/70">
                 {pendingCount} open-text question{pendingCount !== 1 ? "s are" : " is"} awaiting
                 manual review by your instructor. Your final score may change.

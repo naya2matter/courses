@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import type { PublicBlogPost } from "../types/user-blog.types"
 import { BlogMediaBadge } from "./blog-media-badge"
+import { blogReadCta } from "../blog-cta"
 import { BlogTagBadge } from "./blog-tag-badge"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -55,7 +56,8 @@ interface BlogEditorialCardProps {
 
 export function BlogEditorialCard({ post }: BlogEditorialCardProps) {
   const gradient = THUMB_GRADIENTS[post.id % THUMB_GRADIENTS.length]
-  const avatarColor = AVATAR_COLORS[post.author.id % AVATAR_COLORS.length]
+  const authorName = post.author?.name ?? "Unknown author"
+  const avatarColor = AVATAR_COLORS[(post.author?.id ?? 0) % AVATAR_COLORS.length]
   const tags = Array.isArray(post.tags) ? post.tags : []
   const visibleTags = tags.slice(0, 3)
   const extraTags = tags.length - 3
@@ -132,10 +134,10 @@ export function BlogEditorialCard({ post }: BlogEditorialCardProps) {
               className={`inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${avatarColor} text-[10px] font-bold text-white`}
               aria-hidden="true"
             >
-              {post.author.name.charAt(0).toUpperCase()}
+              {authorName.charAt(0).toUpperCase()}
             </span>
             <span className="truncate font-medium text-white/55">
-              {post.author.name}
+              {authorName}
             </span>
             <span className="ml-auto flex shrink-0 items-center gap-1">
               <CalendarIcon className="size-3" />
@@ -163,9 +165,9 @@ export function BlogEditorialCard({ post }: BlogEditorialCardProps) {
             >
               <Link
                 to={`/user/blog/${post.slug}`}
-                aria-label={`Read: ${post.title}`}
+                aria-label={`${blogReadCta(post.media_type)}: ${post.title}`}
               >
-                Read
+                {blogReadCta(post.media_type, true)}
                 <ArrowRightIcon className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             </Button>

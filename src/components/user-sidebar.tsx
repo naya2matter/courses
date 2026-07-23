@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Link } from "react-router-dom"
 import faviconUrl from "@/assets/favicon.svg"
 import {
   LayoutDashboardIcon,
@@ -77,8 +78,8 @@ export function UserSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="px-2 py-3">
-          <a
-            href="/user"
+          <Link
+            to="/user"
             className="group flex w-full flex-col items-center justify-center gap-2 no-underline"
             aria-label="Home"
           >
@@ -94,7 +95,7 @@ export function UserSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                 My Learning
               </span>
             </div>
-          </a>
+          </Link>
         </div>
       </SidebarHeader>
 

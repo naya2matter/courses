@@ -1,6 +1,6 @@
 // ─── Admin Online Courses Report Page ────────────────────────────────────────
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   ActivityIcon,
   AwardIcon,
@@ -30,6 +30,8 @@ import {
   useOnlineReport,
   DEFAULT_UCD, DEFAULT_DCD, DEFAULT_SF, DEFAULT_UP, DEFAULT_UCP,
 } from "./hook/use-online-report"
+import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
+import type { Department } from "@/pages/admin/user-management/departments/types/department.types"
 import { UserCourseDailyTable } from "./components/user-course-daily-table"
 import { DeptCourseDailyTable } from "./components/dept-course-daily-table"
 import { SessionFactTable } from "./components/session-fact-table"
@@ -43,11 +45,6 @@ import {
 } from "./service/online-report.service"
 
 type TabKey = "ucd" | "dcd" | "sf" | "up" | "ucp" | "de"
-
-const DEPARTMENTS = [
-  { id: "1", name: "IT" }, { id: "2", name: "HR" },
-  { id: "3", name: "Finance" }, { id: "4", name: "Ops" },
-]
 
 const TABS = [
   { value: "ucd", label: "User-Course Daily",  icon: UserIcon,       desc: "Per-user daily engagement" },
@@ -167,17 +164,25 @@ function DateRange({ from, to, onFrom, onTo }: {
   )
 }
 
-function DeptSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function DeptSelect({
+  value,
+  onChange,
+  departments,
+}: {
+  value: string
+  onChange: (v: string) => void
+  departments: Department[]
+}) {
   return (
     <div className="flex flex-col gap-0.5">
       <Label className="text-[10px] text-white/35">Department</Label>
-      <Select value={String(value)} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
+      <Select value={value === "" ? "all" : String(value)} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
         <SelectTrigger className="h-7 w-36 border-white/10 bg-white/5 text-xs text-white">
           <SelectValue placeholder="All depts" />
         </SelectTrigger>
         <SelectContent className="border-white/10 bg-[#0f0f1a]">
           <SelectItem value="all">All departments</SelectItem>
-          {DEPARTMENTS.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          {departments.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
         </SelectContent>
       </Select>
     </div>
@@ -187,6 +192,7 @@ function DeptSelect({ value, onChange }: { value: string; onChange: (v: string) 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ReportOnlineCoursesPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("ucd")
   const {
     ucd, ucdFilters, setUcdFilters, setUcdPage, refetchUcd,
     dcd, dcdFilters, setDcdFilters, setDcdPage, refetchDcd,
@@ -194,10 +200,22 @@ export default function ReportOnlineCoursesPage() {
     up, upFilters, setUpFilters, setUpPage, refetchUp,
     ucp, ucpFilters, setUcpFilters, setUcpPage, refetchUcp,
     de, deFilters, setDeFilters, refetchDe,
-  } = useOnlineReport()
+  } = useOnlineReport(activeTab)
 
   const [exporting, setExporting] = useState<TabKey | null>(null)
   const [exportingExcel, setExportingExcel] = useState(false)
+
+  // Real departments for the filter — the backend validates department_id with
+  // `exists:departments,id`, so hardcoded placeholder ids caused a 422 ("failed
+  // to fetch") whenever one was picked.
+  const [departments, setDepartments] = useState<Department[]>([])
+  useEffect(() => {
+    let active = true
+    getAllDepartments()
+      .then((res) => { if (active) setDepartments(res.departments) })
+      .catch(() => { /* filter just falls back to "All departments" */ })
+    return () => { active = false }
+  }, [])
 
   async function handleExportExcel() {
     setExportingExcel(true)
@@ -239,7 +257,7 @@ export default function ReportOnlineCoursesPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue="ucd">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
         {/* Tab list — horizontal scroll on narrow viewports, scrollbar hidden */}
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="h-auto w-max gap-0 rounded-none border-b border-white/10 bg-transparent p-0">
@@ -282,6 +300,7 @@ export default function ReportOnlineCoursesPage() {
             <DeptSelect
               value={String(ucdFilters.department_id ?? "")}
               onChange={(v) => setUcdFilters({ ...ucdFilters, department_id: v, page: 1 })}
+              departments={departments}
             />
           </FilterBar>
           <UserCourseDailyTable data={ucd.data} meta={ucd.meta} isLoading={ucd.isLoading} error={ucd.error} page={ucdFilters.page ?? 1} onPageChange={setUcdPage} onRetry={refetchUcd} />
@@ -305,6 +324,7 @@ export default function ReportOnlineCoursesPage() {
             <DeptSelect
               value={String(dcdFilters.department_id ?? "")}
               onChange={(v) => setDcdFilters({ ...dcdFilters, department_id: v, page: 1 })}
+              departments={departments}
             />
           </FilterBar>
           <DeptCourseDailyTable data={dcd.data} meta={dcd.meta} isLoading={dcd.isLoading} error={dcd.error} page={dcdFilters.page ?? 1} onPageChange={setDcdPage} onRetry={refetchDcd} />
@@ -328,6 +348,7 @@ export default function ReportOnlineCoursesPage() {
             <DeptSelect
               value={String(sfFilters.department_id ?? "")}
               onChange={(v) => setSfFilters({ ...sfFilters, department_id: v, page: 1 })}
+              departments={departments}
             />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Suspicious</Label>
@@ -367,6 +388,7 @@ export default function ReportOnlineCoursesPage() {
             <DeptSelect
               value={String(upFilters.department_id ?? "")}
               onChange={(v) => setUpFilters({ ...upFilters, department_id: v, page: 1 })}
+              departments={departments}
             />
           </FilterBar>
           <UserPerformanceTable data={up.data} meta={up.meta} isLoading={up.isLoading} error={up.error} page={upFilters.page ?? 1} onPageChange={setUpPage} onRetry={refetchUp} />
@@ -392,6 +414,7 @@ export default function ReportOnlineCoursesPage() {
             <DeptSelect
               value={String(ucpFilters.department_id ?? "")}
               onChange={(v) => setUcpFilters({ ...ucpFilters, department_id: v, page: 1 })}
+              departments={departments}
             />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Status</Label>

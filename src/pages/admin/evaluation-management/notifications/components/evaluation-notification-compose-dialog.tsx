@@ -6,7 +6,7 @@
 //   3. "confirm"  — AlertDialog asking for final confirmation
 //   4. "result"   — show send outcome
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   AlertCircleIcon,
   CheckCircle2Icon,
@@ -40,8 +40,13 @@ import { Label } from "@/components/ui/label"
 import { DatePickerField } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 
 import { isApiError } from "@/lib/api"
+import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
+import type { Department } from "@/pages/admin/user-management/departments/types/department.types"
 import {
   previewEvaluationNotification,
   sendEvaluationNotification,
@@ -120,17 +125,42 @@ function ComposeStep({
     return apiErrors[field]?.[0]
   }
 
+  // Department filter for the recipient list (UI-only; not part of the payload).
+  const [departmentId, setDepartmentId] = useState<string>("all")
+  const [departments, setDepartments] = useState<Department[]>([])
+  useEffect(() => {
+    let active = true
+    getAllDepartments()
+      .then((res) => { if (active) setDepartments(res.departments) })
+      .catch(() => { /* filter just falls back to all departments */ })
+    return () => { active = false }
+  }, [])
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Managers */}
+      {/* Department filter + Managers */}
       <div className="space-y-1.5">
         <Label className="text-sm">
           Users <span className="text-red-400">*</span>
         </Label>
+        <div className="mb-2">
+          <Select value={departmentId} onValueChange={setDepartmentId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Filter by department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All departments</SelectItem>
+              {departments.map((d) => (
+                <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <ManagerMultiSelect
           selectedIds={form.user_ids}
           onChange={(ids) => onChange({ user_ids: ids })}
           error={errors.user_ids ?? fieldError("user_ids")}
+          departmentId={departmentId === "all" ? null : Number(departmentId)}
         />
       </div>
 
@@ -179,6 +209,33 @@ function ComposeStep({
         {(errors.message || fieldError("message")) && (
           <p className="text-xs text-red-400">{errors.message ?? fieldError("message")}</p>
         )}
+      </div>
+
+      {/* Quick month filter — sets the date range below to that whole month */}
+      <div className="space-y-1.5">
+        <Label htmlFor="notif-month" className="text-sm text-muted-foreground">
+          Month <span className="text-muted-foreground/50">(optional — scopes the evaluations to a single month)</span>
+        </Label>
+        <input
+          id="notif-month"
+          type="month"
+          value={
+            form.start_date && form.end_date && form.start_date.slice(0, 7) === form.end_date.slice(0, 7)
+              ? form.start_date.slice(0, 7)
+              : ""
+          }
+          onChange={(e) => {
+            const m = e.target.value // "YYYY-MM"
+            if (!m) {
+              onChange({ start_date: "", end_date: "" })
+              return
+            }
+            const [y, mo] = m.split("-").map(Number)
+            const lastDay = new Date(y, mo, 0).getDate()
+            onChange({ start_date: `${m}-01`, end_date: `${m}-${String(lastDay).padStart(2, "0")}` })
+          }}
+          className="h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+        />
       </div>
 
       {/* Date range */}

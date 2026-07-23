@@ -138,8 +138,8 @@ export function BlogFiltersToolbar({
         </SelectContent>
       </Select>
 
-      {/* Author — only when 2+ distinct authors */}
-      {authors.length > 1 && (
+      {/* Author — shown whenever there are authors to filter by */}
+      {authors.length > 0 && (
         <Select value={authorId} onValueChange={onAuthorChange}>
           <SelectTrigger className="h-8 w-36 rounded-lg border-white/10 bg-white/5 text-sm">
             <SelectValue placeholder="All Authors" />

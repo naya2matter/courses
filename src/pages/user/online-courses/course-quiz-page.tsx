@@ -112,28 +112,33 @@ function InfoChip({
   )
 }
 
-// ── Question preview row ──────────────────────────────────────────────────────
+// ── Question type summary ─────────────────────────────────────────────────────
+// Compact overview: how many questions of each type, without revealing the
+// question text or point breakdown before the quiz starts.
 
-function QuestionRow({ q, index }: { q: UserQuizQuestion; index: number }) {
+function QuestionTypeSummary({ questions }: { questions: UserQuizQuestion[] }) {
+  const counts = questions.reduce<Record<string, number>>((acc, q) => {
+    acc[q.type] = (acc[q.type] ?? 0) + 1
+    return acc
+  }, {})
+  const order = ["radio", "checkbox", "text"]
+  const types = Object.keys(counts).sort((a, b) => order.indexOf(a) - order.indexOf(b))
   return (
-    <div className="flex items-start gap-3 py-3.5">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border border-indigo-500/20 bg-indigo-500/10 text-xs font-bold text-indigo-400">
-        {index + 1}
-      </div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <p className="text-sm font-medium leading-snug text-white/80">{q.question_text}</p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[11px] font-medium text-white/40">
-            {QUESTION_ICONS[q.type]}
-            {QUESTION_LABELS[q.type] ?? q.type}
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      {types.map((type) => (
+        <div
+          key={type}
+          className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-3"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+            {QUESTION_ICONS[type]}
           </span>
-          {q.points != null && (
-            <span className="inline-flex rounded-full border border-amber-500/15 bg-amber-500/8 px-2 py-0.5 text-[11px] font-semibold text-amber-400/80">
-              {q.points} pt{q.points !== 1 ? "s" : ""}
-            </span>
-          )}
+          <div className="min-w-0">
+            <p className="text-lg font-bold leading-none tabular-nums text-white">{counts[type]}</p>
+            <p className="mt-1 truncate text-[11px] text-white/45">{QUESTION_LABELS[type] ?? type}</p>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   )
 }
@@ -423,10 +428,8 @@ export function CourseQuizPage() {
                   </span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="divide-y divide-white/5 px-5 py-0">
-                {quiz.questions.map((q, i) => (
-                  <QuestionRow key={q.id} q={q} index={i} />
-                ))}
+              <CardContent className="px-5 py-4">
+                <QuestionTypeSummary questions={quiz.questions} />
               </CardContent>
             </Card>
           )}

@@ -37,6 +37,8 @@ export interface UserQuizListItem {
   // attempt summary included in list
   attempts_count?: number | null
   last_attempt?: UserQuizAttemptSummary | null
+  /** True when the latest attempt has open-text answers awaiting manual grading. */
+  user_result_pending?: boolean
 }
 
 // ── Full quiz (returned by getById) ─────────────────────────────────────────

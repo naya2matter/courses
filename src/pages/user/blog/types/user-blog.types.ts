@@ -107,6 +107,12 @@ export interface BlogCommentResponse {
 export interface PublicBlogFilters {
   page?: number
   per_page?: number
+  /** Filter to a single author (server-side). */
+  author_id?: number | null
+}
+
+export interface PublicBlogAuthorsResponse {
+  data: BlogAuthor[]
 }
 
 // ── API response envelopes ────────────────────────────────────────────────────

@@ -79,15 +79,15 @@ function MobileCard({
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-xl">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate font-medium text-foreground">{entry.user.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{entry.department.name}</p>
+          <p className="truncate font-medium text-foreground">{(entry.user?.name ?? "Unknown user")}</p>
+          <p className="truncate text-xs text-muted-foreground">{(entry.department?.name ?? "—")}</p>
         </div>
         <Button
           variant="ghost"
           size="icon"
           className="size-8 shrink-0"
           onClick={() => onView(entry)}
-          aria-label={`View details for ${entry.user.name}`}
+          aria-label={`View details for ${(entry.user?.name ?? "Unknown user")}`}
         >
           <EyeIcon className="size-4" />
         </Button>
@@ -97,7 +97,7 @@ function MobileCard({
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground">Course</span>
           <span className="truncate max-w-[160px] text-right text-foreground">
-            {entry.course.name}
+            {(entry.course?.name ?? "—")}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
@@ -210,19 +210,19 @@ export function EvaluationHistoryTable({
                   key={entry.id}
                   className="border-white/10 transition-colors hover:bg-white/5"
                 >
-                  <TableCell className="font-medium">{entry.user.name}</TableCell>
+                  <TableCell className="font-medium">{(entry.user?.name ?? "Unknown user")}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {entry.department.name}
+                    {(entry.department?.name ?? "—")}
                   </TableCell>
                   <TableCell className="max-w-[180px]">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="block truncate text-sm cursor-default">
-                          {entry.course.name}
+                          {(entry.course?.name ?? "—")}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
-                        {entry.course.name}
+                        {(entry.course?.name ?? "—")}
                       </TooltipContent>
                     </Tooltip>
                   </TableCell>
@@ -249,7 +249,7 @@ export function EvaluationHistoryTable({
                           size="icon"
                           className="size-8"
                           onClick={() => onViewDetails(entry)}
-                          aria-label={`View details for ${entry.user.name}`}
+                          aria-label={`View details for ${(entry.user?.name ?? "Unknown user")}`}
                         >
                           <EyeIcon className="size-4" />
                         </Button>

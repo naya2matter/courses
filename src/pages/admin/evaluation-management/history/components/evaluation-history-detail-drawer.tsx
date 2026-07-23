@@ -64,7 +64,7 @@ function DrawerContent({ entry }: { entry: EvaluationHistoryEntry }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate font-semibold text-white">{entry.user.name}</p>
+              <p className="truncate font-semibold text-white">{(entry.user?.name ?? "Unknown user")}</p>
               <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-xs capitalize text-white/70">
                 {entry.course_type}
               </span>
@@ -72,11 +72,11 @@ function DrawerContent({ entry }: { entry: EvaluationHistoryEntry }) {
             <div className="mt-2 space-y-1 text-xs text-white/50">
               <p className="flex items-center gap-1.5">
                 <BuildingIcon className="h-3.5 w-3.5 shrink-0 text-white/30" />
-                {entry.department.name}
+                {(entry.department?.name ?? "—")}
               </p>
               <p className="flex items-center gap-1.5">
                 <BookOpenIcon className="h-3.5 w-3.5 shrink-0 text-white/30" />
-                {entry.course.name}
+                {(entry.course?.name ?? "—")}
               </p>
             </div>
           </div>

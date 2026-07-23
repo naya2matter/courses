@@ -46,9 +46,9 @@ export interface EvaluationHistoryEntry {
   id: number
   course_type: string
   total_score: number
-  user: EvaluationHistoryUser
-  department: EvaluationHistoryDepartment
-  course: EvaluationHistoryCourse
+  user: EvaluationHistoryUser | null
+  department: EvaluationHistoryDepartment | null
+  course: EvaluationHistoryCourse | null
   performance_level: EvaluationHistoryPerformanceLevel
   history: EvaluationHistorySnapshotRow[]
   created_at: string

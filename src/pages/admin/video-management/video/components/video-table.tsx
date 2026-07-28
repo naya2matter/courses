@@ -532,9 +532,9 @@ export function VideoTable(
           </div>
         </div>
 
-        {/* ── Desktop Table (md+) ───────────────────────────────────────── */}
+        {/* ── Desktop Table (md+) — scrolls horizontally on mid-size screens ── */}
         <div className="hidden md:block rounded-xl border border-white/10 overflow-hidden">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow className="border-white/10 hover:bg-transparent">
                 <TableHead className="w-12 text-center">#</TableHead>
@@ -583,8 +583,8 @@ export function VideoTable(
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <VideoThumb video={video} />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium line-clamp-1">{video.name}</p>
+                        <div className="min-w-0 max-w-[320px]">
+                          <p className="text-sm font-medium line-clamp-1 break-all">{video.name}</p>
                           {video.description && (
                             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                               {video.description}

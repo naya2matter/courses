@@ -41,24 +41,24 @@ const navLearning = [
     icon: <BookOpenIcon />,
   },
   {
-    title: "My Audio",
-    url: "/user/audio",
-    icon: <HeadphonesIcon />,
-  },
-  {
     title: "My Attendance",
     url: "/user/clocking",
     icon: <ClockIcon />,
   },
   {
-    title: "My Evaluations",
-    url: "/user/evaluations",
-    icon: <ClipboardListIcon />,
-  },
-  {
     title: "My Quiz",
     url: "/user/quizzes",
     icon: <BookOpenCheckIcon />,
+  },
+  {
+    title: "My Audio",
+    url: "/user/audio",
+    icon: <HeadphonesIcon />,
+  },
+  {
+    title: "My Evaluations",
+    url: "/user/evaluations",
+    icon: <ClipboardListIcon />,
   },
   {
     title: "Blog",

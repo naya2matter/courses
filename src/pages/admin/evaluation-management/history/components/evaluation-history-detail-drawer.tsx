@@ -92,10 +92,12 @@ function DrawerContent({ entry }: { entry: EvaluationHistoryEntry }) {
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
           <p className="text-xs text-white/40">Performance</p>
           <PerformanceLevelBadge level={entry.performance_level} />
-          <p className="text-[11px] text-white/40">
-            Range {entry.performance_level.range.min}–{entry.performance_level.range.max}
-            {" · "}Level {entry.performance_level.level}
-          </p>
+          {entry.performance_level && (
+            <p className="text-[11px] text-white/40">
+              Range {entry.performance_level.range.min}–{entry.performance_level.range.max}
+              {" · "}Level {entry.performance_level.level}
+            </p>
+          )}
         </div>
       </div>
 

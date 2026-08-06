@@ -59,13 +59,23 @@ export function SearchableSelect({
   const [search, setSearch] = useState("")
   const inputId = useId()
 
+  // Defensive: upstream data (API responses, store state) occasionally
+  // contains a stray null/undefined entry instead of a real option object
+  // (e.g. a list built from ids that no longer resolve to a record). Drop
+  // those here so one bad entry can't crash every dropdown that uses this
+  // component.
+  const safeOptions = useMemo(
+    () => options.filter((o): o is SearchableSelectOption => o != null),
+    [options],
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return options
-    return options.filter((o) =>
+    if (!q) return safeOptions
+    return safeOptions.filter((o) =>
       `${o.label} ${o.keywords ?? ""}`.toLowerCase().includes(q),
     )
-  }, [options, search])
+  }, [safeOptions, search])
 
   return (
     <Select
@@ -101,7 +111,7 @@ export function SearchableSelect({
         </div>
 
         {/* Pinned options (not filtered) */}
-        {pinnedOptions?.map((o) => (
+        {pinnedOptions?.filter((o) => o != null).map((o) => (
           <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
             {o.node ?? o.label}
           </SelectItem>

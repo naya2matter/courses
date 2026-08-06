@@ -49,7 +49,8 @@ export interface EvaluationHistoryEntry {
   user: EvaluationHistoryUser | null
   department: EvaluationHistoryDepartment | null
   course: EvaluationHistoryCourse | null
-  performance_level: EvaluationHistoryPerformanceLevel
+  /** Null when the evaluation has no score/level assigned yet. */
+  performance_level: EvaluationHistoryPerformanceLevel | null
   history: EvaluationHistorySnapshotRow[]
   created_at: string
   updated_at: string

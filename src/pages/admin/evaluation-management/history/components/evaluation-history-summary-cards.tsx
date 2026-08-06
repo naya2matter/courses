@@ -100,7 +100,7 @@ function buildCards(
       : 0
 
   function countLabel(label: string) {
-    return entries.filter((e) => e.performance_level.label === label).length
+    return entries.filter((e) => e.performance_level?.label === label).length
   }
 
   return [

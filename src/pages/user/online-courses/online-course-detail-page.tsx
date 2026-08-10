@@ -44,6 +44,7 @@ export function OnlineCourseDetailPage() {
   const [course, setCourse] = useState<OnlineCourseDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const load = useCallback(async () => {
     if (!Number.isInteger(courseId) || courseId <= 0) {
@@ -164,9 +165,20 @@ export function OnlineCourseDetailPage() {
                     {course.title}
                   </h1>
                   {course.description && (
-                    <p className="mt-1.5 text-sm leading-relaxed text-white/55 line-clamp-3">
-                      {course.description}
-                    </p>
+                    <div className="mt-1.5">
+                      <p className={`text-sm leading-relaxed text-white/55 ${descExpanded ? "" : "line-clamp-3"}`}>
+                        {course.description}
+                      </p>
+                      {course.description.length > 180 && (
+                        <button
+                          type="button"
+                          onClick={() => setDescExpanded((v) => !v)}
+                          className="mt-1 text-xs font-medium text-indigo-300 hover:text-indigo-200"
+                        >
+                          {descExpanded ? "Show less" : "Show more"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 

@@ -72,8 +72,10 @@ function ProgressRing({ pct, done, label }: { pct: number; done: boolean; label:
 
 // ── Attention score helpers ───────────────────────────────────────────────────
 
-// Watched-percentage at which a video counts as complete (mirrors the backend).
-const VIDEO_DONE_PCT = 95
+// Watched-percentage at which a video counts as complete — the ring turns
+// green, the "Done" badge shows, the next item unlocks, and the completion
+// toast + auto-advance fire. Requires a full watch-through (100%).
+const AUTO_ADVANCE_PCT = 100
 
 // Persist the last video session result per content item so the "Session results"
 // card stays visible when the learner leaves and returns (e.g. Previous → back).
@@ -105,7 +107,9 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     }
   })
   const [resultExpanded, setResultExpanded] = useState(false)
+  const [videoEnded, setVideoEnded] = useState(false)
   const hasToastedRef = useRef(false)
+  const hasAutoAdvancedRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -113,6 +117,8 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
       setIsLoading(true)
       setError(null)
       hasToastedRef.current = false
+      hasAutoAdvancedRef.current = false
+      setVideoEnded(false)
       try {
         const res = await openContent(courseId, contentId)
         if (!cancelled) setData(res.data)
@@ -158,17 +164,6 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     }
   }, [pdfCompletion?.done])
 
-  // Live completion: the moment the learner reaches 95% watched, notify them and
-  // unlock the next item — no need to finish 100% or refresh the page.
-  useEffect(() => {
-    if (isVideo && session.liveContentPct >= VIDEO_DONE_PCT && !hasToastedRef.current) {
-      hasToastedRef.current = true
-      toast.success("Video complete!", {
-        description: "You can now continue to the next item.",
-      })
-    }
-  }, [isVideo, session.liveContentPct])
-
   // Persist the live session result to storage so the card can be restored on a
   // later visit. Write-only sync to an external system (no local state update).
   useEffect(() => {
@@ -183,6 +178,23 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     (id: number) => navigate(`/user/online-courses/${courseId}/content/${id}`),
     [navigate, courseId],
   )
+
+  // Full completion: once the learner reaches 100% watched (or the video fires
+  // its native "ended" event), notify them and automatically move on to the
+  // next item after a short pause so they have time to read the toast.
+  useEffect(() => {
+    if (!isVideo || hasAutoAdvancedRef.current) return
+    if (session.liveContentPct < AUTO_ADVANCE_PCT && !videoEnded) return
+    hasAutoAdvancedRef.current = true
+    toast.success("Video complete!", {
+      description: data?.next_content ? "Moving on to the next item…" : "Great work — you've finished this video.",
+    })
+    if (data?.next_content) {
+      const nextId = data.next_content.id
+      const timer = setTimeout(() => goTo(nextId), 1800)
+      return () => clearTimeout(timer)
+    }
+  }, [isVideo, session.liveContentPct, videoEnded, data?.next_content, goTo])
 
   const [isDownloading, setIsDownloading] = useState(false)
   const handleAttachmentDownload = useCallback(async () => {
@@ -243,10 +255,10 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     ? Math.round(session.result.course_progress_percentage)
     : savedPct
 
-  // A video is "done" once watched ≥95% live (unlocks immediately, no refresh),
-  // or the backend/session already recorded completion.
+  // A video is "done" only once watched 100% live (or ended natively), or the
+  // backend/session already recorded completion.
   const contentDone = isVideo
-    ? (session.result?.content_completed || alreadyCompleted || contentPct >= VIDEO_DONE_PCT)
+    ? (session.result?.content_completed || alreadyCompleted || contentPct >= AUTO_ADVANCE_PCT || videoEnded)
     : (pdfCompletion?.done ?? alreadyCompleted)
 
   // Prefer the live result; fall back to the persisted one so the card survives
@@ -296,7 +308,10 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
             onSpeedChange={session.handleSpeedChange}
             onFullscreen={session.handleFullscreen}
             onTimeUpdate={session.handleTimeUpdate}
-            onEnded={session.handleEnded}
+            onEnded={() => {
+              session.handleEnded()
+              setVideoEnded(true)
+            }}
           />
         ) : (
           <Suspense fallback={

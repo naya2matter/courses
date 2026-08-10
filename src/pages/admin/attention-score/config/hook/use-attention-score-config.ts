@@ -1,9 +1,12 @@
 // ─── useAttentionScoreConfig Hook ──────────────────────────────────────────────
 // Triggers the initial fetch (active config + history) on mount, stops any
-// in-flight job polling on unmount, and re-exposes the store.
+// in-flight job polling on unmount, and re-exposes the store plus the two things
+// derived from it: whether the draft differs from the active config, and whether
+// the draft passes client-side validation.
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useAttentionScoreConfigStore } from "../store/attention-score.store"
+import { validateConfig } from "../lib/validate-config"
 
 export function useAttentionScoreConfig() {
   const activeConfig = useAttentionScoreConfigStore((s) => s.activeConfig)
@@ -12,10 +15,18 @@ export function useAttentionScoreConfig() {
   const history = useAttentionScoreConfigStore((s) => s.history)
   const previewResults = useAttentionScoreConfigStore((s) => s.previewResults)
   const recalculationJob = useAttentionScoreConfigStore((s) => s.recalculationJob)
+
   const isLoading = useAttentionScoreConfigStore((s) => s.isLoading)
+  const isLoadingHistory = useAttentionScoreConfigStore((s) => s.isLoadingHistory)
   const isPreviewing = useAttentionScoreConfigStore((s) => s.isPreviewing)
   const isSaving = useAttentionScoreConfigStore((s) => s.isSaving)
-  const error = useAttentionScoreConfigStore((s) => s.error)
+  const restoringId = useAttentionScoreConfigStore((s) => s.restoringId)
+
+  const loadError = useAttentionScoreConfigStore((s) => s.loadError)
+  const historyError = useAttentionScoreConfigStore((s) => s.historyError)
+  const previewError = useAttentionScoreConfigStore((s) => s.previewError)
+  const saveError = useAttentionScoreConfigStore((s) => s.saveError)
+  const fieldErrors = useAttentionScoreConfigStore((s) => s.fieldErrors)
 
   const fetchActiveConfig = useAttentionScoreConfigStore((s) => s.fetchActiveConfig)
   const fetchHistory = useAttentionScoreConfigStore((s) => s.fetchHistory)
@@ -26,7 +37,8 @@ export function useAttentionScoreConfig() {
   const save = useAttentionScoreConfigStore((s) => s.save)
   const restore = useAttentionScoreConfigStore((s) => s.restore)
   const stopPolling = useAttentionScoreConfigStore((s) => s.stopPolling)
-  const clearError = useAttentionScoreConfigStore((s) => s.clearError)
+  const dismissJob = useAttentionScoreConfigStore((s) => s.dismissJob)
+  const clearErrors = useAttentionScoreConfigStore((s) => s.clearErrors)
 
   useEffect(() => {
     fetchActiveConfig()
@@ -35,6 +47,21 @@ export function useAttentionScoreConfig() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Client-side validation of the draft — recomputed only when the draft changes.
+  const validation = useMemo(
+    () => (draftConfig ? validateConfig(draftConfig) : null),
+    [draftConfig],
+  )
+
+  // The config is small (a few dozen numbers), so a structural compare is cheap
+  // and far more reliable than tracking dirtiness through every setter.
+  const isDirty = useMemo(() => {
+    if (!draftConfig || !activeConfig) return false
+    return JSON.stringify(draftConfig) !== JSON.stringify(activeConfig.config)
+  }, [draftConfig, activeConfig])
+
+  const isBusy = isSaving || restoringId !== null
+
   return {
     activeConfig,
     draftConfig,
@@ -42,10 +69,23 @@ export function useAttentionScoreConfig() {
     history,
     previewResults,
     recalculationJob,
+
     isLoading,
+    isLoadingHistory,
     isPreviewing,
     isSaving,
-    error,
+    restoringId,
+    isBusy,
+
+    loadError,
+    historyError,
+    previewError,
+    saveError,
+    fieldErrors,
+
+    validation,
+    isDirty,
+
     fetchActiveConfig,
     fetchHistory,
     setDraftConfig,
@@ -54,6 +94,7 @@ export function useAttentionScoreConfig() {
     preview,
     save,
     restore,
-    clearError,
+    dismissJob,
+    clearErrors,
   }
 }

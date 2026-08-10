@@ -1,259 +1,358 @@
 // ─── Attention Score Config Editor Form ────────────────────────────────────────
-// Renders every editable number/table from the client's spec, bound to the
-// draft config held in the store. Pure controlled inputs — validation happens
-// server-side; this form just reflects and updates the draft.
+// Every editable number in the Attention Score formula, grouped into sections
+// that each explain what the numbers actually do. Bound to the draft config held
+// in the store; validation messages come pre-computed from the shared validator,
+// with any server-side 422 messages merged on top.
 
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  ActivityIcon,
+  AlertCircleIcon,
+  ClockIcon,
+  GaugeIcon,
+  LayersIcon,
+  ScaleIcon,
+  ShieldAlertIcon,
+  SlidersHorizontalIcon,
+  TrendingUpIcon,
+} from "lucide-react"
+
 import { BandTableEditor } from "./band-table-editor"
+import { NumberField } from "./number-field"
+import { SectionCard, SumIndicator } from "./section-card"
+import type { ValidationResult } from "../lib/validate-config"
 import type { AttentionScoreConfigData } from "../types/attention-score.types"
 
 interface ConfigEditorFormProps {
   config: AttentionScoreConfigData
   onChange: (config: AttentionScoreConfigData) => void
+  validation: ValidationResult
+  /** Field-level messages from a server 422, keyed by the server's field path. */
+  fieldErrors: Record<string, string[]>
   disabled?: boolean
 }
 
-export function ConfigEditorForm({ config, onChange, disabled }: ConfigEditorFormProps) {
-  function set(path: (draft: AttentionScoreConfigData) => void) {
+export function ConfigEditorForm({
+  config,
+  onChange,
+  validation,
+  fieldErrors,
+  disabled,
+}: ConfigEditorFormProps) {
+  function set(mutate: (draft: AttentionScoreConfigData) => void) {
     const next = structuredClone(config)
-    path(next)
+    mutate(next)
     onChange(next)
   }
 
-  const weightSum = config.video.weights.watch_time + config.video.weights.engagement + config.video.weights.completion
-  const blendedSum =
-    config.blended_score_weights.completion +
-    config.blended_score_weights.progress +
-    config.blended_score_weights.attention +
-    config.blended_score_weights.quiz
+  /**
+   * Client-side validation first, then the server's own message for the same
+   * field. The server namespaces paths under `config.`, so check both forms.
+   * Returns NumberField's `error`/`warning` props so severity is never lost —
+   * a warning must not render with error styling or mark the field invalid.
+   */
+  function msg(path: string): { error?: string; warning?: string } {
+    const issue = validation.issueByPath[path]
+    if (issue) {
+      return issue.severity === "error" ? { error: issue.message } : { warning: issue.message }
+    }
+    const server = fieldErrors[path]?.[0] ?? fieldErrors[`config.${path}`]?.[0]
+    return server ? { error: server } : {}
+  }
+
+  /** Section-level messages are always blocking errors. */
+  function sectionMsg(path: string): string | undefined {
+    return msg(path).error
+  }
+
+  const counts = (key: keyof ValidationResult["errorsBySection"]) => ({
+    errorCount: validation.errorsBySection[key].length,
+    warningCount: validation.warningsBySection[key].length,
+  })
+
+  const bandProps = {
+    issueByPath: validation.issueByPath,
+    errorPaths: validation.errorPaths,
+    disabled,
+  }
+
+  const v = config.video
+  const weightSum = v.weights.watch_time + v.weights.engagement + v.weights.completion
+  const blended = config.blended_score_weights
+  const blendedSum = blended.completion + blended.progress + blended.attention + blended.quiz
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* ── Component weights ─────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Component Weights</h3>
+      <SectionCard
+        icon={ScaleIcon}
+        title="Component Weights"
+        description="How much each part contributes to a video's attention score. These three must total 100."
+        aside={<SumIndicator sum={weightSum} target={100} />}
+        {...counts("weights")}
+      >
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Watch Time & Consistency</Label>
-            <Input
-              type="number"
-              value={config.video.weights.watch_time}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.video.weights.watch_time = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Engagement</Label>
-            <Input
-              type="number"
-              value={config.video.weights.engagement}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.video.weights.engagement = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Completion</Label>
-            <Input
-              type="number"
-              value={config.video.weights.completion}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.video.weights.completion = Number(e.target.value) })}
-            />
-          </div>
-        </div>
-        <p className={weightSum === 100 ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
-          Sum: {weightSum} (must equal 100)
-        </p>
-      </section>
-
-      {/* ── Time ratio bands ──────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Watch Time & Consistency — Time Ratio Bands</h3>
-        <p className="text-sm text-muted-foreground">Active playback time ÷ video duration → points.</p>
-        <BandTableEditor
-          rows={config.video.time_ratio_bands}
-          hasMin
-          valueField="points"
-          valueLabel="Points"
-          disabled={disabled}
-          onChange={(rows) => set((d) => { d.video.time_ratio_bands = rows as typeof d.video.time_ratio_bands })}
-        />
-      </section>
-
-      {/* ── Engagement ─────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Engagement</h3>
-        <div className="max-w-xs space-y-2">
-          <Label>Base points (normal learning behavior)</Label>
-          <Input
-            type="number"
-            value={config.video.engagement_base_points}
+          <NumberField
+            label="Watch time & consistency"
+            value={v.weights.watch_time}
+            {...msg("video.weights.watch_time")}
+            suffix="%"
             disabled={disabled}
-            onChange={(e) => set((d) => { d.video.engagement_base_points = Number(e.target.value) })}
+            onChange={(n) => set((d) => { d.video.weights.watch_time = n })}
+          />
+          <NumberField
+            label="Engagement"
+            value={v.weights.engagement}
+            {...msg("video.weights.engagement")}
+            suffix="%"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.video.weights.engagement = n })}
+          />
+          <NumberField
+            label="Completion"
+            value={v.weights.completion}
+            {...msg("video.weights.completion")}
+            suffix="%"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.video.weights.completion = n })}
           />
         </div>
-        <p className="text-sm text-muted-foreground">Speed-change count → point adjustment.</p>
-        <BandTableEditor
-          rows={config.video.speed_change_bands}
-          hasMin
-          valueField="adjustment"
-          valueLabel="Adjustment"
-          disabled={disabled}
-          onChange={(rows) => set((d) => { d.video.speed_change_bands = rows as typeof d.video.speed_change_bands })}
-        />
-      </section>
 
-      {/* ── Completion bands ──────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Completion Bands</h3>
-        <p className="text-sm text-muted-foreground">Completion % → points.</p>
+        <SectionError message={sectionMsg("video.weights")} />
+      </SectionCard>
+
+      {/* ── Watch time ─────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={ClockIcon}
+        title="Watch Time & Consistency"
+        description="Active playback time ÷ video duration, converted to points. A learner who watches steadily scores at the top band."
+        {...counts("watch_time")}
+      >
         <BandTableEditor
-          rows={config.video.completion_bands}
+          rows={v.time_ratio_bands}
           hasMin
           valueField="points"
           valueLabel="Points"
+          basePath="video.time_ratio_bands"
+          unit="×"
+          {...bandProps}
+          onChange={(rows) => set((d) => { d.video.time_ratio_bands = rows as typeof d.video.time_ratio_bands })}
+        />
+
+        <div className="border-t border-white/8 pt-4">
+          <NumberField
+            label="Allowed review window multiplier"
+            value={v.allowed_review_window_multiplier}
+            {...msg("video.allowed_review_window_multiplier")}
+            hint="How many times the video's length a learner may spend before extra time stops counting. 2 = twice the runtime."
+            suffix="×"
+            disabled={disabled}
+            className="max-w-xs"
+            onChange={(n) => set((d) => { d.video.allowed_review_window_multiplier = n })}
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── Engagement ─────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={ActivityIcon}
+        title="Engagement"
+        description="Starts from a base score for normal viewing, then adjusts it based on how often playback speed was changed."
+        {...counts("engagement")}
+      >
+        <NumberField
+          label="Base points (normal learning behaviour)"
+          value={v.engagement_base_points}
+          {...msg("video.engagement_base_points")}
+          hint="Awarded before any speed-change adjustment is applied."
+          suffix="pts"
           disabled={disabled}
+          className="max-w-xs"
+          onChange={(n) => set((d) => { d.video.engagement_base_points = n })}
+        />
+
+        <div className="space-y-2 border-t border-white/8 pt-4">
+          <p className="text-xs font-medium text-white/50">Speed-change adjustment</p>
+          <p className="text-[11px] text-white/30">
+            Number of speed changes in a session → points added to (or taken off) the base.
+          </p>
+          <BandTableEditor
+            rows={v.speed_change_bands}
+            hasMin
+            valueField="adjustment"
+            valueLabel="Adjustment"
+            basePath="video.speed_change_bands"
+            {...bandProps}
+            onChange={(rows) => set((d) => { d.video.speed_change_bands = rows as typeof d.video.speed_change_bands })}
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── Completion ─────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={TrendingUpIcon}
+        title="Completion"
+        description="How far through the video the learner actually got, converted to points."
+        {...counts("completion")}
+      >
+        <BandTableEditor
+          rows={v.completion_bands}
+          hasMin
+          valueField="points"
+          valueLabel="Points"
+          basePath="video.completion_bands"
+          unit="%"
+          {...bandProps}
           onChange={(rows) => set((d) => { d.video.completion_bands = rows as typeof d.video.completion_bands })}
         />
-      </section>
+      </SectionCard>
 
-      {/* ── Skip ratio bands ──────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Learning Skip Ratio Bands</h3>
-        <p className="text-sm text-muted-foreground">Unwatched % skipped over → point adjustment.</p>
+      {/* ── Skip ratio ─────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={SlidersHorizontalIcon}
+        title="Learning Skip Ratio"
+        description="Share of the video that was skipped past rather than watched. Higher skipping should cost points."
+        {...counts("skip_ratio")}
+      >
         <BandTableEditor
-          rows={config.video.skip_ratio_bands}
+          rows={v.skip_ratio_bands}
           hasMin={false}
           valueField="adjustment"
           valueLabel="Adjustment"
-          disabled={disabled}
+          basePath="video.skip_ratio_bands"
+          unit="%"
+          {...bandProps}
           onChange={(rows) => set((d) => { d.video.skip_ratio_bands = rows as typeof d.video.skip_ratio_bands })}
         />
-      </section>
+      </SectionCard>
 
-      {/* ── Consistency validation ────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Completion Consistency Validation</h3>
-        <p className="text-sm text-muted-foreground">
-          If completion ≥ threshold AND skip ratio &gt; threshold, apply an extra penalty.
-        </p>
+      {/* ── Consistency validation ─────────────────────────────────────────── */}
+      <SectionCard
+        icon={GaugeIcon}
+        title="Completion Consistency Check"
+        description="Catches sessions that report near-full completion while skipping most of the video. When both thresholds are crossed, the penalty is applied on top."
+        {...counts("consistency")}
+      >
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Completion threshold (%)</Label>
-            <Input
-              type="number"
-              value={config.video.consistency_validation.completion_threshold}
-              disabled={disabled}
-              onChange={(e) =>
-                set((d) => { d.video.consistency_validation.completion_threshold = Number(e.target.value) })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Skip ratio threshold (%)</Label>
-            <Input
-              type="number"
-              value={config.video.consistency_validation.skip_ratio_threshold}
-              disabled={disabled}
-              onChange={(e) =>
-                set((d) => { d.video.consistency_validation.skip_ratio_threshold = Number(e.target.value) })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Penalty</Label>
-            <Input
-              type="number"
-              value={config.video.consistency_validation.penalty}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.video.consistency_validation.penalty = Number(e.target.value) })}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Risk levels ────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Risk Levels</h3>
-        <div className="grid gap-4 sm:grid-cols-2 sm:max-w-md">
-          <div className="space-y-2">
-            <Label>High risk below</Label>
-            <Input
-              type="number"
-              value={config.risk_levels.high_below}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.risk_levels.high_below = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Medium risk below</Label>
-            <Input
-              type="number"
-              value={config.risk_levels.medium_below}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.risk_levels.medium_below = Number(e.target.value) })}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Blended score weights ─────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold">Blended Score Weights</h3>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div className="space-y-2">
-            <Label>Completion</Label>
-            <Input
-              type="number" step="0.01"
-              value={config.blended_score_weights.completion}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.blended_score_weights.completion = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Progress</Label>
-            <Input
-              type="number" step="0.01"
-              value={config.blended_score_weights.progress}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.blended_score_weights.progress = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Attention</Label>
-            <Input
-              type="number" step="0.01"
-              value={config.blended_score_weights.attention}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.blended_score_weights.attention = Number(e.target.value) })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Quiz</Label>
-            <Input
-              type="number" step="0.01"
-              value={config.blended_score_weights.quiz}
-              disabled={disabled}
-              onChange={(e) => set((d) => { d.blended_score_weights.quiz = Number(e.target.value) })}
-            />
-          </div>
-        </div>
-        <p className={blendedSum === 1 ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
-          Sum: {blendedSum.toFixed(2)} (must equal 1.00)
-        </p>
-        <div className="max-w-xs space-y-2">
-          <Label>Suspicious-session penalty multiplier</Label>
-          <Input
-            type="number"
-            value={config.blended_score_weights.suspicious_penalty_multiplier}
+          <NumberField
+            label="Completion at or above"
+            value={v.consistency_validation.completion_threshold}
+            {...msg("video.consistency_validation.completion_threshold")}
+            suffix="%"
             disabled={disabled}
-            onChange={(e) =>
-              set((d) => { d.blended_score_weights.suspicious_penalty_multiplier = Number(e.target.value) })
-            }
+            onChange={(n) => set((d) => { d.video.consistency_validation.completion_threshold = n })}
+          />
+          <NumberField
+            label="…and skip ratio above"
+            value={v.consistency_validation.skip_ratio_threshold}
+            {...msg("video.consistency_validation.skip_ratio_threshold")}
+            suffix="%"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.video.consistency_validation.skip_ratio_threshold = n })}
+          />
+          <NumberField
+            label="…then apply penalty"
+            value={v.consistency_validation.penalty}
+            {...msg("video.consistency_validation.penalty")}
+            suffix="pts"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.video.consistency_validation.penalty = n })}
           />
         </div>
-      </section>
+      </SectionCard>
+
+      {/* ── Risk levels ────────────────────────────────────────────────────── */}
+      <SectionCard
+        icon={ShieldAlertIcon}
+        title="Risk Levels"
+        description="Score thresholds that decide how a learner is flagged in reports and dashboards."
+        {...counts("risk_levels")}
+      >
+        <div className="grid gap-4 sm:max-w-md sm:grid-cols-2">
+          <NumberField
+            label="High risk below"
+            value={config.risk_levels.high_below}
+            {...msg("risk_levels.high_below")}
+            suffix="pts"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.risk_levels.high_below = n })}
+          />
+          <NumberField
+            label="Medium risk below"
+            value={config.risk_levels.medium_below}
+            {...msg("risk_levels.medium_below")}
+            suffix="pts"
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.risk_levels.medium_below = n })}
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── Blended score weights ──────────────────────────────────────────── */}
+      <SectionCard
+        icon={LayersIcon}
+        title="Blended Score Weights"
+        description="How the overall learner score combines the four inputs. These must total 1.00."
+        aside={<SumIndicator sum={blendedSum} target={1} decimals={2} />}
+        {...counts("blended")}
+      >
+        <div className="grid gap-4 sm:grid-cols-4">
+          <NumberField
+            label="Completion" step="0.01"
+            value={blended.completion}
+            {...msg("blended_score_weights.completion")}
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.blended_score_weights.completion = n })}
+          />
+          <NumberField
+            label="Progress" step="0.01"
+            value={blended.progress}
+            {...msg("blended_score_weights.progress")}
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.blended_score_weights.progress = n })}
+          />
+          <NumberField
+            label="Attention" step="0.01"
+            value={blended.attention}
+            {...msg("blended_score_weights.attention")}
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.blended_score_weights.attention = n })}
+          />
+          <NumberField
+            label="Quiz" step="0.01"
+            value={blended.quiz}
+            {...msg("blended_score_weights.quiz")}
+            disabled={disabled}
+            onChange={(n) => set((d) => { d.blended_score_weights.quiz = n })}
+          />
+        </div>
+
+        <SectionError message={sectionMsg("blended_score_weights")} />
+
+        <div className="border-t border-white/8 pt-4">
+          <NumberField
+            label="Suspicious-session penalty multiplier"
+            value={blended.suspicious_penalty_multiplier}
+            {...msg("blended_score_weights.suspicious_penalty_multiplier")}
+            hint="Blended score is multiplied by this when a session is flagged suspicious. 0.5 halves it; 1 disables the penalty."
+            step="0.01"
+            suffix="×"
+            disabled={disabled}
+            className="max-w-xs"
+            onChange={(n) => set((d) => { d.blended_score_weights.suspicious_penalty_multiplier = n })}
+          />
+        </div>
+      </SectionCard>
     </div>
+  )
+}
+
+/** Section-wide message (e.g. "the weights must total 100") shown below its fields. */
+function SectionError({ message }: { message?: string }) {
+  if (!message) return null
+  return (
+    <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-red-400">
+      <AlertCircleIcon className="mt-px size-3.5 shrink-0" />
+      {message}
+    </p>
   )
 }

@@ -139,9 +139,20 @@ export interface AttentionScoreConfigState {
   recalculationJob: AttentionScoreRecalculationJob | null
 
   isLoading: boolean
+  isLoadingHistory: boolean
   isPreviewing: boolean
   isSaving: boolean
-  error: string | null
+  /** Id of the version currently being restored, or null. */
+  restoringId: number | null
+
+  // Errors are kept in separate slots so a failed preview doesn't blank out the
+  // page, and a failed history fetch doesn't look like the editor is broken.
+  loadError: string | null
+  historyError: string | null
+  previewError: string | null
+  saveError: string | null
+  /** Field-level messages from a 422 response, keyed by the server's field path. */
+  fieldErrors: Record<string, string[]>
 
   fetchActiveConfig: () => Promise<void>
   fetchHistory: () => Promise<void>
@@ -153,5 +164,7 @@ export interface AttentionScoreConfigState {
   restore: (id: number) => Promise<void>
   pollJobStatus: (jobId: number) => void
   stopPolling: () => void
-  clearError: () => void
+  /** Hide a finished (done/failed) job banner. */
+  dismissJob: () => void
+  clearErrors: () => void
 }

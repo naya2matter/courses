@@ -57,6 +57,7 @@ import VideoManagementPage from "@/pages/admin/video-management/video/video"
 import { CreateVideoPage } from "@/pages/admin/video-management/video/pages/create-video-page"
 import { ViewVideoPage } from "@/pages/admin/video-management/video/pages/view-video-page"
 import VideoCategoriesPage from "@/pages/admin/video-management/categories/categories"
+import AttentionScoreConfigPage from "@/pages/admin/attention-score/config/config"
 
 // Admin — Blog Management
 import BlogManagementPage from "@/pages/admin/blog-management/blog/blog"
@@ -145,6 +146,7 @@ function App() {
               <Route path="/admin/report-management/kpis" element={<KpisPage />} />
               <Route path="/admin/report-management/quiz" element={<QuizReportPage />} />
               <Route path="/admin/report-management/refresh" element={<RefreshOperationsPage />} />
+              <Route path="/admin/report-management/attention-score" element={<AttentionScoreConfigPage />} />
 
               {/* Evaluation Management */}
               <Route path="/admin/evaluation-management/user-evaluation" element={<UserEvaluationPage />} />

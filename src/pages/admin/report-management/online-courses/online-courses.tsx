@@ -32,6 +32,8 @@ import {
 } from "./hook/use-online-report"
 import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
 import type { Department } from "@/pages/admin/user-management/departments/types/department.types"
+import { getOnlineCourses } from "@/pages/admin/course-management/online-courses/service/online-course.service"
+import type { OnlineCourse } from "@/pages/admin/course-management/online-courses/types/online-course.types"
 import { UserCourseDailyTable } from "./components/user-course-daily-table"
 import { DeptCourseDailyTable } from "./components/dept-course-daily-table"
 import { SessionFactTable } from "./components/session-fact-table"
@@ -189,6 +191,31 @@ function DeptSelect({
   )
 }
 
+function CourseSelect({
+  value,
+  onChange,
+  courses,
+}: {
+  value: string
+  onChange: (v: string) => void
+  courses: OnlineCourse[]
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Label className="text-[10px] text-white/35">Course</Label>
+      <Select value={value === "" ? "all" : String(value)} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
+        <SelectTrigger className="h-7 w-40 border-white/10 bg-white/5 text-xs text-white">
+          <SelectValue placeholder="All courses" />
+        </SelectTrigger>
+        <SelectContent className="border-white/10 bg-[#0f0f1a]">
+          <SelectItem value="all">All courses</SelectItem>
+          {courses.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ReportOnlineCoursesPage() {
@@ -214,6 +241,17 @@ export default function ReportOnlineCoursesPage() {
     getAllDepartments()
       .then((res) => { if (active) setDepartments(res.departments) })
       .catch(() => { /* filter just falls back to "All departments" */ })
+    return () => { active = false }
+  }, [])
+
+  // Real online courses for the filter — same "exists:course_onlines,id" story
+  // as departments above, so this has to come from the backend, not a stub list.
+  const [courses, setCourses] = useState<OnlineCourse[]>([])
+  useEffect(() => {
+    let active = true
+    getOnlineCourses({ per_page: 200 })
+      .then((res) => { if (active) setCourses(res.data) })
+      .catch(() => { /* filter just falls back to "All courses" */ })
     return () => { active = false }
   }, [])
 
@@ -302,6 +340,11 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setUcdFilters({ ...ucdFilters, department_id: v, page: 1 })}
               departments={departments}
             />
+            <CourseSelect
+              value={String(ucdFilters.course_online_id ?? "")}
+              onChange={(v) => setUcdFilters({ ...ucdFilters, course_online_id: v, page: 1 })}
+              courses={courses}
+            />
           </FilterBar>
           <UserCourseDailyTable data={ucd.data} meta={ucd.meta} isLoading={ucd.isLoading} error={ucd.error} page={ucdFilters.page ?? 1} onPageChange={setUcdPage} onRetry={refetchUcd} />
         </TabsContent>
@@ -326,6 +369,11 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setDcdFilters({ ...dcdFilters, department_id: v, page: 1 })}
               departments={departments}
             />
+            <CourseSelect
+              value={String(dcdFilters.course_online_id ?? "")}
+              onChange={(v) => setDcdFilters({ ...dcdFilters, course_online_id: v, page: 1 })}
+              courses={courses}
+            />
           </FilterBar>
           <DeptCourseDailyTable data={dcd.data} meta={dcd.meta} isLoading={dcd.isLoading} error={dcd.error} page={dcdFilters.page ?? 1} onPageChange={setDcdPage} onRetry={refetchDcd} />
         </TabsContent>
@@ -349,6 +397,11 @@ export default function ReportOnlineCoursesPage() {
               value={String(sfFilters.department_id ?? "")}
               onChange={(v) => setSfFilters({ ...sfFilters, department_id: v, page: 1 })}
               departments={departments}
+            />
+            <CourseSelect
+              value={String(sfFilters.course_online_id ?? "")}
+              onChange={(v) => setSfFilters({ ...sfFilters, course_online_id: v, page: 1 })}
+              courses={courses}
             />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Suspicious</Label>
@@ -390,6 +443,11 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setUpFilters({ ...upFilters, department_id: v, page: 1 })}
               departments={departments}
             />
+            <CourseSelect
+              value={String(upFilters.course_online_id ?? "")}
+              onChange={(v) => setUpFilters({ ...upFilters, course_online_id: v, page: 1 })}
+              courses={courses}
+            />
           </FilterBar>
           <UserPerformanceTable data={up.data} meta={up.meta} isLoading={up.isLoading} error={up.error} page={upFilters.page ?? 1} onPageChange={setUpPage} onRetry={refetchUp} />
         </TabsContent>
@@ -415,6 +473,11 @@ export default function ReportOnlineCoursesPage() {
               value={String(ucpFilters.department_id ?? "")}
               onChange={(v) => setUcpFilters({ ...ucpFilters, department_id: v, page: 1 })}
               departments={departments}
+            />
+            <CourseSelect
+              value={String(ucpFilters.course_online_id ?? "")}
+              onChange={(v) => setUcpFilters({ ...ucpFilters, course_online_id: v, page: 1 })}
+              courses={courses}
             />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Status</Label>

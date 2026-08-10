@@ -25,8 +25,6 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import { getAllUsers } from "@/pages/admin/user-management/users/service/user.service"
-import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 
 import { getOnlineCourses } from "../service/online-course.service"
 import type { OnlineCourse } from "../types/online-course.types"
@@ -230,25 +228,20 @@ export default function OnlineCourseAssignmentsPage() {
   } = useOnlineCourseAssignments()
 
   const [courses, setCourses]           = useState<OnlineCourse[]>([])
-  const [users, setUsers]               = useState<UserListResource[]>([])
   const [loadingOptions, setLoadingOptions] = useState(true)
   const [assignOpen, setAssignOpen]     = useState(false)
   const [searchDraft, setSearchDraft]   = useState("")
   const deletingIdRef = useRef<number | null>(null)
   const lastErrorRef  = useRef<string | null>(null)
 
-  // Load course + user options once
+  // Load course options once
   useEffect(() => {
     let mounted = true
     setLoadingOptions(true)
-    Promise.all([
-      getOnlineCourses({ per_page: 200 }),
-      getAllUsers({ per_page: 300 }),
-    ])
-      .then(([coursesRes, usersRes]) => {
+    getOnlineCourses({ per_page: 200 })
+      .then((coursesRes) => {
         if (!mounted) return
         setCourses(coursesRes.data)
-        setUsers(usersRes.data)
       })
       .catch((err: Error) => {
         if (!mounted) return
@@ -393,7 +386,6 @@ export default function OnlineCourseAssignmentsPage() {
           <OnlineCourseAssignmentFiltersToolbar
             filters={filters}
             courses={courses}
-            users={users}
             resultCount={resultCount}
             onFilterChange={setFilters}
             onClearAll={() =>
@@ -477,7 +469,6 @@ export default function OnlineCourseAssignmentsPage() {
       <AssignOnlineCourseDialog
         open={assignOpen}
         courses={courses}
-        users={users}
         onClose={() => setAssignOpen(false)}
         onAssigned={() => fetchAssignments({ page: 1 })}
       />

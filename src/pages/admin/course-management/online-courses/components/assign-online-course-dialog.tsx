@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
   AlertCircleIcon,
@@ -21,14 +21,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import { getAllUsers, getAllUsersUnpaginated } from "@/pages/admin/user-management/users/service/user.service"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
+import { getFilteredDepartments } from "@/pages/admin/user-management/departments/service/department.service"
+import type { FlatDepartment } from "@/pages/admin/user-management/departments/types/department.types"
 import type { OnlineCourse } from "../types/online-course.types"
 import { useOnlineCourseAssignmentStore } from "../store/online-course-assignment.store"
 
 interface Props {
   open: boolean
   courses: OnlineCourse[]
-  users: UserListResource[]
   onClose: () => void
   onAssigned?: () => void
 }
@@ -36,7 +38,6 @@ interface Props {
 export function AssignOnlineCourseDialog({
   open,
   courses,
-  users,
   onClose,
   onAssigned,
 }: Props) {
@@ -50,15 +51,57 @@ export function AssignOnlineCourseDialog({
   const [selectedUsers, setSelectedUsers] = useState<UserListResource[]>([])
   const [sendNotification, setSendNotification] = useState(true)
 
+  // Search-as-you-type user results — avoids relying on one preloaded page
+  // that silently drops everyone past the backend's per_page cap.
+  const [userOptions, setUserOptions] = useState<UserListResource[]>([])
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false)
+  const [departmentId, setDepartmentId] = useState("")
+  const [departments, setDepartments] = useState<FlatDepartment[]>([])
+
   useEffect(() => {
     if (!open) {
       setCourseId("")
       setUserId("")
       setSelectedUsers([])
       setSendNotification(true)
+      setUserOptions([])
+      setDepartmentId("")
       clearCreateError()
     }
   }, [open, clearCreateError])
+
+  // Departments rarely change — load once, independent of the dialog's open state.
+  useEffect(() => {
+    getFilteredDepartments({ has_users: true }, 100)
+      .then((res) => setDepartments(res.departments))
+      .catch(() => null)
+  }, [])
+
+  const handleUserSearch = useCallback(async (term: string) => {
+    setIsSearchingUsers(true)
+    try {
+      const departmentFilter = departmentId ? Number(departmentId) : undefined
+      if (!term) {
+        // No search text — load everyone (matching the department filter,
+        // if any) so admins can browse the full list, not just one page.
+        const all = await getAllUsersUnpaginated({ department_id: departmentFilter })
+        setUserOptions(all)
+      } else {
+        const res = await getAllUsers({ search: term, department_id: departmentFilter, per_page: 100 })
+        setUserOptions(res.data)
+      }
+    } catch {
+      // keep whatever options are already shown; the search box stays usable
+    } finally {
+      setIsSearchingUsers(false)
+    }
+  }, [departmentId])
+
+  // Preload/refresh the user list when the dialog opens or the department filter changes.
+  useEffect(() => {
+    if (open) handleUserSearch("")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, departmentId])
 
   const selectedCourse = useMemo(
     () => courses.find((c) => String(c.id) === courseId) ?? null,
@@ -66,7 +109,7 @@ export function AssignOnlineCourseDialog({
   )
 
   function addUser(userIdValue: string) {
-    const user = users.find((u) => String(u.id) === userIdValue)
+    const user = userOptions.find((u) => String(u.id) === userIdValue)
     if (!user) return
     if (selectedUsers.some((u) => u.id === user.id)) {
       toast.error("User already selected")
@@ -139,14 +182,29 @@ export function AssignOnlineCourseDialog({
           </div>
 
           <div className="space-y-1.5">
+            <Label>Department</Label>
+            <SearchableSelect
+              value={departmentId}
+              onValueChange={(v) => setDepartmentId(v === "all" ? "" : v)}
+              placeholder="All departments"
+              searchPlaceholder="Search departments…"
+              emptyText="No departments found"
+              pinnedOptions={[{ value: "all", label: "All departments" }]}
+              options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Users</Label>
             <SearchableSelect
               value={userId}
               onValueChange={addUser}
               placeholder="Add user…"
-              searchPlaceholder="Search by name, email, or dept…"
-              emptyText="No users found"
-              options={users.map((u) => ({
+              searchPlaceholder="Type a name or email to search all users…"
+              emptyText={isSearchingUsers ? "Searching…" : "No users found"}
+              onSearchChange={handleUserSearch}
+              isSearching={isSearchingUsers}
+              options={userOptions.map((u) => ({
                 value: String(u.id),
                 label: u.name,
                 keywords: `${u.email} ${u.department?.name ?? ""}`,
@@ -160,6 +218,11 @@ export function AssignOnlineCourseDialog({
                 ),
               }))}
             />
+            <p className="text-xs text-muted-foreground">
+              {isSearchingUsers
+                ? "Loading…"
+                : `Showing all ${userOptions.length} users${departmentId ? " in this department" : ""}. Type above to narrow down.`}
+            </p>
             {selectedUsers.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {selectedUsers.map((u) => (

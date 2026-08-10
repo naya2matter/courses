@@ -31,7 +31,7 @@ import { isApiError } from "@/lib/api"
 
 import {
   getVideoById,
-  getVideoStreamBlobUrl,
+  getVideoStreamUrl,
   getVideoSubtitleContent,
   retryTranscode,
   updateVideo,
@@ -157,24 +157,22 @@ function VideoPlayerPanel({
   subtitleBlobUrl: string | null
   onVideoMount: (el: HTMLVideoElement | null) => void
 }) {
-  const [blobUrl, setBlobUrl] = useState("")
+  const [streamUrl, setStreamUrl] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reloadCount, setReloadCount] = useState(0)
 
   useEffect(() => {
-    let activeUrl: string | null = null
-    const controller = new AbortController()
+    let cancelled = false
 
     async function load() {
       setIsLoading(true)
       setError(null)
       try {
-        const url = await getVideoStreamBlobUrl(videoId, controller.signal)
-        activeUrl = url
-        setBlobUrl(url)
+        const url = await getVideoStreamUrl(videoId)
+        if (!cancelled) setStreamUrl(url)
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return
+        if (cancelled) return
         if (isApiError(err)) {
           setError(
             err.status === 404
@@ -187,15 +185,14 @@ function VideoPlayerPanel({
           setError("Failed to load video stream.")
         }
       } finally {
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       }
     }
 
     load()
 
     return () => {
-      controller.abort()
-      if (activeUrl) URL.revokeObjectURL(activeUrl)
+      cancelled = true
     }
   }, [videoId, reloadCount])
 
@@ -240,10 +237,10 @@ function VideoPlayerPanel({
             <p className="text-sm font-medium">{error}</p>
           </div>
         )}
-        {blobUrl && !isLoading && !error && (
+        {streamUrl && !isLoading && !error && (
           <video
             ref={(el) => onVideoMount(el)}
-            src={blobUrl}
+            src={streamUrl}
             controls
             className="w-full h-full"
             preload="metadata"

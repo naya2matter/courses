@@ -87,6 +87,7 @@ export const adminSidebarConfig: AdminSidebarConfig = {
             { title: "Live Courses", url: "/admin/report-management/live-courses" },
             { title: "Quiz", url: "/admin/report-management/quiz" },
             { title: "Refresh Operations", url: "/admin/report-management/refresh" },
+            { title: "Attention Score Settings", url: "/admin/report-management/attention-score" },
           ],
         },
       ],

@@ -72,6 +72,32 @@ export async function getAllUsers(
 }
 
 /**
+ * Fetch every user matching the filters by walking every page — the backend
+ * caps a single request's per_page at 100, so this loops until it has all
+ * of them. Meant for pickers that need the complete list (e.g. "all users
+ * in this department") rather than one page of results.
+ *
+ * Capped at 30 pages (3,000 users) as a safety net against a runaway loop.
+ */
+export async function getAllUsersUnpaginated(
+  filters: Omit<UserListFilters, "page" | "per_page"> = {},
+): Promise<UserListResource[]> {
+  const perPage = 100
+  const maxPages = 30
+  let page = 1
+  let all: UserListResource[] = []
+
+  while (page <= maxPages) {
+    const res = await getAllUsers({ ...filters, per_page: perPage, page })
+    all = all.concat(res.data)
+    if (page >= res.meta.last_page || res.data.length === 0) break
+    page += 1
+  }
+
+  return all
+}
+
+/**
  * Fetch a single user by ID.
  * Endpoint: GET /admin/users/getById/{id}
  *

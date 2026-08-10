@@ -6,8 +6,8 @@
 // Extracted from the inline pattern originally used in the Online Course
 // Assignments filters toolbar so every searchable dropdown stays consistent.
 
-import { useId, useMemo, useState, type ReactNode } from "react"
-import { SearchIcon } from "lucide-react"
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react"
+import { Loader2Icon, SearchIcon } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import {
@@ -41,6 +41,14 @@ interface SearchableSelectProps {
   /** Options always shown at the top, exempt from filtering (e.g. "All", "None"). */
   pinnedOptions?: SearchableSelectOption[]
   id?: string
+  /**
+   * Called (debounced ~300ms) with the current search text whenever it
+   * changes, for callers that back this dropdown with a remote/paginated
+   * search instead of a fully preloaded `options` list.
+   */
+  onSearchChange?: (term: string) => void
+  /** Shows a spinner in place of the search icon while a remote search is in flight. */
+  isSearching?: boolean
 }
 
 export function SearchableSelect({
@@ -55,9 +63,18 @@ export function SearchableSelect({
   emptyText = "No results",
   pinnedOptions,
   id,
+  onSearchChange,
+  isSearching,
 }: SearchableSelectProps) {
   const [search, setSearch] = useState("")
   const inputId = useId()
+
+  // Debounce onSearchChange so remote-search callers don't fire a request per keystroke.
+  useEffect(() => {
+    if (!onSearchChange) return
+    const timer = setTimeout(() => onSearchChange(search), 300)
+    return () => clearTimeout(timer)
+  }, [search, onSearchChange])
 
   // Defensive: upstream data (API responses, store state) occasionally
   // contains a stray null/undefined entry instead of a real option object
@@ -97,7 +114,11 @@ export function SearchableSelect({
         {/* Sticky search header */}
         <div className="sticky top-0 z-10 bg-popover px-2 pt-2 pb-1">
           <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            {isSearching ? (
+              <Loader2Icon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            )}
             <Input
               id={inputId}
               value={search}

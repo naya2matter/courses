@@ -330,40 +330,15 @@ export async function deleteVideoSubtitle(videoId: number): Promise<void> {
 }
 
 /**
- * Fetch the video binary from the admin stream endpoint and return an
- * object URL suitable for a browser <video> element.
- *
- * The server uses BinaryFileResponse which supports HTTP Range requests, so
- * the browser can seek even inside the object URL blob.
- * Revoke the returned URL via URL.revokeObjectURL() when the component unmounts.
+ * Fetch a short-lived signed URL for the video so it can be set directly
+ * as a <video src=...>. The browser then issues its own Range requests
+ * against the signed URL instead of the whole file being downloaded upfront.
  */
-export async function getVideoStreamBlobUrl(
-  videoId: number,
-  signal?: AbortSignal,
-): Promise<string> {
-  const token = apiClient.getToken()
-
-  const response = await fetch(`${API_BASE}/admin/videos/${videoId}/stream`, {
-    method: "GET",
-    headers: {
-      Accept: "video/*,*/*",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    signal,
-  })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    const message =
-      (payload as { message?: string } | null)?.message ??
-      `Stream failed (${response.status})`
-    const err = new Error(message) as Error & { status: number }
-    err.status = response.status
-    throw err
-  }
-
-  const blob = await response.blob()
-  return URL.createObjectURL(blob)
+export async function getVideoStreamUrl(videoId: number): Promise<string> {
+  const response = await apiClient.get<{ url: string }>(
+    `/admin/videos/${videoId}/stream-url`,
+  )
+  return response.url
 }
 
 /**

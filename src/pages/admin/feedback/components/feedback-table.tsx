@@ -276,25 +276,32 @@ export function FeedbackTable({
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-muted-foreground">
-            Page {currentPage} of {lastPage}
+            {meta.from != null && meta.to != null
+              ? `Showing ${meta.from}–${meta.to} of ${meta.total?.toLocaleString() ?? 0}`
+              : `${meta.total?.toLocaleString() ?? 0} feedback`}
           </p>
           <div className="flex items-center gap-2">
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {currentPage} / {lastPage}
+            </span>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               disabled={currentPage <= 1 || isLoading}
               onClick={prevPage}
+              aria-label="Previous page"
             >
               <ChevronLeftIcon className="h-4 w-4" />
-              Previous
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               disabled={currentPage >= lastPage || isLoading}
               onClick={nextPage}
+              aria-label="Next page"
             >
-              Next
               <ChevronRightIcon className="h-4 w-4" />
             </Button>
           </div>

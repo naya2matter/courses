@@ -282,5 +282,6 @@ export function useLearningSession({ courseId, contentId, alreadyCompleted }: Op
     handleFullscreen,
     handleTimeUpdate,
     handleEnded,
+    finalize,
   }
 }

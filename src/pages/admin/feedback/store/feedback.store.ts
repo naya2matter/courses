@@ -71,7 +71,7 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
   },
 
   setFilters: (filters: FeedbackFilters) => {
-    const next = { ...get().filters, ...filters, page: 1 }
+    const next = { ...get().filters, ...filters }
     set({ filters: next })
     get().fetchFeedback(next)
   },

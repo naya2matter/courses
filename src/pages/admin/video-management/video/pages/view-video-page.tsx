@@ -654,6 +654,22 @@ export function ViewVideoPage() {
               Retry Transcode
             </Button>
           )}
+          {video.transcode_status === "completed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-sky-500/30 text-sky-400 hover:bg-sky-500/10 hover:text-sky-300"
+              disabled={isRetrying}
+              onClick={handleRetry}
+            >
+              {isRetrying ? (
+                <Loader2Icon className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcwIcon className="mr-2 h-3.5 w-3.5" />
+              )}
+              Re-transcode
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
             <PencilIcon className="mr-2 h-3.5 w-3.5" />
             Edit

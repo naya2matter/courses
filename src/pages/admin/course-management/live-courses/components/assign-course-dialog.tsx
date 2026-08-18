@@ -46,6 +46,8 @@ import type { CourseResource } from "../types/course.types"
 import type { CourseAssignmentResource } from "../types/course-assignment.types"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 
+const SELECT_ALL_VALUE = "__select_all__"
+
 interface AssignCourseDialogProps {
   open: boolean
   /** Pre-selected course — always private, so the selector is locked. */
@@ -129,6 +131,12 @@ export function AssignCourseDialog({
 
   function addUser(userId: string) {
     if (!userId) return
+
+    if (userId === SELECT_ALL_VALUE) {
+      addAllUsers()
+      return
+    }
+
     const user = users.find((u) => String(u.id) === userId)
     if (!user) return
 
@@ -139,6 +147,15 @@ export function AssignCourseDialog({
     }
 
     setSelectedUsers((prev) => [...prev, user])
+    setSelectedUserId("")
+  }
+
+  function addAllUsers() {
+    setSelectedUsers((prev) => {
+      const existingIds = new Set(prev.map((u) => u.id))
+      const toAdd = users.filter((u) => !existingIds.has(u.id))
+      return [...prev, ...toAdd]
+    })
     setSelectedUserId("")
   }
 
@@ -419,9 +436,20 @@ export function AssignCourseDialog({
 
           {/* User */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              User <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">
+                User <span className="text-destructive">*</span>
+              </Label>
+              {selectedUsers.length > 0 && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  onClick={() => setSelectedUsers([])}
+                >
+                  Clear all ({selectedUsers.length})
+                </button>
+              )}
+            </div>
             {isLoadingUsers ? (
               <div className="space-y-2">
                 <Skeleton className="h-11 w-full rounded-md" />
@@ -437,7 +465,23 @@ export function AssignCourseDialog({
                   placeholder="Select a user…"
                   searchPlaceholder="Search users…"
                   triggerClassName="h-11 w-full"
+                  contentClassName="max-h-72"
                   emptyText="No users found"
+                  pinnedOptions={
+                    users.length > 0
+                      ? [
+                          {
+                            value: SELECT_ALL_VALUE,
+                            label: `Select all (${users.length})`,
+                            node: (
+                              <span className="font-medium text-primary">
+                                Select all ({users.length})
+                              </span>
+                            ),
+                          },
+                        ]
+                      : []
+                  }
                   options={users.map((u) => ({
                     value: String(u.id),
                     label: u.name,

@@ -60,7 +60,7 @@ export const useVideoStore = create<VideoState>((set, get) => ({
   },
 
   setFilters: (filters: VideoFilters) => {
-    get().fetchVideos({ ...filters, page: 1 })
+    get().fetchVideos(filters)
   },
 
   createVideo: async (payload: CreateVideoPayload): Promise<VideoDetail> => {

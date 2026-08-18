@@ -191,10 +191,18 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
     })
     if (data?.next_content) {
       const nextId = data.next_content.id
-      const timer = setTimeout(() => goTo(nextId), 1800)
-      return () => clearTimeout(timer)
+      let cancelled = false
+      const timer = setTimeout(() => {
+        // Wait for the completion write to land before navigating — otherwise
+        // the next item's lock-check can run against a still-incomplete
+        // previous item and wrongly report it as locked.
+        void session.finalize().then(() => {
+          if (!cancelled) goTo(nextId)
+        })
+      }, 1800)
+      return () => { cancelled = true; clearTimeout(timer) }
     }
-  }, [isVideo, session.liveContentPct, videoEnded, data?.next_content, goTo])
+  }, [isVideo, session.liveContentPct, videoEnded, data?.next_content, goTo, session.finalize])
 
   const [isDownloading, setIsDownloading] = useState(false)
   const handleAttachmentDownload = useCallback(async () => {
@@ -347,7 +355,7 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
           {data.next_content ? (
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!contentDone) {
                   toast.warning("Finish this content first", {
                     description: isVideo
@@ -356,6 +364,9 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
                   })
                   return
                 }
+                // Ensure the completion write has landed before the next
+                // item's lock-check runs against it.
+                if (isVideo) await session.finalize()
                 goTo(data.next_content!.id)
               }}
               className={`group flex items-center justify-end gap-3 rounded-xl border px-4 py-3 text-right transition-colors ${
@@ -371,7 +382,12 @@ function Viewer({ courseId, contentId }: { courseId: number; contentId: number }
               <ChevronRightIcon className={`size-4 shrink-0 transition-transform ${contentDone ? "text-indigo-400 group-hover:translate-x-0.5" : "text-white/25"}`} />
             </button>
           ) : (
-            <button type="button" onClick={() => navigate(`/user/online-courses/${courseId}`)}
+            <button type="button" onClick={async () => {
+                // Same race as "Up next" — the module tree's unlock check
+                // must see this item's completion write before it lands.
+                if (isVideo) await session.finalize()
+                navigate(`/user/online-courses/${courseId}`)
+              }}
               className="group flex items-center justify-end gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] px-4 py-3 text-right transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/[0.12]">
               <div className="min-w-0">
                 <p className="mb-0.5 text-[10px] uppercase tracking-wider text-emerald-400/60">Finished</p>

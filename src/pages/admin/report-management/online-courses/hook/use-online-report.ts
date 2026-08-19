@@ -29,8 +29,8 @@ import type {
 export const DEFAULT_UCD: UserCourseDailyFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", user_id: "", page: 1, per_page: 15 }
 export const DEFAULT_DCD: DeptCourseDailyFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", page: 1, per_page: 15 }
 export const DEFAULT_SF: SessionFactFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", user_id: "", is_suspicious: "", page: 1, per_page: 15 }
-export const DEFAULT_UP: UserPerfFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", page: 1, per_page: 15 }
-export const DEFAULT_UCP: UserCourseProgressFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", status: "", page: 1, per_page: 15 }
+export const DEFAULT_UP: UserPerfFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", user_id: "", page: 1, per_page: 15 }
+export const DEFAULT_UCP: UserCourseProgressFilters = { date_from: "", date_to: "", department_id: "", course_online_id: "", user_id: "", status: "", page: 1, per_page: 15 }
 export const DEFAULT_DE: DeptEvalFilters = { course_type: "" }
 
 function makeSlice<T>() {

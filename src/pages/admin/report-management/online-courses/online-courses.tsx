@@ -1,6 +1,6 @@
 // ─── Admin Online Courses Report Page ────────────────────────────────────────
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   ActivityIcon,
   AwardIcon,
@@ -25,15 +25,17 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 import {
   useOnlineReport,
   DEFAULT_UCD, DEFAULT_DCD, DEFAULT_SF, DEFAULT_UP, DEFAULT_UCP,
 } from "./hook/use-online-report"
-import { getAllDepartments } from "@/pages/admin/user-management/departments/service/department.service"
-import type { Department } from "@/pages/admin/user-management/departments/types/department.types"
+import { getFilteredDepartments } from "@/pages/admin/user-management/departments/service/department.service"
+import type { FlatDepartment } from "@/pages/admin/user-management/departments/types/department.types"
 import { getOnlineCourses } from "@/pages/admin/course-management/online-courses/service/online-course.service"
 import type { OnlineCourse } from "@/pages/admin/course-management/online-courses/types/online-course.types"
+import { getAllUsers, getAllUsersUnpaginated } from "@/pages/admin/user-management/users/service/user.service"
 import { UserCourseDailyTable } from "./components/user-course-daily-table"
 import { DeptCourseDailyTable } from "./components/dept-course-daily-table"
 import { SessionFactTable } from "./components/session-fact-table"
@@ -173,20 +175,53 @@ function DeptSelect({
 }: {
   value: string
   onChange: (v: string) => void
-  departments: Department[]
+  departments: FlatDepartment[]
 }) {
   return (
     <div className="flex flex-col gap-0.5">
       <Label className="text-[10px] text-white/35">Department</Label>
-      <Select value={value === "" ? "all" : String(value)} onValueChange={(v) => onChange(v === "all" ? "" : v)}>
-        <SelectTrigger className="h-7 w-36 border-white/10 bg-white/5 text-xs text-white">
-          <SelectValue placeholder="All depts" />
-        </SelectTrigger>
-        <SelectContent className="border-white/10 bg-[#0f0f1a]">
-          <SelectItem value="all">All departments</SelectItem>
-          {departments.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      <SearchableSelect
+        value={value === "" ? "all" : String(value)}
+        onValueChange={(v) => onChange(v === "all" ? "" : v)}
+        placeholder="All depts"
+        searchPlaceholder="Search departments…"
+        triggerClassName="h-7 w-36 border-white/10 bg-white/5 text-xs text-white"
+        emptyText="No departments found"
+        pinnedOptions={[{ value: "all", label: "All departments" }]}
+        options={departments.map((d) => ({ value: String(d.id), label: d.name }))}
+      />
+    </div>
+  )
+}
+
+function UserSelect({
+  value,
+  onChange,
+  users,
+  isSearching,
+  onSearchChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+  users: { id: number; name: string; email: string }[]
+  isSearching: boolean
+  onSearchChange: (term: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Label className="text-[10px] text-white/35">User</Label>
+      <SearchableSelect
+        value={value === "" ? "all" : String(value)}
+        onValueChange={(v) => onChange(v === "all" ? "" : v)}
+        placeholder="All users"
+        searchPlaceholder="Search by name or email…"
+        triggerClassName="h-7 w-40 border-white/10 bg-white/5 text-xs text-white"
+        emptyText={isSearching ? "Searching…" : "No users found"}
+        onSearchChange={onSearchChange}
+        isSearching={isSearching}
+        pinnedOptions={[{ value: "all", label: "All users" }]}
+        options={users.map((u) => ({ value: String(u.id), label: u.name, keywords: u.email }))}
+      />
     </div>
   )
 }
@@ -235,10 +270,13 @@ export default function ReportOnlineCoursesPage() {
   // Real departments for the filter — the backend validates department_id with
   // `exists:departments,id`, so hardcoded placeholder ids caused a 422 ("failed
   // to fetch") whenever one was picked.
-  const [departments, setDepartments] = useState<Department[]>([])
+  // Flattened list (parents + sub-departments), same call the Online Course
+  // Assignments filter uses — `getAllDepartments` only returns the top-level
+  // tree, which hid every sub-department from this filter.
+  const [departments, setDepartments] = useState<FlatDepartment[]>([])
   useEffect(() => {
     let active = true
-    getAllDepartments()
+    getFilteredDepartments({ has_users: true }, 100)
       .then((res) => { if (active) setDepartments(res.departments) })
       .catch(() => { /* filter just falls back to "All departments" */ })
     return () => { active = false }
@@ -254,6 +292,42 @@ export default function ReportOnlineCoursesPage() {
       .catch(() => { /* filter just falls back to "All courses" */ })
     return () => { active = false }
   }, [])
+
+  // Search-as-you-type users for the "User" filter, shared across every tab
+  // that has one. A small cache keeps a tab's previously-picked user labeled
+  // correctly even after a later search replaces the loaded batch.
+  const [userOptions, setUserOptions] = useState<{ id: number; name: string; email: string }[]>([])
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false)
+  const [userCache, setUserCache] = useState<Record<number, { name: string; email: string }>>({})
+
+  const handleUserSearch = useCallback(async (term: string) => {
+    setIsSearchingUsers(true)
+    try {
+      const list = term
+        ? (await getAllUsers({ search: term, per_page: 100 })).data
+        : await getAllUsersUnpaginated({})
+      setUserOptions(list)
+      setUserCache((prev) => {
+        const next = { ...prev }
+        for (const u of list) next[u.id] = { name: u.name, email: u.email }
+        return next
+      })
+    } catch {
+      // keep whatever options are already shown; the search box stays usable
+    } finally {
+      setIsSearchingUsers(false)
+    }
+  }, [])
+
+  useEffect(() => { handleUserSearch("") }, [handleUserSearch])
+
+  const usersForSelect = useCallback((selectedId: string | number | undefined) => {
+    if (!selectedId) return userOptions
+    const idNum = Number(selectedId)
+    if (userOptions.some((u) => u.id === idNum)) return userOptions
+    const cached = userCache[idNum]
+    return cached ? [{ id: idNum, ...cached }, ...userOptions] : userOptions
+  }, [userOptions, userCache])
 
   async function handleExportExcel() {
     setExportingExcel(true)
@@ -345,6 +419,13 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setUcdFilters({ ...ucdFilters, course_online_id: v, page: 1 })}
               courses={courses}
             />
+            <UserSelect
+              value={String(ucdFilters.user_id ?? "")}
+              onChange={(v) => setUcdFilters({ ...ucdFilters, user_id: v, page: 1 })}
+              users={usersForSelect(ucdFilters.user_id)}
+              isSearching={isSearchingUsers}
+              onSearchChange={handleUserSearch}
+            />
           </FilterBar>
           <UserCourseDailyTable data={ucd.data} meta={ucd.meta} isLoading={ucd.isLoading} error={ucd.error} page={ucdFilters.page ?? 1} onPageChange={setUcdPage} onRetry={refetchUcd} />
         </TabsContent>
@@ -403,6 +484,13 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setSfFilters({ ...sfFilters, course_online_id: v, page: 1 })}
               courses={courses}
             />
+            <UserSelect
+              value={String(sfFilters.user_id ?? "")}
+              onChange={(v) => setSfFilters({ ...sfFilters, user_id: v, page: 1 })}
+              users={usersForSelect(sfFilters.user_id)}
+              isSearching={isSearchingUsers}
+              onSearchChange={handleUserSearch}
+            />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Suspicious</Label>
               <Select
@@ -448,6 +536,13 @@ export default function ReportOnlineCoursesPage() {
               onChange={(v) => setUpFilters({ ...upFilters, course_online_id: v, page: 1 })}
               courses={courses}
             />
+            <UserSelect
+              value={String(upFilters.user_id ?? "")}
+              onChange={(v) => setUpFilters({ ...upFilters, user_id: v, page: 1 })}
+              users={usersForSelect(upFilters.user_id)}
+              isSearching={isSearchingUsers}
+              onSearchChange={handleUserSearch}
+            />
           </FilterBar>
           <UserPerformanceTable data={up.data} meta={up.meta} isLoading={up.isLoading} error={up.error} page={upFilters.page ?? 1} onPageChange={setUpPage} onRetry={refetchUp} />
         </TabsContent>
@@ -478,6 +573,13 @@ export default function ReportOnlineCoursesPage() {
               value={String(ucpFilters.course_online_id ?? "")}
               onChange={(v) => setUcpFilters({ ...ucpFilters, course_online_id: v, page: 1 })}
               courses={courses}
+            />
+            <UserSelect
+              value={String(ucpFilters.user_id ?? "")}
+              onChange={(v) => setUcpFilters({ ...ucpFilters, user_id: v, page: 1 })}
+              users={usersForSelect(ucpFilters.user_id)}
+              isSearching={isSearchingUsers}
+              onSearchChange={handleUserSearch}
             />
             <div className="flex flex-col gap-0.5">
               <Label className="text-[10px] text-white/35">Status</Label>

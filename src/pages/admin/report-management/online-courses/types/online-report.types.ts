@@ -84,6 +84,7 @@ export interface SessionFactRow {
 
 export interface UserPerfFilters extends CommonOnlineFilters {
   course_online_id?: string | number
+  user_id?: string | number
 }
 
 export type PerformanceRating = "excellent" | "good" | "average" | "needs_improvement"
@@ -119,6 +120,7 @@ export interface UserPerformanceRow {
 
 export interface UserCourseProgressFilters extends CommonOnlineFilters {
   course_online_id?: string | number
+  user_id?: string | number
   status?: "not_started" | "in_progress" | "completed" | ""
 }
 

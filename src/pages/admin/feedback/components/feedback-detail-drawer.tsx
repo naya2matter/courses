@@ -120,8 +120,10 @@ export function FeedbackDetailDrawer({
             {/* Submitter + date */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <StatTile icon={<UserIcon className="h-3.5 w-3.5" />} label="Submitted By">
-                <span className="font-medium">{feedback.user.name}</span>
-                {feedback.user.department && (
+                <span className="font-medium">
+                  {feedback.user?.name ?? "Unknown user"}
+                </span>
+                {feedback.user?.department && (
                   <span className="block text-xs text-muted-foreground">
                     {feedback.user.department.name}
                   </span>

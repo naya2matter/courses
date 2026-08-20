@@ -36,7 +36,7 @@ export interface Feedback {
   description: string
   status: FeedbackStatus
   admin_response: string | null
-  user: FeedbackUser
+  user: FeedbackUser | null
   created_at: string
 }
 

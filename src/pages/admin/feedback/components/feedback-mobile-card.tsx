@@ -84,10 +84,10 @@ export function FeedbackMobileCard({
 
       {/* ── Meta grid ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-        <MetaItem label="Submitted By" value={feedback.user.name} />
+        <MetaItem label="Submitted By" value={feedback.user?.name ?? "Unknown user"} />
         <MetaItem
           label="Department"
-          value={feedback.user.department?.name ?? "—"}
+          value={feedback.user?.department?.name ?? "—"}
         />
         <MetaItem label="Created" value={formatShortDate(feedback.created_at)} />
         <MetaItem

@@ -41,7 +41,7 @@ import {
 
 import { isApiError } from "@/lib/api"
 import { getAllQuizzes } from "../../quizes/service/quiz.service"
-import { getAllUsers } from "@/pages/admin/user-management/users/service/user.service"
+import { getAllUsersUnpaginated } from "@/pages/admin/user-management/users/service/user.service"
 import type { QuizResource } from "../../quizes/types/quiz.types"
 import type { UserListResource } from "@/pages/admin/user-management/users/types/user.types"
 import type {
@@ -90,12 +90,12 @@ export function CreateQuizAssignmentSheet({
     async function loadOptions() {
       setIsLoadingOptions(true)
       try {
-        const [quizzesResponse, usersResponse] = await Promise.all([
+        const [quizzesResponse, users] = await Promise.all([
           getAllQuizzes({ page: 1, per_page: 100, status: "published" }),
-          getAllUsers({ page: 1, per_page: 200 }),
+          getAllUsersUnpaginated(),
         ])
         setQuizOptions(quizzesResponse.data)
-        setUserOptions(usersResponse.data)
+        setUserOptions(users)
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return
         if (isApiError(err)) setSubmitError(err.message || "Failed to load form data.")

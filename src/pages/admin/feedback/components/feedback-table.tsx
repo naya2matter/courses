@@ -194,10 +194,12 @@ export function FeedbackTable({
                     <FeedbackStatusBadge status={fb.status} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {fb.user.name}
+                    {fb.user?.name ?? (
+                      <span className="italic opacity-50">Unknown user</span>
+                    )}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">
-                    {fb.user.department?.name ?? (
+                    {fb.user?.department?.name ?? (
                       <span className="italic opacity-50">—</span>
                     )}
                   </TableCell>
